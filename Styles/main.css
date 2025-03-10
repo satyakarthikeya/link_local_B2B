@@ -103,6 +103,11 @@ header {
 .logo .highlight {
     color: var(--primary-color);
 }
+.logo-nav{
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: whitesmoke;    
+}
 
 .main-nav ul {
     display: flex;

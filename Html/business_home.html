@@ -4,17 +4,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Local - Business Home</title>
-    <link rel="stylesheet" href="../Styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <style>
-        /* Additional styles specific to business home page */
+        /* General Styles */
+        :root {
+            --primary-color: #4A6FFF;
+            --secondary-color: #FF5A60;
+            --dark-color: #2A2E43;
+            --light-color: #F8F9FA;
+            --gray-color: #7A7C85;
+            --success-color: #28C76F;
+            --warning-color: #FF9F43;
+            --border-radius: 10px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background-color: #FFFFFF;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: var(--transition);
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        button {
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--gray-color);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Navbar */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark-color);
+        }
+
+        .logo .highlight {
+            color: var(--primary-color);
+        }
+
         .search-container {
             position: relative;
             flex: 1;
             max-width: 400px;
             margin: 0 15px;
         }
-        
+
         .search-container input {
             width: 100%;
             padding: 10px 15px 10px 40px;
@@ -23,7 +121,7 @@
             font-size: 0.9rem;
             background-color: #F9FAFC;
         }
-        
+
         .search-container i {
             position: absolute;
             top: 50%;
@@ -31,25 +129,230 @@
             transform: translateY(-50%);
             color: var(--gray-color);
         }
-        
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .login-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .login-btn:hover {
+            background-color: var(--dark-color);
+            transform: translateY(-2px);
+        }
+
+        .search-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--dark-color);
+            transition: var(--transition);
+        }
+
+        .search-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 24px;
+            width: 30px;
+        }
+
+        .mobile-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: var(--dark-color);
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .main-nav ul {
+            display: flex;
+            gap: 30px;
+        }
+
+        .main-nav a {
+            color: var(--dark-color);
+            font-weight: 500;
+            font-size: 1rem;
+            padding: 5px 0;
+            position: relative;
+        }
+
+        .main-nav a i {
+            margin-right: 6px;
+            color: var(--primary-color);
+        }
+
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: var(--transition);
+        }
+
+        .main-nav a:hover::after {
+            width: 100%;
+        }
+
+        /* Account Dropdown */
+        .account-dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background-color: white;
+            min-width: 150px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            border-radius: var(--border-radius);
+            margin-top: 5px;
+            z-index: 1000;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 10px 15px;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .dropdown-menu a:hover {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+        }
+
+        .account-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #4A6FFF, #7290FF);
+            color: white;
+            padding: 80px 0;
+            overflow: hidden;
+        }
+
+        .hero .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .hero-content {
+            flex: 1;
+            max-width: 600px;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .cta-btn {
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .primary-btn {
+            background-color: white;
+            color: var(--primary-color);
+            border: none;
+        }
+
+        .primary-btn:hover {
+            background-color: var(--dark-color);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .secondary-btn {
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .secondary-btn:hover {
+            background-color: white;
+            color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        .trusted-by p {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+
+        .trusted-logos {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* Featured Shops and Deals */
         .featured-section, .deals-section {
             padding: 80px 0;
         }
-        
+
         .featured-section {
             background-color: white;
         }
-        
+
         .deals-section {
             background-color: var(--light-color);
         }
-        
+
         .card-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 25px;
         }
-        
+
         .shop-card, .deal-card {
             background-color: white;
             border-radius: var(--border-radius);
@@ -57,60 +360,60 @@
             box-shadow: var(--box-shadow);
             transition: var(--transition);
         }
-        
+
         .shop-card:hover, .deal-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
         }
-        
+
         .card-img {
             height: 200px;
             overflow: hidden;
         }
-        
+
         .card-img img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.5s ease;
         }
-        
+
         .shop-card:hover .card-img img, .deal-card:hover .card-img img {
             transform: scale(1.1);
         }
-        
+
         .card-content {
             padding: 20px;
         }
-        
+
         .shop-card .card-content h3 {
             font-size: 1.2rem;
             margin-bottom: 10px;
             color: var(--dark-color);
         }
-        
+
         .shop-card .card-content p {
             color: var(--gray-color);
             font-size: 0.9rem;
             margin-bottom: 15px;
         }
-        
+
         .shop-rating {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
         }
-        
+
         .shop-rating i {
             color: var(--warning-color);
             margin-right: 5px;
         }
-        
+
         .shop-rating span {
             font-weight: 500;
             font-size: 0.9rem;
         }
-        
+
         .shop-category {
             display: inline-block;
             background-color: rgba(74, 111, 255, 0.1);
@@ -120,7 +423,7 @@
             font-size: 0.8rem;
             font-weight: 500;
         }
-        
+
         .deal-badge {
             display: inline-block;
             background-color: var(--secondary-color);
@@ -131,29 +434,29 @@
             font-weight: 700;
             margin-bottom: 10px;
         }
-        
+
         .deal-card .card-content h3 {
             font-size: 1.2rem;
             margin-bottom: 5px;
             color: var(--dark-color);
         }
-        
+
         .deal-period {
             color: var(--gray-color);
             font-size: 0.9rem;
             margin-bottom: 15px;
         }
-        
+
         .deal-period i {
             margin-right: 5px;
         }
-        
+
         .view-all {
             display: flex;
             justify-content: center;
             margin-top: 40px;
         }
-        
+
         .view-all-btn {
             background-color: transparent;
             color: var(--primary-color);
@@ -164,51 +467,116 @@
             font-size: 1rem;
             transition: var(--transition);
         }
-        
+
         .view-all-btn:hover {
             background-color: var(--primary-color);
             color: white;
             transform: translateY(-3px);
         }
-        
-        /* Responsive adjustments */
+
+        /* Footer */
+        footer {
+            background-color: var(--dark-color);
+            color: white;
+            padding: 80px 0 30px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .footer-about p {
+            margin: 20px 0;
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-icons a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .social-icons a:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        /* Responsive Styles */
         @media (max-width: 1024px) {
             .card-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
-            
             .search-container {
                 max-width: 300px;
             }
         }
-        
+
         @media (max-width: 768px) {
+            .navbar {
+                padding: 15px;
+            }
+            .main-nav {
+                position: fixed;
+                top: 70px;
+                left: -100%;
+                width: 80%;
+                height: calc(100vh - 70px);
+                background-color: white;
+                box-shadow: 5px 0 10px rgba(0, 0, 0, 0.1);
+                transition: var(--transition);
+                padding: 30px;
+            }
+            .main-nav.active {
+                left: 0;
+            }
+            .main-nav ul {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .mobile-toggle {
+                display: flex;
+            }
             .card-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
             .search-container {
                 max-width: 100%;
                 margin: 15px 0;
-                order: 3;
             }
-            
-            .nav-buttons {
-                width: 100%;
-                justify-content: space-between;
-                flex-wrap: wrap;
+            .hero .container {
+                flex-direction: column;
+                text-align: center;
+            }
+            .hero-actions {
+                justify-content: center;
             }
         }
-        
+
         @media (max-width: 480px) {
             .card-grid {
                 grid-template-columns: 1fr;
+            }
+            .hero h1 {
+                font-size: 2rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header with Navbar -->
     <header>
         <div class="navbar">
             <div class="logo">
@@ -226,9 +594,15 @@
                 <a href="myshop.html" class="login-btn">
                     <i class="fas fa-store"></i> My Shop
                 </a>
-                <button class="search-btn">
-                    <i class="fas fa-user"></i>
-                </button>
+                <div class="account-dropdown">
+                    <button class="search-btn">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="#">My Profile</a>
+                        <a href="#">Logout</a>
+                    </div>
+                </div>
                 <button class="mobile-toggle">
                     <span></span>
                     <span></span>
@@ -246,8 +620,7 @@
             </nav>
         </div>
     </header>
-    
-    <!-- Hero Section -->
+
     <section class="hero">
         <div class="container">
             <div class="hero-content">
@@ -271,8 +644,7 @@
             </div>
         </div>
     </section>
-    
-    <!-- Featured Shops Section -->
+
     <section class="featured-section">
         <div class="container">
             <div class="section-header">
@@ -281,7 +653,65 @@
             </div>
             
             <div class="card-grid" id="featured-shops">
-                <!-- Shop cards will be dynamically added here -->
+                <div class="shop-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Coffee Shop">
+                    </div>
+                    <div class="card-content">
+                        <div class="shop-rating">
+                            <i class="fas fa-star"></i>
+                            <span>4.8 (125)</span>
+                        </div>
+                        <h3>Bean & Brew Coffee</h3>
+                        <p>Specialty coffee and pastries</p>
+                        <span class="shop-category">Coffee Shop</span>
+                    </div>
+                </div>
+
+                <div class="shop-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Bookstore">
+                    </div>
+                    <div class="card-content">
+                        <div class="shop-rating">
+                            <i class="fas fa-star"></i>
+                            <span>4.6 (89)</span>
+                        </div>
+                        <h3>Pages & Chapters</h3>
+                        <p>New and used books</p>
+                        <span class="shop-category">Bookstore</span>
+                    </div>
+                </div>
+
+                <div class="shop-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Bakery">
+                    </div>
+                    <div class="card-content">
+                        <div class="shop-rating">
+                            <i class="fas fa-star"></i>
+                            <span>4.9 (156)</span>
+                        </div>
+                        <h3>Sweet Delights Bakery</h3>
+                        <p>Fresh baked goods daily</p>
+                        <span class="shop-category">Bakery</span>
+                    </div>
+                </div>
+
+                <div class="shop-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Florist">
+                    </div>
+                    <div class="card-content">
+                        <div class="shop-rating">
+                            <i class="fas fa-star"></i>
+                            <span>4.7 (98)</span>
+                        </div>
+                        <h3>Bloom Boutique</h3>
+                        <p>Fresh flowers & arrangements</p>
+                        <span class="shop-category">Florist</span>
+                    </div>
+                </div>
             </div>
             
             <div class="view-all">
@@ -289,8 +719,7 @@
             </div>
         </div>
     </section>
-    
-    <!-- Deals Section -->
+
     <section class="deals-section">
         <div class="container">
             <div class="section-header">
@@ -299,7 +728,61 @@
             </div>
             
             <div class="card-grid" id="featured-deals">
-                <!-- Deal cards will be dynamically added here -->
+                <div class="deal-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Coffee Deal">
+                    </div>
+                    <div class="card-content">
+                        <div class="deal-badge">25% OFF</div>
+                        <h3>Latte Special</h3>
+                        <p class="deal-period">
+                            <i class="fas fa-clock"></i>
+                            Ends March 15, 2025
+                        </p>
+                    </div>
+                </div>
+
+                <div class="deal-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Book Deal">
+                    </div>
+                    <div class="card-content">
+                        <div class="deal-badge">Buy 1 Get 1</div>
+                        <h3>Book Bundle</h3>
+                        <p class="deal-period">
+                            <i class="fas fa-clock"></i>
+                            Ends March 20, 2025
+                        </p>
+                    </div>
+                </div>
+
+                <div class="deal-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Bakery Deal">
+                    </div>
+                    <div class="card-content">
+                        <div class="deal-badge">30% OFF</div>
+                        <h3>Cake Sale</h3>
+                        <p class="deal-period">
+                            <i class="fas fa-clock"></i>
+                            Ends March 17, 2025
+                        </p>
+                    </div>
+                </div>
+
+                <div class="deal-card">
+                    <div class="card-img">
+                        <img src="https://via.placeholder.com/300x200" alt="Flower Deal">
+                    </div>
+                    <div class="card-content">
+                        <div class="deal-badge">20% OFF</div>
+                        <h3>Spring Bouquet</h3>
+                        <p class="deal-period">
+                            <i class="fas fa-clock"></i>
+                            Ends March 25, 2025
+                        </p>
+                    </div>
+                </div>
             </div>
             
             <div class="view-all">
@@ -307,8 +790,7 @@
             </div>
         </div>
     </section>
-    
-    <!-- Footer -->
+
     <footer>
         <div class="container">
             <div class="footer-grid">
@@ -363,7 +845,14 @@
             </div>
         </div>
     </footer>
-    
-    <script src="business_home.js"></script>
+
+    <script>
+        const mobileToggle = document.querySelector('.mobile-toggle');
+        const mainNav = document.querySelector('.main-nav');
+
+        mobileToggle.addEventListener('click', () => {
+            mainNav.classList.toggle('active');
+        });
+    </script>
 </body>
 </html>
