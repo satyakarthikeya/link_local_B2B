@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Local - Business Home</title>
+    <link rel="stylesheet" href="../Styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <style>
+        /* Additional styles specific to business home page */
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+            margin: 0 15px;
+        }
+        
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 1px solid #E0E0E0;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            background-color: #F9FAFC;
+        }
+        
+        .search-container i {
+            position: absolute;
+            top: 50%;
+            left: 15px;
+            transform: translateY(-50%);
+            color: var(--gray-color);
+        }
+        
+        .featured-section, .deals-section {
+            padding: 80px 0;
+        }
+        
+        .featured-section {
+            background-color: white;
+        }
+        
+        .deals-section {
+            background-color: var(--light-color);
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+        
+        .shop-card, .deal-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+        }
+        
+        .shop-card:hover, .deal-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-img {
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .shop-card:hover .card-img img, .deal-card:hover .card-img img {
+            transform: scale(1.1);
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        .shop-card .card-content h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+        
+        .shop-card .card-content p {
+            color: var(--gray-color);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .shop-rating {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .shop-rating i {
+            color: var(--warning-color);
+            margin-right: 5px;
+        }
+        
+        .shop-rating span {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .shop-category {
+            display: inline-block;
+            background-color: rgba(74, 111, 255, 0.1);
+            color: var(--primary-color);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .deal-badge {
+            display: inline-block;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .deal-card .card-content h3 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: var(--dark-color);
+        }
+        
+        .deal-period {
+            color: var(--gray-color);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .deal-period i {
+            margin-right: 5px;
+        }
+        
+        .view-all {
+            display: flex;
+            justify-content: center;
+            margin-top: 40px;
+        }
+        
+        .view-all-btn {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        
+        .view-all-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-3px);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .card-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .search-container {
+                max-width: 300px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .search-container {
+                max-width: 100%;
+                margin: 15px 0;
+                order: 3;
+            }
+            
+            .nav-buttons {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with Navbar -->
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <a href="#">
+                    <h1 class="logo-text">Link<span class="highlight">Local</span></h1>
+                </a>
+            </div>
+            
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Search businesses, products, deals...">
+            </div>
+            
+            <div class="nav-buttons">
+                <a href="myshop.html" class="login-btn">
+                    <i class="fas fa-store"></i> My Shop
+                </a>
+                <button class="search-btn">
+                    <i class="fas fa-user"></i>
+                </button>
+                <button class="mobile-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#"><i class="fas fa-home"></i>Home</a></li>
+                    <li><a href="#"><i class="fas fa-store"></i>Shops</a></li>
+                    <li><a href="#"><i class="fas fa-tags"></i>Deals</a></li>
+                    <li><a href="#"><i class="fas fa-map-marker-alt"></i>Near Me</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Connect With Local Businesses</h1>
+                <p>Discover shops, exclusive deals, and support your community all in one place.</p>
+                <div class="hero-actions">
+                    <button class="cta-btn primary-btn">Explore Shops</button>
+                    <button class="cta-btn secondary-btn">View Deals</button>
+                </div>
+                <div class="trusted-by">
+                    <p>Trusted by over 10,000+ businesses</p>
+                    <div class="trusted-logos">
+                        <img src="https://via.placeholder.com/120x40" alt="Trusted Partner">
+                        <img src="https://via.placeholder.com/120x40" alt="Trusted Partner">
+                        <img src="https://via.placeholder.com/120x40" alt="Trusted Partner">
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="https://via.placeholder.com/500x400" alt="Hero Image">
+            </div>
+        </div>
+    </section>
+    
+    <!-- Featured Shops Section -->
+    <section class="featured-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Featured Shops</h2>
+                <p>Discover top-rated local businesses in your community</p>
+            </div>
+            
+            <div class="card-grid" id="featured-shops">
+                <!-- Shop cards will be dynamically added here -->
+            </div>
+            
+            <div class="view-all">
+                <button class="view-all-btn">View All Shops</button>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Deals Section -->
+    <section class="deals-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Hot Deals</h2>
+                <p>Limited time offers from your favorite local shops</p>
+            </div>
+            
+            <div class="card-grid" id="featured-deals">
+                <!-- Deal cards will be dynamically added here -->
+            </div>
+            
+            <div class="view-all">
+                <button class="view-all-btn">View All Deals</button>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-about">
+                    <h1 class="logo-text">Link<span class="highlight">Local</span></h1>
+                    <p>Connecting local businesses with customers in the community. Discover, shop, and support local all in one place.</p>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Services</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="#">FAQs</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-links">
+                    <h4>For Businesses</h4>
+                    <ul>
+                        <li><a href="#">Join as a Business</a></li>
+                        <li><a href="#">Business Dashboard</a></li>
+                        <li><a href="#">Advertise With Us</a></li>
+                        <li><a href="#">Success Stories</a></li>
+                        <li><a href="#">Resources</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <p><i class="fas fa-map-marker-alt"></i> 123 Main Street, City, Country</p>
+                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                    <p><i class="fas fa-envelope"></i> support@linklocal.com</p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 LinkLocal. All rights reserved.</p>
+                <div class="footer-bottom-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="business_home.js"></script>
+</body>
+</html>
