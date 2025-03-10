@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Shop - Link Local</title>
+    <link rel="stylesheet" href="../Styles/main.css">
+    <link rel="stylesheet" href="../Styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Additional styles specific to My Shop page */
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            padding: 40px 0;
+        }
+
+        .section-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 30px;
+        }
+
+        .section-card h3 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            color: var(--dark-color);
+        }
+
+        .section-card h3 i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            color: var(--gray-color);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Orders Styling */
+        .orders-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .order-card {
+            background-color: var(--light-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .order-id {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .order-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background-color: rgba(255, 159, 67, 0.2);
+            color: var(--warning-color);
+        }
+
+        .order-items {
+            margin-bottom: 15px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-details {
+            display: flex;
+            align-items: center;
+        }
+
+        .item-qty {
+            background-color: var(--primary-color);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 15px;
+        }
+
+        .item-price {
+            font-weight: 600;
+        }
+
+        .order-summary {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+            margin-bottom: 20px;
+            border-top: 1px dashed #E0E0E0;
+        }
+
+        .order-total {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--dark-color);
+        }
+
+        .order-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .order-btn {
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-accept {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-accept:hover {
+            background-color: #1ca65b;
+        }
+
+        .btn-reject {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-reject:hover {
+            background-color: #e04145;
+        }
+
+        .btn-modify {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-modify:hover {
+            background-color: #e6873a;
+        }
+
+        .empty-orders {
+            text-align: center;
+            padding: 30px;
+            color: var(--gray-color);
+        }
+
+        .empty-orders i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #E0E0E0;
+        }
+
+        /* Products Styling */
+        .products-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .new-product {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            font-weight: 600;
+            border: none;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .new-product i {
+            margin-right: 8px;
+        }
+
+        .new-product:hover {
+            background-color: #395cdb;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-image {
+            height: 160px;
+            width: 100%;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .product-image img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: cover;
+        }
+
+        .product-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .product-actions button {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: white;
+            color: var(--dark-color);
+            border: none;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .product-actions button:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .product-info {
+            padding: 15px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: var(--dark-color);
+        }
+
+        .product-category {
+            color: var(--gray-color);
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        .inventory {
+            font-size: 0.85rem;
+            color: var(--gray-color);
+            margin-top: 5px;
+        }
+
+        /* Upload Form Styling */
+        .form-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .form-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .product-form {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .form-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--gray-color);
+            cursor: pointer;
+        }
+
+        .form-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #E0E0E0;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 111, 255, 0.2);
+            outline: none;
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 150px;
+            background-color: #f5f5f5;
+            border-radius: var(--border-radius);
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-color);
+            font-size: 0.9rem;
+            overflow: hidden;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            width: 100%;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .submit-btn:hover {
+            background-color: #395cdb;
+        }
+
+        .empty-products {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-color);
+        }
+
+        .empty-products i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #E0E0E0;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .order-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .order-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .products-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                width: 100%;
+            }
+
+            .tab-btn {
+                white-space: nowrap;
+                padding: 15px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header/Navbar -->
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <a href="index.html">
+                    <h1 class="logo-text">Link<span class="highlight">Local</span></h1>
+                </a>
+            </div>
+
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i>Home</a></li>
+                    <li><a href="#"><i class="fas fa-store"></i>Marketplace</a></li>
+                    <li><a href="#"><i class="fas fa-map-marker-alt"></i>Local Shops</a></li>
+                    <li><a href="#"><i class="fas fa-info-circle"></i>About</a></li>
+                </ul>
+            </nav>
+
+            <div class="nav-buttons">
+                <button class="search-btn"><i class="fas fa-search"></i></button>
+                <button class="login-btn">Account <i class="fas fa-user"></i></button>
+                <button class="mobile-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <section class="my-shop-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>My Shop Dashboard</h2>
+                    <p>Manage your products and orders from one convenient place</p>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="orders"><i class="fas fa-shopping-cart"></i> Orders</button>
+                    <button class="tab-btn" data-tab="products"><i class="fas fa-box"></i> Products</button>
+                    <button class="tab-btn" data-tab="stats"><i class="fas fa-chart-bar"></i> Statistics</button>
+                    <button class="tab-btn" data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
+                </div>
+
+                <div class="dashboard-container">
+                    <!-- Orders Tab -->
+                    <div class="tab-content active" id="orders-tab">
+                        <div class="section-card">
+                            <h3><i class="fas fa-shopping-cart"></i> Incoming Orders</h3>
+                            <div class="orders-grid">
+                                <div class="order-card">
+                                    <div class="order-header">
+                                        <div class="order-id">Order #2305</div>
+                                        <div class="order-status status-pending">Pending</div>
+                                    </div>
+                                    <div class="order-items">
+                                        <div class="order-item">
+                                            <div class="item-details">
+                                                <div class="item-qty">2</div>
+                                                <div class="item-name">Organic Avocados</div>
+                                            </div>
+                                            <div class="item-price">$8.98</div>
+                                        </div>
+                                        <div class="order-item">
+                                            <div class="item-details">
+                                                <div class="item-qty">1</div>
+                                                <div class="item-name">Local Honey (16oz)</div>
+                                            </div>
+                                            <div class="item-price">$12.50</div>
+                                        </div>
+                                        <div class="order-item">
+                                            <div class="item-details">
+                                                <div class="item-qty">3</div>
+                                                <div class="item-name">Farm Fresh Eggs (Dozen)</div>
+                                            </div>
+                                            <div class="item-price">$15.75</div>
+                                        </div>
+                                    </div>
+                                    <div class="order-summary">
+                                        <div>
+                                            <div>Order Total:</div>
+                                            <div class="order-total">$37.23</div>
+                                        </div>
+                                        <div class="order-meta">
+                                            <div>Customer: Sarah Thompson</div>
+                                            <div>March 10, 2025 at 2:45 PM</div>
+                                        </div>
+                                    </div>
+                                    <div class="order-actions">
+                                        <button class="order-btn btn-accept">Accept</button>
+                                        <button class="order-btn btn-reject">Reject</button>
+                                        <button class="order-btn btn-modify">Modify</button>
+                                    </div>
+                                </div>
+
+                                <div class="order-card">
+                                    <div class="order-header">
+                                        <div class="order-id">Order #2306</div>
+                                        <div class="order-status status-pending">Pending</div>
+                                    </div>
+                                    <div class="order-items">
+                                        <div class="order-item">
+                                            <div class="item-details">
+                                                <div class="item-qty">1</div>
+                                                <div class="item-name">Handmade Soap Bundle</div>
+                                            </div>
+                                            <div class="item-price">$22.99</div>
+                                        </div>
+                                        <div class="order-item">
+                                            <div class="item-details">
+                                                <div class="item-qty">2</div>
+                                                <div class="item-name">Locally Roasted Coffee (12oz)</div>
+                                            </div>
+                                            <div class="item-price">$28.00</div>
+                                        </div>
+                                    </div>
+                                    <div class="order-summary">
+                                        <div>
+                                            <div>Order Total:</div>
+                                            <div class="order-total">$50.99</div>
+                                        </div>
+                                        <div class="order-meta">
+                                            <div>Customer: Michael Johnson</div>
+                                            <div>March 11, 2025 at 10:15 AM</div>
+                                        </div>
+                                    </div>
+                                    <div class="order-actions">
+                                        <button class="order-btn btn-accept">Accept</button>
+                                        <button class="order-btn btn-reject">Reject</button>
+                                        <button class="order-btn btn-modify">Modify</button>
+                                    </div>
+                                </div>
+
+                                <!-- You can uncomment this if you want to display an empty state
+                                <div class="empty-orders">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <h3>No Orders Yet</h3>
+                                    <p>Your incoming orders will appear here</p>
+                                </div>
+                                -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products Tab -->
+                    <div class="tab-content" id="products-tab">
+                        <div class="section-card">
+                            <div class="products-header">
+                                <h3><i class="fas fa-box"></i> My Products</h3>
+                                <button id="add-product-btn" class="new-product"><i class="fas fa-plus"></i> Add New Product</button>
+                            </div>
+                            
+                            <div class="products-grid" id="products-container">
+                                <div class="product-card">
+                                    <div class="product-image">
+                                        <img src="https://via.placeholder.com/300x200" alt="Organic Avocados">
+                                        <div class="product-actions">
+                                            <button><i class="fas fa-edit"></i></button>
+                                            <button><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="product-info">
+                                        <div class="product-name">Organic Avocados</div>
+                                        <div class="product-category">Fresh Produce</div>
+                                        <div class="product-price">$4.49</div>
+                                        <div class="inventory">In stock: 23 units</div>
+                                    </div>
+                                </div>
+
+                                <div class="product-card">
+                                    <div class="product-image">
+                                        <img src="https://via.placeholder.com/300x200" alt="Local Honey">
+                                        <div class="product-actions">
+                                            <button><i class="fas fa-edit"></i></button>
+                                            <button><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="product-info">
+                                        <div class="product-name">Local Honey (16oz)</div>
+                                        <div class="product-category">Pantry Items</div>
+                                        <div class="product-price">$12.50</div>
+                                        <div class="inventory">In stock: 12 units</div>
+                                    </div>
+                                </div>
+
+                                <div class="product-card">
+                                    <div class="product-image">
+                                        <img src="https://via.placeholder.com/300x200" alt="Farm Fresh Eggs">
+                                        <div class="product-actions">
+                                            <button><i class="fas fa-edit"></i></button>
+                                            <button><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="product-info">
+                                        <div class="product-name">Farm Fresh Eggs (Dozen)</div>
+                                        <div class="product-category">Dairy & Eggs</div>
+                                        <div class="product-price">$5.25</div>
+                                        <div class="inventory">In stock: 40 units</div>
+                                    </div>
+                                </div>
+
+                                <div class="product-card">
+                                    <div class="product-image">
+                                        <img src="https://via.placeholder.com/300x200" alt="Handmade Soap Bundle">
+                                        <div class="product-actions">
+                                            <button><i class="fas fa-edit"></i></button>
+                                            <button><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="product-info">
+                                        <div class="product-name">Handmade Soap Bundle</div>
+                                        <div class="product-category">Home & Beauty</div>
+                                        <div class="product-price">$22.99</div>
+                                        <div class="inventory">In stock: 8 units</div>
+                                    </div>
+                                </div>
+
+                                <div class="product-card">
+                                    <div class="product-image">
+                                        <img src="https://via.placeholder.com/300x200" alt="Locally Roasted Coffee">
+                                        <div class="product-actions">
+                                            <button><i class="fas fa-edit"></i></button>
+                                            <button><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="product-info">
+                                        <div class="product-name">Locally Roasted Coffee (12oz)</div>
+                                        <div class="product-category">Beverages</div>
+                                        <div class="product-price">$14.00</div>
+                                        <div class="inventory">In stock: 15 units</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Tab -->
+                    <div class="tab-content" id="stats-tab">
+                        <div class="section-card">
+                            <h3><i class="fas fa-chart-bar"></i> Shop Statistics</h3>
+                            <p style="text-align: center; padding: 30px;">Statistics functionality coming soon!</p>
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div class="tab-content" id="settings-tab">
+                        <div class="section-card">
+                            <h3><i class="fas fa-cog"></i> Shop Settings</h3>
+                            <p style="text-align: center; padding: 30px;">Settings functionality coming soon!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Product Form Overlay -->
+    <div class="form-overlay" id="product-form-overlay">
+        <div class="product-form">
+            <button class="form-close" id="form-close-btn"><i class="fas fa-times"></i></button>
+            <div class="form-header">
+                <h3>Add New Product</h3>
+            </div>
+            <form id="add-product-form">
+                <div class="form-group">
+                    <label for="product-name">Product Name</label>
+                    <input type="text" id="product-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-category">Product Category</label>
+                    <select id="product-category" class="form-control" required>
+                        <option value="">Select a category</option>
+                        <option value="Fresh Produce">Fresh Produce</option>
+                        <option value="Dairy & Eggs">Dairy & Eggs</option>
+                        <option value="Bakery">Bakery</option>
+                        <option value="Pantry Items">Pantry Items</option>
+                        <option value="Beverages">Beverages</option>
+                        <option value="Meat & Seafood">Meat & Seafood</option>
+                        <option value="Home & Beauty">Home & Beauty</option>
+                        <option value="Craft & Handmade">Craft & Handmade</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="product-price">Price per Unit ($)</label>
+                    <input type="number" id="product-price" class="form-control" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-quantity">Quantity Available</label>
+                    <input type="number" id="product-quantity" class="form-control" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-image">Product Image</label>
+                    <input type="file" id="product-image" class="form-control" accept="image/*">
+                    <div class="image-preview" id="image-preview">
+                        No image selected
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="submit-btn">Add Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-about">
+                    <h1 class="logo-text" style="color: white;">Link<span class="highlight">Local</span></h1>
+                    <p>Supporting local businesses and connecting communities through our marketplace platform.</p>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#">Home</a></li>
+                        <li><a href="#">Marketplace</a></li>
+                        <li><a href="#">Local Shops</a></li>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>For Business</h4>
+                    <ul>
+                        <li><a href="#">Join as Seller</a></li>
+                        <li><a href="#">Business Dashboard</a></li>
+                        <li><a href="#">Seller Guidelines</a></li>
+                        <li><a href="#">Success Stories</a></li>
+                        <li><a href="#">Advertise with Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <p><i class="fas fa-map-marker-alt"></i> 123 Main Street, New York, NY 10001</p>
+                    <p><i class="fas fa-phone-alt"></i> (123) 456-7890</p>
+                    <p><i class="fas fa-envelope"></i> contact@linklocal.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 LinkLocal. All rights reserved.</p>
+                <div class="footer-bottom-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Help Center</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="myshop.js"></script>
+</body>
+</html>
