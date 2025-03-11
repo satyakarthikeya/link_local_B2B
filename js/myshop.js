@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="product-info">
                     <div class="product-name">${productName}</div>
                     <div class="product-category">${productCategory}</div>
-                    <div class="product-price">$${parseFloat(productPrice).toFixed(2)}</div>
+                    <div class="product-price">${parseFloat(productPrice).toFixed(2)}Rs</div>
                     <div class="inventory">In stock: ${productQuantity} units</div>
                 </div>
             `;
