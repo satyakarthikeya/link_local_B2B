@@ -1,0 +1,330 @@
+/* Auth Pages Styling */
+:root {
+    --primary-color: #4A6FFF;
+    --secondary-color: #FF5A60;
+    --dark-color: #2A2E43;
+    --light-color: #F8F9FA;
+    --gray-color: #7A7C85;
+    --success-color: #28C76F;
+    --warning-color: #FF9F43;
+    --border-radius: 10px;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #4A6FFF, #7290FF);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.auth-container {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 450px;
+    padding: 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+}
+
+.auth-logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin-bottom: 30px;
+    display: inline-block;
+}
+
+.auth-logo span {
+    color: var(--primary-color);
+}
+
+h2 {
+    color: var(--dark-color);
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--dark-color);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+
+.input-container input {
+    width: 100%;
+    padding: 15px 15px 15px 45px;
+    border: 1px solid #E0E0E0;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+    background-color: #F9FAFC;
+    color: var(--dark-color);
+}
+
+.input-container input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 111, 255, 0.2);
+    outline: none;
+}
+
+.input-container i {
+    position: absolute;
+    left: 15px;
+    color: gray;
+}
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: gray;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+}
+
+
+.btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 50px;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(74, 111, 255, 0.3);
+}
+
+.btn:hover {
+    background-color: #395cdb;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(74, 111, 255, 0.4);
+}
+
+.btn:active {
+    transform: translateY(-1px);
+}
+
+.btn.secondary {
+    background-color: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: none;
+}
+
+.btn.secondary:hover {
+    background-color: rgba(74, 111, 255, 0.1);
+}
+
+.back-btn {
+    background-color: #E0E0E0;
+    color: var(--dark-color);
+    margin-top: 30px;
+    box-shadow: none;
+}
+
+.back-btn:hover {
+    background-color: #D0D0D0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: 25px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: #E0E0E0;
+}
+
+.auth-divider span {
+    padding: 0 15px;
+    color: var(--gray-color);
+    font-size: 0.9rem;
+}
+
+.forgot-password {
+    display: block;
+    margin-top: 10px;
+    color: var(--primary-color);
+    text-align: right;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+.auth-footer {
+    margin-top: 30px;
+    font-size: 0.9rem;
+    color: var(--gray-color);
+}
+
+.auth-footer a {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-top: 5px;
+    display: block;
+}
+/* Scoped styling for password field to avoid affecting other inputs */
+.password-container {
+    position: relative;
+}
+
+/* Adjust left side lock icon */
+.password-container i.fa-lock {
+    left: 15px;
+}
+
+/* Adjust right side eye icon */
+.password-container .password-toggle {
+    right: 15px;
+    left: auto; /* Prevents global left positioning */
+    cursor: pointer;
+}
+.password-toggle i {
+    pointer-events: none;
+}
+/* Style for the select dropdown */
+.input-container select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: #fff;
+    color: #333;
+    outline: none;
+    appearance: none; /* Removes default browser dropdown arrow */
+  }
+  
+  /* Add custom dropdown arrow */
+ /* General input container styling */
+/* .input-container {
+    position: relative;
+  } */
+  
+  /* Style for the select dropdown */
+  .input-container select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: #fff;
+    color: #333;
+    outline: none;
+    appearance: none; /* Removes default browser dropdown arrow */
+    cursor: pointer;
+  }
+  
+  /* Custom dropdown arrow, but ONLY for selects */
+  .input-container select + i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #555;
+  }
+  
+  /* Align icon properly inside the input box */
+  .input-container i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #555;
+  }
+  
+  /* Ensure text doesn't overlap icon */
+  .input-container select {
+    padding-left: 40px;
+  }
+  
+  
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-container {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 30px 20px;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+}
