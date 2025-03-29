@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/delivery_home.css";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import D_Navbar from "../components/D_Navbar";
+import D_Footer from "../components/D_Footer";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_Homepage = () => {
@@ -11,7 +11,7 @@ const D_Homepage = () => {
 
   return (
     <>
-      <Navbar />
+      <D_Navbar />
 
       {/* Delivery Agent Dashboard */}
       <section className="delivery-dashboard">
@@ -72,7 +72,7 @@ const D_Homepage = () => {
         </ul>
       </div>
 
-      <Footer />
+      <D_Footer />
     </>
   );
 };
