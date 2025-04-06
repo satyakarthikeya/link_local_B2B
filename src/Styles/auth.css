@@ -328,3 +328,85 @@ h2 {
         font-size: 1.5rem;
     }
 }
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1400px; /* Wider container for larger screens */
+    }
+    
+    /* Hero section full-width style */
+    .hero {
+        min-height: 90vh; /* Better proportion for larger screens */
+    }
+    
+    .hero h1 {
+        font-size: 3.5rem; /* Larger heading for bigger screens */
+    }
+    
+    .hero p {
+        font-size: 1.4rem;
+    }
+    
+    .hero-image img {
+        max-width: 600px; /* Larger hero image */
+    }
+    
+    /* Stats section adjustments */
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 40px;
+    }
+    
+    .stat-box {
+        padding: 40px 30px;
+    }
+    
+    /* Features section adjustments */
+    .features-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 40px;
+    }
+}
+
+/* Full 1920x1080 optimization */
+@media (min-width: 1920px) {
+    body {
+        font-size: 18px; /* Base font size increase */
+    }
+    
+    .container {
+        max-width: 1800px; /* Much wider container for 1920px screens */
+    }
+    
+    /* Hero section adjustments */
+    .hero {
+        min-height: 80vh;
+    }
+    
+    .hero h1 {
+        font-size: 4rem;
+    }
+    
+    .hero p {
+        font-size: 1.5rem;
+    }
+    
+    .hero-image img {
+        max-width: 700px;
+    }
+    
+    /* Section spacing */
+    .stats, .features, .how-it-works {
+        padding: 120px 0;
+    }
+    
+    /* Grid layouts */
+    .stats-grid, .features-grid {
+        gap: 50px;
+    }
+    
+    /* Footer scaling */
+    .footer-grid {
+        max-width: 1800px;
+        margin: 0 auto 80px;
+    }
+}
