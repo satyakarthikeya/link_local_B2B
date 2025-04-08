@@ -262,7 +262,7 @@ const B_ProfilePage = () => {
                     src={profileData.profilePicture} 
                     alt={profileData.businessName} 
                     className="profile-image"
-                    onError={(e) => {e.target.src = 'https://via.placeholder.com/150?text=Business'; e.target.onerror = null;}}
+                    
                   />
                   {isEditing && (
                     <label className="image-upload-btn">
@@ -352,7 +352,6 @@ const B_ProfilePage = () => {
                         src={profileData.coverPhoto} 
                         alt="Cover" 
                         className="cover-photo"
-                        onError={(e) => {e.target.src = 'https://via.placeholder.com/1200x300?text=Cover+Photo'; e.target.onerror = null;}}
                       />
                       {isEditing && (
                         <label className="cover-upload-btn">
