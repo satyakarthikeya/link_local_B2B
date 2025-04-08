@@ -319,7 +319,7 @@ h2 {
 }
 
 /* Responsive */
-@media (max-width: 480px) {
+@media (max-width: 720px) {
     .auth-container {
         padding: 30px 20px;
     }

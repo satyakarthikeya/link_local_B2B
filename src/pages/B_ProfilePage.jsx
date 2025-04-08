@@ -211,7 +211,8 @@ const B_ProfilePage = () => {
 
   // Go back function
   const handleGoBack = () => {
-    navigate(-1);
+    // If we came from My Shop, go back there, otherwise go to business home
+    navigate('/business-home/my-shop');
   };
 
   return (
@@ -223,7 +224,7 @@ const B_ProfilePage = () => {
           {/* Profile Header */}
           <div className="profile-header">
             <button className="back-btn" onClick={handleGoBack}>
-              <i className="fas fa-arrow-left"></i> Back
+              <i className="fas fa-arrow-left"></i> Back to My Shop
             </button>
             <h1>Business Profile</h1>
           </div>

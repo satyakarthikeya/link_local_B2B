@@ -6,7 +6,6 @@ const MyShop = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showProductForm, setShowProductForm] = useState(false);
 
-  // Mock data for demonstration
   const stats = {
     totalSales: "₹45,250",
     totalOrders: 127,
@@ -22,18 +21,44 @@ const MyShop = () => {
       status: "pending",
       date: "2024-02-20"
     },
-    // Add more orders...
+    {
+      id: "ORD002",
+      customer: "Jane Smith",
+      amount: "₹2,500",
+      status: "completed",
+      date: "2024-02-19"
+    },
+    {
+      id: "ORD003",
+      customer: "Mike Johnson",
+      amount: "₹800",
+      status: "processing",
+      date: "2024-02-18"
+    }
   ];
 
   const topProducts = [
     {
       id: 1,
-      name: "Product A",
+      name: "Premium A4 Sheets",
       sales: 45,
       revenue: "₹4,500",
       trend: "up"
     },
-    // Add more products...
+    {
+      id: 2,
+      name: "Cotton Fabric Bundle",
+      sales: 38,
+      revenue: "₹7,600",
+      trend: "up"
+    },
+    {
+      id: 3,
+      name: "Electronic Components Kit",
+      sales: 32,
+      revenue: "₹3,200",
+      trend: "down"
+    }
   ];
 
   return (
@@ -131,8 +156,6 @@ const MyShop = () => {
         </div>
       )}
 
-      {/* Additional tab content components */}
-      
       {showProductForm && (
         <div className="modal-overlay">
           <div className="product-form-modal">
@@ -146,7 +169,10 @@ const MyShop = () => {
                 <label>Category</label>
                 <select>
                   <option>Select category</option>
-                  {/* Add categories */}
+                  <option>Stationery</option>
+                  <option>Electronics</option>
+                  <option>Textiles</option>
+                  <option>Food & Beverages</option>
                 </select>
               </div>
               <div className="form-row">
