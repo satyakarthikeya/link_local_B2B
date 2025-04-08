@@ -1,55 +1,57 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import B_Navbar from '../components/B_Navbar';
-import "../styles/business_home.css";
-import "../styles/profile.css"; // We'll create this next
+import D_Navbar from '../components/D_Navbar';
+import D_Footer from '../components/D_Footer';
+import "../styles/delivery_home.css";
+import "../styles/profile.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
-const B_ProfilePage = () => {
+const D_ProfilePage = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   
   // Profile form state
   const [profileData, setProfileData] = useState({
-    businessName: "Chennai Silks",
-    ownerName: "Ravi Kumar",
-    email: "info@chennaisilks.com",
+    fullName: "John Doe",
+    email: "john.doe@example.com",
     phone: "+91 98765 43210",
-    gstNumber: "33AABCT3518Q1ZW",
-    businessType: "Textile Wholesale",
-    establishedYear: "1998",
-    website: "www.chennaisilks.com",
+    gender: "Male",
+    dateOfBirth: "1992-06-15",
     address: {
-      street: "42 Town Hall Road",
-      area: "Gandhipuram",
+      street: "42 MG Road",
+      area: "Saibaba Colony",
       city: "Coimbatore",
       state: "Tamil Nadu",
-      pincode: "641001"
+      pincode: "641011"
     },
-    businessHours: {
-      monday: { open: "09:00", close: "18:00" },
-      tuesday: { open: "09:00", close: "18:00" },
-      wednesday: { open: "09:00", close: "18:00" },
-      thursday: { open: "09:00", close: "18:00" },
-      friday: { open: "09:00", close: "18:00" },
-      saturday: { open: "10:00", close: "16:00" },
-      sunday: { open: "", close: "" }
+    profilePicture: "../assests/guddu.jpeg",
+    vehicleType: "Two Wheeler",
+    vehicleNumber: "TN 66 AB 1234",
+    licenseNumber: "TN5520220012345",
+    preferredWorkingHours: {
+      monday: { working: true, start: "09:00", end: "18:00" },
+      tuesday: { working: true, start: "09:00", end: "18:00" },
+      wednesday: { working: true, start: "09:00", end: "18:00" },
+      thursday: { working: true, start: "09:00", end: "18:00" },
+      friday: { working: true, start: "09:00", end: "18:00" },
+      saturday: { working: true, start: "10:00", end: "16:00" },
+      sunday: { working: false, start: "", end: "" }
     },
-    businessDescription: "Chennai Silks is a premier wholesale textile supplier specializing in silk fabrics, cotton materials, and other textile products for retail businesses, designers and manufacturers.",
-    profilePicture: "../assests/chennai silks.png",
-    coverPhoto: "../assests/brookfields.jpg",
+    about: "Experienced delivery partner with 3+ years in food and package delivery. Known for timely deliveries and excellent customer service.",
   });
 
   // Bank account information
   const [bankData, setBankData] = useState({
-    accountHolderName: "Chennai Silks Pvt Ltd",
-    accountNumber: "••••••••3456",
-    ifscCode: "SBIN0001234",
+    accountHolderName: "John Doe",
+    accountNumber: "••••••••4567",
+    ifscCode: "SBIN0001235",
     bankName: "State Bank of India",
-    branchName: "Gandhipuram Branch"
+    branchName: "Saibaba Colony Branch"
   });
 
   // Form validation state
@@ -57,32 +59,29 @@ const B_ProfilePage = () => {
 
   // Documents state
   const [documents, setDocuments] = useState([
-    { id: 1, name: "GST Certificate", type: "gst", status: "verified", uploadDate: "12/10/2023" },
-    { id: 2, name: "Business Registration", type: "registration", status: "verified", uploadDate: "12/10/2023" },
-    { id: 3, name: "Shop License", type: "license", status: "verified", uploadDate: "12/10/2023" }
+    { id: 1, name: "Driving License", type: "license", status: "verified", uploadDate: "15/01/2025" },
+    { id: 2, name: "Aadhar Card", type: "idproof", status: "verified", uploadDate: "15/01/2025" },
+    { id: 3, name: "Vehicle Registration", type: "vehicle", status: "verified", uploadDate: "15/01/2025" }
   ]);
 
-  // Payment history mock data
-  const [paymentHistory, setPaymentHistory] = useState([
-    { id: "PMT001", date: "15/03/2025", amount: "₹5,200", status: "Completed", method: "Bank Transfer", orderId: "OD12345" },
-    { id: "PMT002", date: "02/03/2025", amount: "₹3,750", status: "Completed", method: "UPI", orderId: "OD12332" },
-    { id: "PMT003", date: "18/02/2025", amount: "₹8,900", status: "Completed", method: "Credit Card", orderId: "OD12318" },
-    { id: "PMT004", date: "05/02/2025", amount: "₹2,100", status: "Completed", method: "Bank Transfer", orderId: "OD12296" }
+  // Earnings history mock data
+  const [earningsHistory, setEarningsHistory] = useState([
+    { id: "TXN001", date: "15/03/2025", amount: "₹650", orders: 8, bonus: "₹50", status: "Completed" },
+    { id: "TXN002", date: "14/03/2025", amount: "₹520", orders: 6, bonus: "₹0", status: "Completed" },
+    { id: "TXN003", date: "13/03/2025", amount: "₹720", orders: 9, bonus: "₹100", status: "Completed" },
+    { id: "TXN004", date: "12/03/2025", amount: "₹490", orders: 5, bonus: "₹0", status: "Completed" }
   ]);
 
-  // Subscription data
-  const [subscription, setSubscription] = useState({
-    plan: "Business Pro",
-    status: "Active",
-    nextBillingDate: "15/05/2025",
-    amount: "₹999/month",
-    features: [
-      "Unlimited product listings",
-      "Priority customer support",
-      "Analytics dashboard",
-      "0% transaction fee",
-      "Multiple user accounts"
-    ]
+  // Stats data
+  const [statsData, setStatsData] = useState({
+    totalDeliveries: 847,
+    totalEarnings: "₹68,950",
+    avgDeliveryTime: "28 mins",
+    acceptanceRate: "96%",
+    customerRating: 4.8,
+    onTimeDelivery: "97%",
+    totalDistance: "3,245 km",
+    bonusEarned: "₹5,400"
   });
 
   // Handle form changes
@@ -104,15 +103,29 @@ const B_ProfilePage = () => {
     }
   };
 
-  // Handle business hours changes
+  // Handle working hours changes
   const handleHoursChange = (day, type, value) => {
     setProfileData({
       ...profileData,
-      businessHours: {
-        ...profileData.businessHours,
+      preferredWorkingHours: {
+        ...profileData.preferredWorkingHours,
         [day]: {
-          ...profileData.businessHours[day],
+          ...profileData.preferredWorkingHours[day],
           [type]: value
+        }
+      }
+    });
+  };
+
+  // Handle working day toggle
+  const handleWorkingDayToggle = (day) => {
+    setProfileData({
+      ...profileData,
+      preferredWorkingHours: {
+        ...profileData.preferredWorkingHours,
+        [day]: {
+          ...profileData.preferredWorkingHours[day],
+          working: !profileData.preferredWorkingHours[day].working
         }
       }
     });
@@ -158,7 +171,7 @@ const B_ProfilePage = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!profileData.businessName) newErrors.businessName = "Business name is required";
+    if (!profileData.fullName) newErrors.fullName = "Full name is required";
     
     if (!profileData.email) {
       newErrors.email = "Email is required";
@@ -172,10 +185,12 @@ const B_ProfilePage = () => {
       newErrors.phone = "Phone number is invalid";
     }
     
-    if (!profileData.gstNumber) {
-      newErrors.gstNumber = "GST number is required";
-    } else if (!/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(profileData.gstNumber)) {
-      newErrors.gstNumber = "GST number is invalid (format: 22AAAAA0000A1Z5)";
+    if (!profileData.vehicleNumber) {
+      newErrors.vehicleNumber = "Vehicle number is required";
+    }
+    
+    if (!profileData.licenseNumber) {
+      newErrors.licenseNumber = "License number is required";
     }
     
     if (!profileData.address.city) newErrors.city = "City is required";
@@ -225,31 +240,23 @@ const B_ProfilePage = () => {
     setActiveTab(tab);
   };
 
-  // Upgrade plan
-  const handleUpgradePlan = () => {
-    navigate('/business-subscription');
-    // For demo purposes
-    alert("Navigating to subscription plans page...");
-  };
-
   // Go back function
   const handleGoBack = () => {
-    // If we came from My Shop, go back there, otherwise go to business home
-    navigate('/business-home/my-shop');
+    navigate('/delivery-home');
   };
 
   return (
-    <div className="business-app">
-      <B_Navbar />
+    <>
+      <D_Navbar isOnlineGlobal={isOnline} setIsOnlineGlobal={setIsOnline} />
 
       <main className="profile-page">
         <div className="container">
           {/* Profile Header */}
           <div className="profile-header">
             <button className="back-btn" onClick={handleGoBack}>
-              <i className="fas fa-arrow-left"></i> Back to My Shop
+              <i className="fas fa-arrow-left"></i> Back to Dashboard
             </button>
-            <h1>Business Profile</h1>
+            <h1>My Profile</h1>
           </div>
 
           {/* Profile Content */}
@@ -260,9 +267,9 @@ const B_ProfilePage = () => {
                 <div className="profile-image-container">
                   <img 
                     src={profileData.profilePicture} 
-                    alt={profileData.businessName} 
+                    alt={profileData.fullName} 
                     className="profile-image"
-                    onError={(e) => {e.target.src = 'https://via.placeholder.com/150?text=Business'; e.target.onerror = null;}}
+                    onError={(e) => {e.target.src = 'https://via.placeholder.com/150?text=Profile'; e.target.onerror = null;}}
                   />
                   {isEditing && (
                     <label className="image-upload-btn">
@@ -271,8 +278,8 @@ const B_ProfilePage = () => {
                     </label>
                   )}
                 </div>
-                <h3>{profileData.businessName}</h3>
-                <p className="business-type">{profileData.businessType}</p>
+                <h3>{profileData.fullName}</h3>
+                <p className="business-type">Delivery Partner</p>
                 <p className="business-location">
                   <i className="fas fa-map-marker-alt"></i> {profileData.address.city}, {profileData.address.state}
                 </p>
@@ -283,7 +290,7 @@ const B_ProfilePage = () => {
                   className={`menu-item ${activeTab === 'personal' ? 'active' : ''}`}
                   onClick={() => handleTabClick('personal')}
                 >
-                  <i className="fas fa-user"></i> Business Information
+                  <i className="fas fa-user"></i> Personal Information
                 </button>
                 <button 
                   className={`menu-item ${activeTab === 'banking' ? 'active' : ''}`}
@@ -298,23 +305,23 @@ const B_ProfilePage = () => {
                   <i className="fas fa-file-alt"></i> Documents
                 </button>
                 <button 
-                  className={`menu-item ${activeTab === 'payments' ? 'active' : ''}`}
-                  onClick={() => handleTabClick('payments')}
+                  className={`menu-item ${activeTab === 'earnings' ? 'active' : ''}`}
+                  onClick={() => handleTabClick('earnings')}
                 >
-                  <i className="fas fa-credit-card"></i> Payment History
+                  <i className="fas fa-wallet"></i> Earnings
                 </button>
                 <button 
-                  className={`menu-item ${activeTab === 'subscription' ? 'active' : ''}`}
-                  onClick={() => handleTabClick('subscription')}
+                  className={`menu-item ${activeTab === 'stats' ? 'active' : ''}`}
+                  onClick={() => handleTabClick('stats')}
                 >
-                  <i className="fas fa-crown"></i> Subscription Plan
+                  <i className="fas fa-chart-bar"></i> Performance
                 </button>
               </div>
 
               <div className="sidebar-help">
                 <h4>Need Help?</h4>
-                <p>Contact our business support team for assistance with your account</p>
-                <button className="help-btn" onClick={() => navigate('/business-support')}>
+                <p>Contact our support team for assistance with your account</p>
+                <button className="help-btn" onClick={() => navigate('/delivery/support')}>
                   <i className="fas fa-headset"></i> Get Support
                 </button>
               </div>
@@ -329,11 +336,11 @@ const B_ProfilePage = () => {
                 </div>
               )}
 
-              {/* Business Information Tab */}
+              {/* Personal Information Tab */}
               {activeTab === 'personal' && (
                 <div className="profile-section">
                   <div className="section-header">
-                    <h2>Business Information</h2>
+                    <h2>Personal Information</h2>
                     {!isEditing ? (
                       <button className="edit-btn" onClick={() => setIsEditing(true)}>
                         <i className="fas fa-edit"></i> Edit Information
@@ -346,55 +353,25 @@ const B_ProfilePage = () => {
                   </div>
 
                   <form onSubmit={handleSubmit}>
-                    {/* Cover Photo */}
-                    <div className="cover-photo-container">
-                      <img 
-                        src={profileData.coverPhoto} 
-                        alt="Cover" 
-                        className="cover-photo"
-                        onError={(e) => {e.target.src = 'https://via.placeholder.com/1200x300?text=Cover+Photo'; e.target.onerror = null;}}
-                      />
-                      {isEditing && (
-                        <label className="cover-upload-btn">
-                          <i className="fas fa-camera"></i> Change Cover
-                          <input type="file" accept="image/*" hidden />
-                        </label>
-                      )}
-                    </div>
-
                     {/* Basic Details */}
                     <div className="form-section">
                       <h3>Basic Details</h3>
                       
                       <div className="form-row">
                         <div className="form-group">
-                          <label htmlFor="businessName">Business Name</label>
+                          <label htmlFor="fullName">Full Name</label>
                           <input 
                             type="text" 
-                            id="businessName" 
-                            name="businessName" 
-                            value={profileData.businessName} 
+                            id="fullName" 
+                            name="fullName" 
+                            value={profileData.fullName} 
                             onChange={handleInputChange}
                             disabled={!isEditing}
-                            className={errors.businessName ? 'error' : ''}
+                            className={errors.fullName ? 'error' : ''}
                           />
-                          {errors.businessName && <span className="error-message">{errors.businessName}</span>}
+                          {errors.fullName && <span className="error-message">{errors.fullName}</span>}
                         </div>
                         
-                        <div className="form-group">
-                          <label htmlFor="ownerName">Owner Name</label>
-                          <input 
-                            type="text" 
-                            id="ownerName" 
-                            name="ownerName" 
-                            value={profileData.ownerName} 
-                            onChange={handleInputChange}
-                            disabled={!isEditing}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="form-row">
                         <div className="form-group">
                           <label htmlFor="email">Email Address</label>
                           <input 
@@ -408,7 +385,9 @@ const B_ProfilePage = () => {
                           />
                           {errors.email && <span className="error-message">{errors.email}</span>}
                         </div>
-                        
+                      </div>
+                      
+                      <div className="form-row">
                         <div className="form-group">
                           <label htmlFor="phone">Phone Number</label>
                           <input 
@@ -422,56 +401,31 @@ const B_ProfilePage = () => {
                           />
                           {errors.phone && <span className="error-message">{errors.phone}</span>}
                         </div>
-                      </div>
-                      
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label htmlFor="gstNumber">GST Number</label>
-                          <input 
-                            type="text" 
-                            id="gstNumber" 
-                            name="gstNumber" 
-                            value={profileData.gstNumber} 
-                            onChange={handleInputChange}
-                            disabled={!isEditing}
-                            className={errors.gstNumber ? 'error' : ''}
-                          />
-                          {errors.gstNumber && <span className="error-message">{errors.gstNumber}</span>}
-                        </div>
                         
                         <div className="form-group">
-                          <label htmlFor="businessType">Business Type</label>
-                          <input 
-                            type="text" 
-                            id="businessType" 
-                            name="businessType" 
-                            value={profileData.businessType} 
+                          <label htmlFor="gender">Gender</label>
+                          <select 
+                            id="gender" 
+                            name="gender" 
+                            value={profileData.gender} 
                             onChange={handleInputChange}
                             disabled={!isEditing}
-                          />
+                          >
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
                         </div>
                       </div>
                       
                       <div className="form-row">
                         <div className="form-group">
-                          <label htmlFor="establishedYear">Year Established</label>
+                          <label htmlFor="dateOfBirth">Date of Birth</label>
                           <input 
-                            type="text" 
-                            id="establishedYear" 
-                            name="establishedYear" 
-                            value={profileData.establishedYear} 
-                            onChange={handleInputChange}
-                            disabled={!isEditing}
-                          />
-                        </div>
-                        
-                        <div className="form-group">
-                          <label htmlFor="website">Website (Optional)</label>
-                          <input 
-                            type="text" 
-                            id="website" 
-                            name="website" 
-                            value={profileData.website} 
+                            type="date" 
+                            id="dateOfBirth" 
+                            name="dateOfBirth" 
+                            value={profileData.dateOfBirth} 
                             onChange={handleInputChange}
                             disabled={!isEditing}
                           />
@@ -481,7 +435,7 @@ const B_ProfilePage = () => {
 
                     {/* Address Information */}
                     <div className="form-section">
-                      <h3>Business Address</h3>
+                      <h3>Your Address</h3>
                       
                       <div className="form-row">
                         <div className="form-group full-width">
@@ -554,9 +508,62 @@ const B_ProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* Business Hours */}
+                    {/* Vehicle Information */}
                     <div className="form-section">
-                      <h3>Business Hours</h3>
+                      <h3>Vehicle Information</h3>
+                      
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="vehicleType">Vehicle Type</label>
+                          <select 
+                            id="vehicleType" 
+                            name="vehicleType" 
+                            value={profileData.vehicleType} 
+                            onChange={handleInputChange}
+                            disabled={!isEditing}
+                          >
+                            <option value="Two Wheeler">Two Wheeler</option>
+                            <option value="Three Wheeler">Three Wheeler</option>
+                            <option value="Four Wheeler">Four Wheeler</option>
+                            <option value="Bicycle">Bicycle</option>
+                          </select>
+                        </div>
+                        
+                        <div className="form-group">
+                          <label htmlFor="vehicleNumber">Vehicle Number</label>
+                          <input 
+                            type="text" 
+                            id="vehicleNumber" 
+                            name="vehicleNumber" 
+                            value={profileData.vehicleNumber} 
+                            onChange={handleInputChange}
+                            disabled={!isEditing}
+                            className={errors.vehicleNumber ? 'error' : ''}
+                          />
+                          {errors.vehicleNumber && <span className="error-message">{errors.vehicleNumber}</span>}
+                        </div>
+                      </div>
+                      
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="licenseNumber">Driving License Number</label>
+                          <input 
+                            type="text" 
+                            id="licenseNumber" 
+                            name="licenseNumber" 
+                            value={profileData.licenseNumber} 
+                            onChange={handleInputChange}
+                            disabled={!isEditing}
+                            className={errors.licenseNumber ? 'error' : ''}
+                          />
+                          {errors.licenseNumber && <span className="error-message">{errors.licenseNumber}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preferred Working Hours */}
+                    <div className="form-section">
+                      <h3>Preferred Working Hours</h3>
                       
                       <div className="business-hours">
                         {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
@@ -565,16 +572,16 @@ const B_ProfilePage = () => {
                             <div className="hours-inputs">
                               <input
                                 type="time"
-                                value={profileData.businessHours[day].open}
-                                onChange={(e) => handleHoursChange(day, 'open', e.target.value)}
-                                disabled={!isEditing}
+                                value={profileData.preferredWorkingHours[day].start}
+                                onChange={(e) => handleHoursChange(day, 'start', e.target.value)}
+                                disabled={!isEditing || !profileData.preferredWorkingHours[day].working}
                               />
                               <span>to</span>
                               <input
                                 type="time"
-                                value={profileData.businessHours[day].close}
-                                onChange={(e) => handleHoursChange(day, 'close', e.target.value)}
-                                disabled={!isEditing}
+                                value={profileData.preferredWorkingHours[day].end}
+                                onChange={(e) => handleHoursChange(day, 'end', e.target.value)}
+                                disabled={!isEditing || !profileData.preferredWorkingHours[day].working}
                               />
                             </div>
                             {isEditing && (
@@ -582,18 +589,10 @@ const B_ProfilePage = () => {
                                 <label>
                                   <input 
                                     type="checkbox"
-                                    checked={!profileData.businessHours[day].open && !profileData.businessHours[day].close}
-                                    onChange={() => {
-                                      if (profileData.businessHours[day].open || profileData.businessHours[day].close) {
-                                        handleHoursChange(day, 'open', '');
-                                        handleHoursChange(day, 'close', '');
-                                      } else {
-                                        handleHoursChange(day, 'open', '09:00');
-                                        handleHoursChange(day, 'close', '18:00');
-                                      }
-                                    }}
+                                    checked={!profileData.preferredWorkingHours[day].working}
+                                    onChange={() => handleWorkingDayToggle(day)}
                                   />
-                                  Closed
+                                  Off Day
                                 </label>
                               </div>
                             )}
@@ -602,17 +601,17 @@ const B_ProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* Business Description */}
+                    {/* About Section */}
                     <div className="form-section">
-                      <h3>Business Description</h3>
+                      <h3>About</h3>
                       <div className="form-group full-width">
                         <textarea
-                          name="businessDescription"
-                          value={profileData.businessDescription}
+                          name="about"
+                          value={profileData.about}
                           onChange={handleInputChange}
                           rows="4"
                           disabled={!isEditing}
-                          placeholder="Describe your business, products, and services..."
+                          placeholder="Tell us a bit about yourself..."
                         ></textarea>
                       </div>
                     </div>
@@ -650,7 +649,7 @@ const B_ProfilePage = () => {
 
                   <div className="banking-info-note">
                     <i className="fas fa-shield-alt"></i>
-                    <p>Your banking information is securely stored and encrypted. This information is used for processing payments and refunds.</p>
+                    <p>Your banking information is securely stored and encrypted. This information is used for processing your earnings payouts.</p>
                   </div>
 
                   <form onSubmit={handleSubmit}>
@@ -749,7 +748,7 @@ const B_ProfilePage = () => {
               {activeTab === 'documents' && (
                 <div className="profile-section">
                   <div className="section-header">
-                    <h2>Business Documents</h2>
+                    <h2>Documents</h2>
                     <button className="edit-btn" onClick={() => window.scrollTo(0, document.body.scrollHeight)}>
                       <i className="fas fa-upload"></i> Upload New Document
                     </button>
@@ -807,50 +806,8 @@ const B_ProfilePage = () => {
                     
                     <div className="upload-options">
                       <div className="upload-option">
-                        <h4>GST Certificate</h4>
-                        <p>Upload your GST registration certificate</p>
-                        <label className="upload-btn">
-                          <i className="fas fa-upload"></i> Upload File
-                          <input 
-                            type="file" 
-                            accept=".pdf,.jpg,.jpeg,.png" 
-                            hidden 
-                            onChange={(e) => handleFileUpload(e, 'gst')} 
-                          />
-                        </label>
-                      </div>
-                      
-                      <div className="upload-option">
-                        <h4>Business Registration</h4>
-                        <p>Upload your business registration document</p>
-                        <label className="upload-btn">
-                          <i className="fas fa-upload"></i> Upload File
-                          <input 
-                            type="file" 
-                            accept=".pdf,.jpg,.jpeg,.png" 
-                            hidden 
-                            onChange={(e) => handleFileUpload(e, 'registration')} 
-                          />
-                        </label>
-                      </div>
-                      
-                      <div className="upload-option">
-                        <h4>PAN Card</h4>
-                        <p>Upload your PAN card</p>
-                        <label className="upload-btn">
-                          <i className="fas fa-upload"></i> Upload File
-                          <input 
-                            type="file" 
-                            accept=".pdf,.jpg,.jpeg,.png" 
-                            hidden 
-                            onChange={(e) => handleFileUpload(e, 'pan')} 
-                          />
-                        </label>
-                      </div>
-                      
-                      <div className="upload-option">
-                        <h4>Shop License</h4>
-                        <p>Upload your shop & establishment license</p>
+                        <h4>Driving License</h4>
+                        <p>Upload your driving license</p>
                         <label className="upload-btn">
                           <i className="fas fa-upload"></i> Upload File
                           <input 
@@ -858,6 +815,48 @@ const B_ProfilePage = () => {
                             accept=".pdf,.jpg,.jpeg,.png" 
                             hidden 
                             onChange={(e) => handleFileUpload(e, 'license')} 
+                          />
+                        </label>
+                      </div>
+                      
+                      <div className="upload-option">
+                        <h4>ID Proof</h4>
+                        <p>Upload your Aadhar or PAN card</p>
+                        <label className="upload-btn">
+                          <i className="fas fa-upload"></i> Upload File
+                          <input 
+                            type="file" 
+                            accept=".pdf,.jpg,.jpeg,.png" 
+                            hidden 
+                            onChange={(e) => handleFileUpload(e, 'idproof')} 
+                          />
+                        </label>
+                      </div>
+                      
+                      <div className="upload-option">
+                        <h4>Vehicle Registration</h4>
+                        <p>Upload your vehicle registration certificate</p>
+                        <label className="upload-btn">
+                          <i className="fas fa-upload"></i> Upload File
+                          <input 
+                            type="file" 
+                            accept=".pdf,.jpg,.jpeg,.png" 
+                            hidden 
+                            onChange={(e) => handleFileUpload(e, 'vehicle')} 
+                          />
+                        </label>
+                      </div>
+                      
+                      <div className="upload-option">
+                        <h4>Insurance</h4>
+                        <p>Upload your vehicle insurance</p>
+                        <label className="upload-btn">
+                          <i className="fas fa-upload"></i> Upload File
+                          <input 
+                            type="file" 
+                            accept=".pdf,.jpg,.jpeg,.png" 
+                            hidden 
+                            onChange={(e) => handleFileUpload(e, 'insurance')} 
                           />
                         </label>
                       </div>
@@ -870,12 +869,12 @@ const B_ProfilePage = () => {
                 </div>
               )}
 
-              {/* Payments History Tab */}
-              {activeTab === 'payments' && (
+              {/* Earnings Tab */}
+              {activeTab === 'earnings' && (
                 <div className="profile-section">
                   <div className="section-header">
-                    <h2>Payment History</h2>
-                    <button className="edit-btn" onClick={() => alert("Downloading payment reports...")}>
+                    <h2>Earnings History</h2>
+                    <button className="edit-btn" onClick={() => alert("Downloading earnings report...")}>
                       <i className="fas fa-download"></i> Download Report
                     </button>
                   </div>
@@ -883,27 +882,32 @@ const B_ProfilePage = () => {
                   <div className="payments-filters">
                     <div className="filter-group">
                       <label htmlFor="payment-period">Period</label>
-                      <select id="payment-period" defaultValue="3months">
-                        <option value="1month">Last Month</option>
-                        <option value="3months">Last 3 Months</option>
-                        <option value="6months">Last 6 Months</option>
-                        <option value="1year">Last Year</option>
+                      <select id="payment-period" defaultValue="this-week">
+                        <option value="today">Today</option>
+                        <option value="this-week">This Week</option>
+                        <option value="last-week">Last Week</option>
+                        <option value="this-month">This Month</option>
                       </select>
                     </div>
-                    
-                    <div className="filter-group">
-                      <label htmlFor="payment-status">Status</label>
-                      <select id="payment-status" defaultValue="all">
-                        <option value="all">All Statuses</option>
-                        <option value="completed">Completed</option>
-                        <option value="pending">Pending</option>
-                        <option value="failed">Failed</option>
-                      </select>
+                  </div>
+
+                  <div className="payment-summary">
+                    <div className="summary-card">
+                      <div className="summary-title">Total Earnings</div>
+                      <div className="summary-amount">₹2,380</div>
+                      <div className="summary-period">This Week</div>
                     </div>
                     
-                    <div className="filter-group">
-                      <label htmlFor="payment-search">Search</label>
-                      <input type="text" id="payment-search" placeholder="Search transactions..." />
+                    <div className="summary-card">
+                      <div className="summary-title">Orders Completed</div>
+                      <div className="summary-amount">28</div>
+                      <div className="summary-period">This Week</div>
+                    </div>
+                    
+                    <div className="summary-card">
+                      <div className="summary-title">Bonus Earned</div>
+                      <div className="summary-amount">₹150</div>
+                      <div className="summary-period">This Week</div>
                     </div>
                   </div>
 
@@ -913,150 +917,134 @@ const B_ProfilePage = () => {
                         <div className="transaction-id">Transaction ID</div>
                         <div className="transaction-date">Date</div>
                         <div className="transaction-amount">Amount</div>
-                        <div className="transaction-method">Method</div>
+                        <div className="transaction-method">Orders</div>
+                        <div className="transaction-method">Bonus</div>
                         <div className="transaction-status">Status</div>
-                        <div className="transaction-action">Action</div>
                       </div>
                       
-                      {paymentHistory.map(payment => (
-                        <div className="transaction-row" key={payment.id}>
-                          <div className="transaction-id">{payment.id}</div>
-                          <div className="transaction-date">{payment.date}</div>
-                          <div className="transaction-amount">{payment.amount}</div>
-                          <div className="transaction-method">{payment.method}</div>
-                          <div className={`transaction-status status-${payment.status.toLowerCase()}`}>
-                            {payment.status}
-                          </div>
-                          <div className="transaction-action">
-                            <button 
-                              className="view-transaction-btn"
-                              onClick={() => alert(`Viewing details for transaction ${payment.id}`)}
-                            >
-                              View Invoice
-                            </button>
+                      {earningsHistory.map(earning => (
+                        <div className="transaction-row" key={earning.id}>
+                          <div className="transaction-id">{earning.id}</div>
+                          <div className="transaction-date">{earning.date}</div>
+                          <div className="transaction-amount">{earning.amount}</div>
+                          <div className="transaction-method">{earning.orders}</div>
+                          <div className="transaction-method">{earning.bonus}</div>
+                          <div className={`transaction-status status-${earning.status.toLowerCase()}`}>
+                            {earning.status}
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-
-                  <div className="payment-summary">
-                    <div className="summary-card">
-                      <div className="summary-title">Total Payments</div>
-                      <div className="summary-amount">₹19,950</div>
-                      <div className="summary-period">Last 3 months</div>
-                    </div>
-                    
-                    <div className="summary-card">
-                      <div className="summary-title">Average Transaction</div>
-                      <div className="summary-amount">₹4,987</div>
-                      <div className="summary-period">Last 3 months</div>
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* Subscription Tab */}
-              {activeTab === 'subscription' && (
+              {/* Performance Stats Tab */}
+              {activeTab === 'stats' && (
                 <div className="profile-section">
                   <div className="section-header">
-                    <h2>Subscription Plan</h2>
-                    <button className="edit-btn" onClick={handleUpgradePlan}>
-                      <i className="fas fa-arrow-circle-up"></i> Upgrade Plan
-                    </button>
-                  </div>
-
-                  <div className="current-plan-card">
-                    <div className="plan-header">
-                      <div className="plan-name">
-                        <i className="fas fa-crown"></i>
-                        <h3>{subscription.plan}</h3>
-                      </div>
-                      <div className="plan-status">{subscription.status}</div>
-                    </div>
-                    
-                    <div className="plan-details">
-                      <div className="plan-pricing">
-                        <span className="price">{subscription.amount}</span>
-                      </div>
-                      
-                      <div className="plan-billing">
-                        <div className="billing-info">
-                          <span className="label">Next billing date:</span>
-                          <span className="value">{subscription.nextBillingDate}</span>
-                        </div>
-                        <div className="payment-method">
-                          <span className="label">Payment method:</span>
-                          <span className="value">Credit Card (••••4582)</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="plan-features">
-                      <h4>Features Included</h4>
-                      <ul>
-                        {subscription.features.map((feature, index) => (
-                          <li key={index}>
-                            <i className="fas fa-check"></i> {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div className="plan-actions">
-                      <button className="update-payment" onClick={() => alert("Opening payment method page...")}>
-                        <i className="fas fa-credit-card"></i> Update Payment Method
-                      </button>
-                      <button className="view-invoice" onClick={() => alert("Opening invoices page...")}>
-                        <i className="fas fa-file-invoice"></i> View Invoices
-                      </button>
+                    <h2>Performance Statistics</h2>
+                    <div>
+                      <label htmlFor="stats-period" className="stats-period-label">Period: </label>
+                      <select id="stats-period" className="stats-period-select">
+                        <option value="all-time">All Time</option>
+                        <option value="this-month">This Month</option>
+                        <option value="last-month">Last Month</option>
+                      </select>
                     </div>
                   </div>
 
-                  <div className="all-plans-section">
-                    <h3>Available Plans</h3>
-                    <div className="plans-comparison">
-                      <div className="plan-card">
-                        <div className="plan-name">Starter</div>
-                        <div className="plan-price">₹499/month</div>
-                        <ul className="plan-features-list">
-                          <li>Up to 50 product listings</li>
-                          <li>Email support</li>
-                          <li>Basic analytics</li>
-                          <li>2% transaction fee</li>
-                        </ul>
-                        <button className="plan-button">Select Plan</button>
+                  <div className="stats-grid">
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-truck-loading"></i>
                       </div>
-                      
-                      <div className="plan-card current">
-                        <div className="plan-tag">Current Plan</div>
-                        <div className="plan-name">Business Pro</div>
-                        <div className="plan-price">₹999/month</div>
-                        <ul className="plan-features-list">
-                          <li>Unlimited product listings</li>
-                          <li>Priority customer support</li>
-                          <li>Advanced analytics dashboard</li>
-                          <li>0% transaction fee</li>
-                          <li>Multiple user accounts</li>
-                        </ul>
-                        <button className="plan-button active">Current Plan</button>
-                      </div>
-                      
-                      <div className="plan-card premium">
-                        <div className="plan-tag">Premium</div>
-                        <div className="plan-name">Enterprise</div>
-                        <div className="plan-price">₹2,499/month</div>
-                        <ul className="plan-features-list">
-                          <li>All Business Pro features</li>
-                          <li>Dedicated account manager</li>
-                          <li>Custom API integration</li>
-                          <li>Advanced inventory management</li>
-                          <li>Bulk order discounts</li>
-                          <li>White label options</li>
-                        </ul>
-                        <button className="plan-button upgrade" onClick={handleUpgradePlan}>Upgrade</button>
+                      <div className="stat-details">
+                        <h4>Total Deliveries</h4>
+                        <div className="stat-value">{statsData.totalDeliveries}</div>
                       </div>
                     </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-wallet"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>Total Earnings</h4>
+                        <div className="stat-value">{statsData.totalEarnings}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-clock"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>Avg. Delivery Time</h4>
+                        <div className="stat-value">{statsData.avgDeliveryTime}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-check-circle"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>Acceptance Rate</h4>
+                        <div className="stat-value">{statsData.acceptanceRate}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-star"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>Customer Rating</h4>
+                        <div className="stat-value">{statsData.customerRating} / 5.0</div>
+                      </div>
+                    </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-medal"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>On-Time Delivery</h4>
+                        <div className="stat-value">{statsData.onTimeDelivery}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-road"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>Total Distance</h4>
+                        <div className="stat-value">{statsData.totalDistance}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="stat-card">
+                      <div className="stat-icon">
+                        <i className="fas fa-gift"></i>
+                      </div>
+                      <div className="stat-details">
+                        <h4>Total Bonus</h4>
+                        <div className="stat-value">{statsData.bonusEarned}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="performance-tips">
+                    <h3><i className="fas fa-lightbulb"></i> Tips to Improve Performance</h3>
+                    <ul>
+                      <li>Accept more orders during peak hours to increase earnings</li>
+                      <li>Keep your vehicle well-maintained to avoid delivery delays</li>
+                      <li>Follow delivery instructions carefully for better customer ratings</li>
+                      <li>Use the suggested routes in the app to optimize your delivery time</li>
+                      <li>Always verify the order before leaving the pickup location</li>
+                    </ul>
                   </div>
                 </div>
               )}
@@ -1065,83 +1053,9 @@ const B_ProfilePage = () => {
         </div>
       </main>
 
-      {/* Footer will be here, reusing the one from B_Homepage */}
-      <footer className="business-footer">
-        <div className="container">
-          {/* Top Footer Section */}
-          <div className="footer-top">
-            <div className="footer-brand">
-              <h1 className="logo-text">Link<span className="highlight">Local</span></h1>
-              <p className="tagline">Empowering local businesses, strengthening communities</p>
-            </div>
-            <div className="newsletter">
-              <h4>Subscribe to our newsletter</h4>
-              <div className="newsletter-form">
-                <input type="email" placeholder="Enter your email" />
-                <button className="subscribe-btn">Subscribe</button>
-              </div>
-            </div>
-          </div>
-          
-          {/* Footer Main Content */}
-          <div className="footer-main">
-            <div className="footer-col about-col">
-              <h4>About LinkLocal</h4>
-              <p>We connect local wholesalers with businesses to facilitate seamless B2B commerce in your community.</p>
-              <div className="social-icons">
-                <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-                <a href="#" aria-label="Twitter"><i className="fab fa-twitter"></i></a>
-                <a href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
-                <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
-              </div>
-            </div>
-            
-            <div className="footer-col">
-              <h4>Quick Links</h4>
-              <ul className="footer-links">
-                <li><a href="#"><i className="fas fa-angle-right"></i> Home</a></li>
-                <li><a href="#"><i className="fas fa-angle-right"></i> About Us</a></li>
-                <li><a href="#"><i className="fas fa-angle-right"></i> How It Works</a></li>
-                <li><a href="#"><i className="fas fa-angle-right"></i> Services</a></li>
-              </ul>
-            </div>
-            
-            <div className="footer-col">
-              <h4>Business</h4>
-              <ul className="footer-links">
-                <li><a href="#"><i className="fas fa-angle-right"></i> Become a Seller</a></li>
-                <li><a href="#"><i className="fas fa-angle-right"></i> Seller Dashboard</a></li>
-                <li><a href="#"><i className="fas fa-angle-right"></i> Pricing Plans</a></li>
-                <li><a href="#"><i className="fas fa-angle-right"></i> Seller FAQ</a></li>
-              </ul>
-            </div>
-            
-            <div className="footer-col contact-col">
-              <h4>Contact Us</h4>
-              <div className="contact-info">
-                <p><i className="fas fa-map-marker-alt"></i> 123 Business Hub, Tech Park, Coimbatore</p>
-                <p><i className="fas fa-envelope"></i> support@linklocal.com</p>
-                <p><i className="fas fa-phone"></i> +91 9876543210</p>
-                <p><i className="fas fa-clock"></i> Mon-Sat: 9:00 AM - 6:00 PM</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Footer Bottom */}
-          <div className="footer-bottom">
-            <div className="copyright">
-              <p>&copy; {new Date().getFullYear()} LinkLocal. All rights reserved.</p>
-            </div>
-            <div className="footer-bottom-links">
-              <a href="#">Privacy Policy</a>
-              <a href="#">Terms of Service</a>
-              <a href="#">Cookie Policy</a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+      <D_Footer />
+    </>
   );
 };
 
-export default B_ProfilePage;
+export default D_ProfilePage;

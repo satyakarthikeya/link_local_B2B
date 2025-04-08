@@ -126,7 +126,7 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
                     </div>
                   </div>
                   <div className="profile-links">
-                    <Link to="/profile" className="profile-link">
+                    <Link to="/delivery-profile" className="profile-link">
                       <i className="fas fa-user"></i>
                       <span>My Profile</span>
                     </Link>

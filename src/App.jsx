@@ -8,7 +8,8 @@ import RegisterBusiness from "./pages/RegisterBusiness";
 import RegisterDelivery from "./pages/RegisterDelivery";
 import D_Homepage from "./pages/D_Homepage";
 import D_MapView from "./pages/D_MapView";
-import MyShop from "./pages/MyShop";
+import D_ProfilePage from "./pages/D_ProfilePage";
+import MyShop from "./pages/Myshop";
 import B_Homepage from "./pages/B_homepage";
 import B_ProfilePage from "./pages/B_ProfilePage";
 
@@ -25,6 +26,7 @@ function App() {
           <Route path="/register-delivery" element={<RegisterDelivery />} />
           <Route path="/delivery-home" element={<D_Homepage />} />
           <Route path="/map-view" element={<D_MapView />} />
+          <Route path="/delivery-profile" element={<D_ProfilePage />} />
           <Route path="/business-home" element={<B_Homepage />} />
           <Route path="/business-home/my-shop" element={<MyShop />} />
           <Route path="/business-profile" element={<B_ProfilePage />} />
