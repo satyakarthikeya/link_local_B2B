@@ -92,7 +92,8 @@
   }
   
   .tab-btn.active {
-    color: var(--primary-color);
+    color: #2A2E43;
+    
   }
   
   .tab-btn.active::after {

@@ -324,6 +324,7 @@
 
 .notification-btn {
   position: relative;
+  background: #DCE5FF;
 }
 
 .notification-badge {
@@ -393,7 +394,7 @@
 }
 
 .notification-item.unread {
-  background: rgba(74, 111, 255, 0.05);
+  background: #cca6a6;
 }
 
 .notification-icon {
@@ -833,7 +834,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: none;
+  background: #0d0f14;
   border: none;
   cursor: pointer;
   padding: 6px 10px;
