@@ -3184,3 +3184,43 @@ select:focus {
 .fade-in {
   animation: fadeIn 0.3s ease forwards;
 }
+/* 1920px Screen Optimization */
+@media (min-width: 1920px) {
+  .business-app {
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  .hero-section {
+    min-height: 600px;
+    padding: 120px 0;
+  }
+
+  .hero-content h1 {
+    font-size: 4rem;
+  }
+
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+
+  .product-card {
+    min-height: 500px;
+  }
+
+  .product-img-wrapper {
+    height: 280px;
+  }
+
+  .footer-content {
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+}
+
+/* Root Variables */
+/* ...Rest of the CSS would go here... */

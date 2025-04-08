@@ -1,12 +1,11 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import '../styles/business_home.css';
+import B_Navbar from '../components/B_Navbar';
 
-// Lazy-loaded components
 const ProductCard = lazy(() => import('../components/ProductCard'));
 const Cart = lazy(() => import('../components/Cart'));
 
-// Constants moved outside the component
 const CITIES = ['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi'];
 const CATEGORIES = [
   { id: 'all', name: 'All Categories', icon: 'fa-th-large' },
@@ -18,6 +17,7 @@ const CATEGORIES = [
   { id: 'tools', name: 'Tools & Hardware', icon: 'fa-tools' },
   { id: 'packaging', name: 'Packaging', icon: 'fa-box-open' }
 ];
+
 const PRODUCTS = [
   {
     id: 1,
@@ -49,7 +49,7 @@ const PRODUCTS = [
     deliveryTime: "2-3 days",
     image: "../assests/cotton.jpeg",
     inStock: true,
-    popularity: 87,
+    popularity: 87
   },
   {
     id: 3,
@@ -65,7 +65,7 @@ const PRODUCTS = [
     deliveryTime: "1 day",
     image: "../assests/jumper wires.jpeg",
     inStock: true,
-    popularity: 76,
+    popularity: 76
   },
   {
     id: 4,
@@ -81,7 +81,7 @@ const PRODUCTS = [
     deliveryTime: "Same day",
     image: "../assests/honey.jpeg",
     inStock: true,
-    popularity: 92,
+    popularity: 92
   },
   {
     id: 5,
@@ -117,7 +117,6 @@ const PRODUCTS = [
   }
 ];
 
-// Custom hook for local storage state
 const useLocalStorage = (key, initialValue) => {
   const [storedValue, setStoredValue] = useState(() => {
     try {
@@ -142,119 +141,183 @@ const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue];
 };
 
-// Component extracted for header
-const BusinessHeader = ({ 
-  isScrolled, 
-  selectedCity, 
-  setSelectedCity, 
-  searchQuery, 
-  setSearchQuery, 
-  cart, 
-  setShowCart, 
-  navigate 
-}) => {
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const handleLocationSelect = (city) => {
-    setSelectedCity(city);
-    setShowLocationDropdown(false);
-  };
+const B_Homepage = () => {
+  useEffect(() => {
+    document.body.style.minHeight = '100vh';
+    document.body.style.display = 'flex';
+    document.body.style.flexDirection = 'column';
+    
+    return () => {
+      document.body.style = '';
+    };
+  }, []);
+  const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCity, setSelectedCity] = useState('Coimbatore');
+  const [cart, setCart] = useLocalStorage('cart', []);
+  const [showCart, setShowCart] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [sortBy, setSortBy] = useState('popular');
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [showCartNotification, setShowCartNotification] = useState(false);
+
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 80);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const addToCart = useCallback((product) => {
+    setCart(prevCart => [...prevCart, product]);
+    setShowCartNotification(true);
+    setTimeout(() => setShowCartNotification(false), 2000);
+  }, [setCart]);
+
+  const filteredProducts = useMemo(() => {
+    let filtered = PRODUCTS.filter((product) => {
+      return (
+        (selectedCategory === 'all' || product.category === selectedCategory) &&
+        product.location === selectedCity &&
+        (searchQuery === '' ||
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.seller.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    });
+
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'priceLow':
+          return a.numericPrice - b.numericPrice;
+        case 'priceHigh':
+          return b.numericPrice - a.numericPrice;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'popular':
+        default:
+          return b.popularity - a.popularity;
+      }
+    });
+  }, [selectedCategory, selectedCity, searchQuery, sortBy]);
 
   return (
-    <header className={`business-header ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="location-bar">
-        <div className="container">
-          <div className="location-wrapper">
-            <div className="location-selector" onClick={() => setShowLocationDropdown(!showLocationDropdown)}>
-              <i className="fas fa-map-marker-alt"></i>
-              <span>Delivering to: {selectedCity}</span>
-              <i className={`fas fa-chevron-down ${showLocationDropdown ? 'rotated' : ''}`}></i>
+    <div className="business-app">
+      <B_Navbar 
+        selectedCity={selectedCity} 
+        setSelectedCity={setSelectedCity} 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery} 
+        cart={cart} 
+        setShowCart={setShowCart} 
+        navigate={navigate} 
+        showLocationDropdown={showLocationDropdown}
+        setShowLocationDropdown={setShowLocationDropdown}
+      />
 
-              {showLocationDropdown && (
-                <div className="location-dropdown">
-                  <div className="location-search">
-                    <i className="fas fa-search"></i>
-                    <input type="text" placeholder="Search location" />
-                  </div>
-                  <div className="popular-locations">
-                    <h4>Popular Cities</h4>
-                    <ul>
-                      {CITIES.map(city => (
-                        <li key={city} onClick={() => handleLocationSelect(city)}>
-                          <i className="fas fa-map-marker-alt"></i> {city}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+      <main className="business-main">
+        {/* Hero Section */}
+        <section className="hero-section">
+          <div className="container">
+            <div className="hero-content">
+              <h1>Your B2B Marketplace <br />For Local Business Growth</h1>
+              <p>Connect with trusted suppliers and grow your business network</p>
+              <div className="hero-stats">
+                <div className="stat-item">
+                  <span className="stat-number">500+</span>
+                  <span>Suppliers</span>
                 </div>
-              )}
+                <div className="stat-item">
+                  <span className="stat-number">5000+</span>
+                  <span>Products</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-number">20+</span>
+                  <span>Cities</span>
+                </div>
+              </div>
             </div>
-            <div className="welcome-text">Welcome to LinkLocal Business</div>
+          </div>
+        </section>
+
+        {/* Categories Section */}
+        <section className="categories-section">
+          <div className="container">
+            <div className="section-header">
+              <h2>Explore Categories</h2>
+              <p>Find everything your business needs</p>
+            </div>
+            <div className="categories-grid">
+              {CATEGORIES.map(category => (
+                <div
+                  key={category.id}
+                  className={`category-tile ${selectedCategory === category.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <i className={`fas ${category.icon}`}></i>
+                  <span>{category.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Products Section */}
+        <ProductsSection
+          filteredProducts={filteredProducts}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          addToCart={addToCart}
+          setSelectedCategory={setSelectedCategory}
+          setSearchQuery={setSearchQuery}
+        />
+
+        {showCartNotification && (
+          <div className="cart-notification">
+            <i className="fas fa-check-circle"></i> Item added to cart!
+          </div>
+        )}
+      </main>
+
+      {/* Cart Sidebar */}
+      {showCart && (
+        <Suspense fallback={<div>Loading cart...</div>}>
+          <Cart items={cart} onClose={() => setShowCart(false)} />
+        </Suspense>
+      )}
+
+      <footer className="business-footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-col">
+              <h3>About LinkLocal</h3>
+              <p>Your trusted B2B marketplace connecting local businesses.</p>
+            </div>
+            <div className="footer-col">
+              <h3>Quick Links</h3>
+              <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Categories</a></li>
+                <li><a href="#">My Shop</a></li>
+                <li><a href="#">Profile</a></li>
+              </ul>
+            </div>
+            <div className="footer-col">
+              <h3>Contact</h3>
+              <p>Email: support@linklocal.com</p>
+              <p>Phone: +91 1234567890</p>
+            </div>
+          </div>
+          <div className="footer-bottom">
+            <p>&copy; 2024 LinkLocal. All rights reserved.</p>
           </div>
         </div>
-      </div>
-
-      <div className="navbar">
-        <div className="logo">
-          <h1>Link<span className="highlight">Local</span></h1>
-        </div>
-
-        <div className={`search-container ${isSearchFocused ? 'focused' : ''}`}>
-          <div className="search-box">
-            <i className="fas fa-search"></i>
-            <input
-              type="text"
-              placeholder="Search products, categories, sellers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
-            />
-          </div>
-        </div>
-
-        <div className="nav-buttons">
-          <button className="nav-btn cart" onClick={() => setShowCart(true)}>
-            <i className="fas fa-shopping-cart"></i>
-            <span className="cart-count">{cart.length}</span>
-          </button>
-          <button className="nav-btn primary" onClick={() => navigate('/business-home/my-shop')}>
-            <i className="fas fa-store"></i> My Shop
-          </button>
-          <div className="user-menu">
-            <button className="user-btn" onClick={() => navigate('/business-home/profile')}>
-              <i className="fas fa-user-circle"></i>
-              <span>My Account</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
+      </footer>
+    </div>
   );
 };
 
-// Component extracted for categories section
-const CategoriesSection = ({ selectedCategory, setSelectedCategory }) => (
-  <section className="categories-section">
-    <div className="container">
-      <div className="categories-grid">
-        {CATEGORIES.map(category => (
-          <div
-            key={category.id}
-            className={`category-tile ${selectedCategory === category.id ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category.id)}
-          >
-            <i className={`fas ${category.icon}`}></i>
-            <span>{category.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-// Component extracted for products section
 const ProductsSection = ({ 
   filteredProducts, 
   sortBy, 
@@ -299,133 +362,5 @@ const ProductsSection = ({
     </div>
   </section>
 );
-
-// Main component
-const B_Homepage = () => {
-  const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCity, setSelectedCity] = useState('Coimbatore');
-  const [cart, setCart] = useLocalStorage('cart', []);
-  const [showCart, setShowCart] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [sortBy, setSortBy] = useState('popular');
-  const [wishlist, setWishlist] = useLocalStorage('wishlist', []);
-  const [showCartNotification, setShowCartNotification] = useState(false);
-  const [recentlyViewed, setRecentlyViewed] = useLocalStorage('recentlyViewed', []);
-
-  // Handle scroll event
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 80);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Add to cart function
-  const addToCart = useCallback((product) => {
-    setCart(prevCart => [...prevCart, product]);
-    setShowCartNotification(true);
-    setTimeout(() => setShowCartNotification(false), 2000);
-  }, [setCart]);
-
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = PRODUCTS.filter((product) => {
-      return (
-        (selectedCategory === 'all' || product.category === selectedCategory) &&
-        product.location === selectedCity &&
-        (searchQuery === '' ||
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.seller.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    });
-
-    // Sort the filtered products
-    return filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'priceLow':
-          return a.numericPrice - b.numericPrice;
-        case 'priceHigh':
-          return b.numericPrice - a.numericPrice;
-        case 'rating':
-          return b.rating - a.rating;
-        case 'popular':
-        default:
-          return b.popularity - a.popularity;
-      }
-    });
-  }, [selectedCategory, selectedCity, searchQuery, sortBy]);
-
-  return (
-    <div className="business-app">
-      <BusinessHeader
-        isScrolled={isScrolled}
-        selectedCity={selectedCity}
-        setSelectedCity={setSelectedCity}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        cart={cart}
-        setShowCart={setShowCart}
-        navigate={navigate}
-      />
-
-      {showCart && (
-        <Suspense fallback={<div>Loading cart...</div>}>
-          <Cart items={cart} onClose={() => setShowCart(false)} />
-        </Suspense>
-      )}
-
-      <main className="business-main">
-        <CategoriesSection 
-          selectedCategory={selectedCategory} 
-          setSelectedCategory={setSelectedCategory} 
-        />
-
-        <ProductsSection
-          filteredProducts={filteredProducts}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          addToCart={addToCart}
-          setSelectedCategory={setSelectedCategory}
-          setSearchQuery={setSearchQuery}
-        />
-
-        {showCartNotification && (
-          <div className="cart-notification">
-            <i className="fas fa-check-circle"></i> Item added to cart!
-          </div>
-        )}
-      </main>
-
-      <footer className="business-footer">
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-col">
-              <h3>About LinkLocal</h3>
-              <p>Your trusted B2B marketplace connecting local businesses.</p>
-            </div>
-            <div className="footer-col">
-              <h3>Quick Links</h3>
-              <ul>
-                <li><a href="#">Home</a></li>
-                <li><a href="#">Categories</a></li>
-                <li><a href="#">My Shop</a></li>
-                <li><a href="#">Profile</a></li>
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h3>Contact</h3>
-              <p>Email: support@linklocal.com</p>
-              <p>Phone: +91 1234567890</p>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <p>&copy; 2024 LinkLocal. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-};
 
 export default B_Homepage;

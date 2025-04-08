@@ -45,13 +45,21 @@ NotificationItem.propTypes = {
   onRead: PropTypes.func.isRequired
 };
 
-const B_Navbar = () => {
-  const navigate = useNavigate();
+const B_Navbar = ({ 
+  selectedCity, 
+  setSelectedCity, 
+  searchQuery, 
+  setSearchQuery, 
+  cart, 
+  setShowCart, 
+  navigate, 
+  showLocationDropdown, 
+  setShowLocationDropdown 
+}) => {
   const { user, logout } = useContext(AuthContext);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(3); // This should come from a cart context or API
-  const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, type: 'order', message: 'New order received from Chennai Electronics', time: '2 mins ago', read: false },
@@ -135,6 +143,34 @@ const B_Navbar = () => {
               <span>LinkLocal</span>
               <div className="badge business-badge">Business</div>
             </Link>
+            
+            <div className="location-selector">
+              <div 
+                className="selected-location"
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+              >
+                <i className="fas fa-map-marker-alt"></i>
+                <span>{selectedCity}</span>
+                <i className={`fas fa-chevron-${showLocationDropdown ? 'up' : 'down'}`}></i>
+              </div>
+              
+              {showLocationDropdown && (
+                <div className="location-dropdown">
+                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Kolkata', 'Pune', 'Jaipur', 'Ahmedabad'].map(city => (
+                    <div 
+                      key={city} 
+                      className={`location-option ${selectedCity === city ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedCity(city);
+                        setShowLocationDropdown(false);
+                      }}
+                    >
+                      {city}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={`navbar-middle ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
@@ -156,6 +192,17 @@ const B_Navbar = () => {
                 <i className="fas fa-home"></i>
                 <span>Home</span>
               </Link>
+              <div className="mobile-link location-selector-mobile">
+                <i className="fas fa-map-marker-alt"></i>
+                <select 
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                >
+                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Kolkata', 'Pune', 'Jaipur', 'Ahmedabad'].map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
               <Link to="/business-home/my-shop" className="mobile-link">
                 <i className="fas fa-store"></i>
                 <span>My Shop</span>
@@ -267,6 +314,18 @@ const B_Navbar = () => {
       </div>
     </nav>
   );
+};
+
+B_Navbar.propTypes = {
+  selectedCity: PropTypes.string,
+  setSelectedCity: PropTypes.func,
+  searchQuery: PropTypes.string,
+  setSearchQuery: PropTypes.func,
+  cart: PropTypes.array,
+  setShowCart: PropTypes.func,
+  navigate: PropTypes.func,
+  showLocationDropdown: PropTypes.bool,
+  setShowLocationDropdown: PropTypes.func
 };
 
 export default B_Navbar;

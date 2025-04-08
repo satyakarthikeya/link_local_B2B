@@ -3,6 +3,15 @@ import PropTypes from 'prop-types';
 import '../styles/business_home.css';
 
 const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
+  const calculateDiscount = () => {
+    if (product.originalPrice) {
+      const discount = ((product.originalPrice - product.price) / product.originalPrice) * 100;
+      return Math.round(discount);
+    }
+    return null;
+  };
+
+  const discount = calculateDiscount();
   const {
     image,
     name,
@@ -20,6 +29,9 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
   return (
     <div className="product-card">
       <div className="product-img-wrapper">
+        {discount && (
+          <span className="discount-badge">-{discount}%</span>
+        )}
         <img src={image} alt={name} className="product-img" />
         {inStock ? (
           <span className="stock-badge in-stock">In Stock</span>
