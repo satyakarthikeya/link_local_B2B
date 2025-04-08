@@ -26,7 +26,7 @@ const LoginPage = () => {
 
         <div className="auth-divider"><span>OR</span></div>
 
-        <div className="account-option delivery">
+        <div className="account-option ">
           <div className="account-icon">
             <i className="fas fa-truck"></i>
           </div>
