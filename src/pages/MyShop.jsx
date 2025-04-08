@@ -1,181 +1,177 @@
 
 import React, { useState } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import '../Styles/MyShop.css';
+import '../styles/MyShop.css';
 
 const MyShop = () => {
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [showProductForm, setShowProductForm] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [products, setProducts] = useState([
+
+  // Mock data for demonstration
+  const stats = {
+    totalSales: "₹45,250",
+    totalOrders: 127,
+    pendingOrders: 12,
+    activeProducts: 45
+  };
+
+  const recentOrders = [
+    {
+      id: "ORD001",
+      customer: "John Doe",
+      amount: "₹1,200",
+      status: "pending",
+      date: "2024-02-20"
+    },
+    // Add more orders...
+  ];
+
+  const topProducts = [
     {
       id: 1,
-      name: "Product 1",
-      price: "₹299",
-      description: "Product description here",
-      image: "../assests/headphones.jpeg"
+      name: "Product A",
+      sales: 45,
+      revenue: "₹4,500",
+      trend: "up"
     },
-    {
-      id: 2,
-      name: "Product 2",
-      price: "₹199",
-      description: "Product description here",
-      image: "../assests/jumper wires.jpeg"
-    }
-  ]);
-  
-  const [orders] = useState([
-    {
-      id: '2305',
-      status: 'Pending',
-      customer: 'John Doe',
-      items: ['Product 1', 'Product 2'],
-      total: '₹499',
-      date: '2024-02-20'
-    }
-  ]);
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    setShowProductForm(false);
-  };
+    // Add more products...
+  ];
 
   return (
-    <>
-      <main>
-        <section className="my-shop-section">
-          <div className="container">
-            <div className="section-header">
-              <h2>My Shop Dashboard</h2>
-              <p>Manage your products and orders from one convenient place</p>
-            </div>
+    <div className="myshop-container">
+      <div className="dashboard-header">
+        <h1>My Shop Dashboard</h1>
+        <div className="header-actions">
+          <button className="add-product-btn" onClick={() => setShowProductForm(true)}>
+            <i className="fas fa-plus"></i> Add New Product
+          </button>
+          <button className="generate-report-btn">
+            <i className="fas fa-download"></i> Generate Report
+          </button>
+        </div>
+      </div>
 
-            <div className="tabs">
-              <button 
-                className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-                onClick={() => setActiveTab('orders')}
-              >
-                <i className="fas fa-shopping-cart"></i> Orders
-              </button>
-              <button 
-                className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
-                onClick={() => setActiveTab('products')}
-              >
-                <i className="fas fa-box"></i> Products
-              </button>
-            </div>
+      <div className="dashboard-nav">
+        <button 
+          className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          <i className="fas fa-chart-line"></i> Dashboard
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}
+          onClick={() => setActiveTab('products')}
+        >
+          <i className="fas fa-box"></i> Products
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
+          onClick={() => setActiveTab('orders')}
+        >
+          <i className="fas fa-shopping-cart"></i> Orders
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          <i className="fas fa-chart-bar"></i> Analytics
+        </button>
+      </div>
 
-            <div className="dashboard-container">
-              {activeTab === 'orders' && (
-                <div className="section-card">
-                  <h3><i className="fas fa-shopping-cart"></i> Recent Orders</h3>
-                  <div className="orders-grid">
-                    {orders.map(order => (
-                      <div key={order.id} className="order-card">
-                        <div className="order-header">
-                          <div className="order-id">Order #{order.id}</div>
-                          <div className={`order-status status-${order.status.toLowerCase()}`}>
-                            {order.status}
-                          </div>
-                        </div>
-                        <div className="order-details">
-                          <p><strong>Customer:</strong> {order.customer}</p>
-                          <p><strong>Items:</strong> {order.items.join(', ')}</p>
-                          <p><strong>Total:</strong> {order.total}</p>
-                          <p><strong>Date:</strong> {order.date}</p>
-                        </div>
-                        <div className="order-actions">
-                          <button className="accept-btn">Accept</button>
-                          <button className="reject-btn">Reject</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+      {activeTab === 'dashboard' && (
+        <div className="dashboard-content">
+          <div className="stats-grid">
+            {Object.entries(stats).map(([key, value]) => (
+              <div className="stat-card" key={key}>
+                <h3>{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</h3>
+                <div className="stat-value">{value}</div>
+                <div className="stat-trend up">
+                  <i className="fas fa-arrow-up"></i> 12% from last month
                 </div>
-              )}
-
-              {activeTab === 'products' && (
-                <div className="section-card">
-                  <div className="products-header">
-                    <h3><i className="fas fa-box"></i> My Products</h3>
-                    <button className="new-product" onClick={() => setShowProductForm(true)}>
-                      <i className="fas fa-plus"></i> Add New Product
-                    </button>
-                  </div>
-                  <div className="products-grid">
-                    {products.map(product => (
-                      <div key={product.id} className="product-card">
-                        <div className="product-image">
-                          <img src={product.image} alt={product.name} />
-                          <div className="product-actions">
-                            <button className="action-btn"><i className="fas fa-edit"></i></button>
-                            <button className="action-btn"><i className="fas fa-trash"></i></button>
-                          </div>
-                        </div>
-                        <div className="product-info">
-                          <h4>{product.name}</h4>
-                          <p>{product.description}</p>
-                          <div className="product-price">{product.price}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
-        </section>
-      </main>
 
-      {showProductForm && (
-        <div className="form-overlay">
-          <div className="product-form">
-            <button className="form-close" onClick={() => setShowProductForm(false)}>
-              <i className="fas fa-times"></i>
-            </button>
-            <div className="form-header">
-              <h3>Add New Product</h3>
-            </div>
-            <form onSubmit={handleFormSubmit}>
-              <div className="form-group">
-                <label>Product Name</label>
-                <input type="text" className="form-control" required />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea className="form-control" rows="3" required></textarea>
-              </div>
-              <div className="form-group">
-                <label>Price</label>
-                <input type="number" className="form-control" required />
-              </div>
-              <div className="form-group">
-                <label>Product Image</label>
-                <input type="file" className="form-control" onChange={handleImageChange} accept="image/*" required />
-                {imagePreview && (
-                  <div className="image-preview">
-                    <img src={imagePreview} alt="Preview" />
+          <div className="dashboard-grid">
+            <div className="recent-orders card">
+              <h3>Recent Orders</h3>
+              <div className="orders-list">
+                {recentOrders.map(order => (
+                  <div className="order-item" key={order.id}>
+                    <div className="order-info">
+                      <span className="order-id">{order.id}</span>
+                      <span className="order-customer">{order.customer}</span>
+                    </div>
+                    <div className="order-details">
+                      <span className="order-amount">{order.amount}</span>
+                      <span className={`order-status ${order.status}`}>{order.status}</span>
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
-              <button type="submit" className="submit-btn">Add Product</button>
-            </form>
+            </div>
+
+            <div className="top-products card">
+              <h3>Top Products</h3>
+              <div className="products-list">
+                {topProducts.map(product => (
+                  <div className="product-item" key={product.id}>
+                    <div className="product-info">
+                      <span className="product-name">{product.name}</span>
+                      <span className="product-sales">{product.sales} sales</span>
+                    </div>
+                    <div className="product-revenue">
+                      <span className="amount">{product.revenue}</span>
+                      <i className={`fas fa-arrow-${product.trend}`}></i>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      <Footer />
-    </>
+      {/* Additional tab content components */}
+      
+      {showProductForm && (
+        <div className="modal-overlay">
+          <div className="product-form-modal">
+            <h2>Add New Product</h2>
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className="form-group">
+                <label>Product Name</label>
+                <input type="text" placeholder="Enter product name" />
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <select>
+                  <option>Select category</option>
+                  {/* Add categories */}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Price</label>
+                  <input type="number" placeholder="Enter price" />
+                </div>
+                <div className="form-group">
+                  <label>Stock</label>
+                  <input type="number" placeholder="Enter stock quantity" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea rows="4" placeholder="Enter product description"></textarea>
+              </div>
+              <div className="form-actions">
+                <button type="button" onClick={() => setShowProductForm(false)}>Cancel</button>
+                <button type="submit">Add Product</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

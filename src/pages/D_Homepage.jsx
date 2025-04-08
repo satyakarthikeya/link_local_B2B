@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/delivery_home.css";
+import "../styles/delivery_home.css"; // Correct path to delivery_home.css
 import D_Navbar from "../components/D_Navbar";
 import D_Footer from "../components/D_Footer";
 import "@fortawesome/fontawesome-free/css/all.min.css";

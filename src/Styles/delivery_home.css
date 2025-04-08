@@ -832,6 +832,44 @@ footer {
   .orders-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  .map-container {
+    height: 500px;
+  }
+
+  .chart-container {
+    height: 400px;
+  }
+
+  .quick-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .stat-card {
+    padding: 24px;
+  }
+
+  .stat-card i {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+
+  .stat-details p {
+    font-size: 1.75rem;
+  }
+
+  .hero {
+    padding: 100px 0;
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+  }
+
+  .hero p {
+    font-size: 1.25rem;
+  }
 }
 
 /* Hero Section */
@@ -889,7 +927,7 @@ footer {
 
 .map-header p {
   font-size: 1.1rem;
-  color: var(--gray-color);
+  color: var (--gray-color);
   margin-bottom: 20px;
 }
 

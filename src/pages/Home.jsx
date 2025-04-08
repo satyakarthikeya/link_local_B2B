@@ -1,5 +1,5 @@
 import React from "react";
-import "../Styles/main.css"; // Fixed capitalization to match folder structure
+import "../styles/main.css"; // Fixed capitalization to match folder structure
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useNavigate } from "react-router-dom";
@@ -30,9 +30,9 @@ const stepsData = [
 const Home = () => {
   const navigate = useNavigate();
 
-  // Add handler functions for buttons
+  // Updated handler function for buttons to navigate to login page
   const handleGetStarted = () => {
-    navigate('/signup');
+    navigate('/login');
   };
 
   return (
@@ -45,7 +45,7 @@ const Home = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="hero">
+      <section className="hero" >
         <div className="container">
           <div className="hero-content">
             <h1>Connect Locally, Grow Globally</h1>
@@ -69,7 +69,7 @@ const Home = () => {
             </div>
           </div>
           <div className="hero-image">
-            <img src="src\assests\Logo.jpg" alt="LinkLocal platform interface" />
+            <img src="src\assests\Logo.png" alt="LinkLocal platform interface" />
           </div>
         </div>
       </section>

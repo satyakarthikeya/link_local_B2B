@@ -1,5 +1,5 @@
 import React from "react";
-import "../styles/delivery_home.css"; // Use the same styles
+import "../styles/delivery_home.css"; // Ensure correct path
 
 const D_Footer = () => {
   return (

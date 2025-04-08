@@ -1,88 +1,112 @@
-import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import '../Styles/business_home.css';
 
-// Lazy loading components
+// Lazy loading components 
 const ProductCard = lazy(() => import('../components/ProductCard'));
 
 const B_Homepage = () => {
-  // State management for the component
   const navigate = useNavigate();
+
+  // State management
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('Coimbatore');
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('cart')) || []);
+  const [wishlist, setWishlist] = useState(() => JSON.parse(localStorage.getItem('wishlist')) || []);
   const [showCartNotification, setShowCartNotification] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState('popular');
-  const [priceRange, setPriceRange] = useState([0, 5000]);
-  const [minDeliveryTime, setMinDeliveryTime] = useState('any');
-  const [minRating, setMinRating] = useState(0);
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
-  const [wishlist, setWishlist] = useState([]);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [recentlyViewed, setRecentlyViewed] = useState(() => JSON.parse(localStorage.getItem('recentlyViewed')) || []);
+  const [isSearchFocused, setIsSearchFocused] = useState(false); // Added missing state
+  const [sortBy, setSortBy] = useState('popular'); // Added missing state for sorting
 
-  const cities = ['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi'];
+  const cities = useMemo(() => ['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi'], []);
 
-  // Close location dropdown when clicking outside
-  useEffect(() => {
-    // Load cart from localStorage if available
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
+  // Categories array
+  const categories = useMemo(() => [
+    { id: 'all', name: 'All Categories', icon: 'fa-th-large' },
+    { id: 'stationery', name: 'Stationery', icon: 'fa-pencil-alt' },
+    { id: 'electronics', name: 'Electronics', icon: 'fa-laptop' },
+    { id: 'textiles', name: 'Textiles', icon: 'fa-tshirt' },
+    { id: 'food', name: 'Food & Beverages', icon: 'fa-utensils' },
+    { id: 'furniture', name: 'Furniture', icon: 'fa-chair' },
+    { id: 'tools', name: 'Tools & Hardware', icon: 'fa-tools' },
+    { id: 'packaging', name: 'Packaging', icon: 'fa-box-open' }
+  ], []);
+
+  // Hot deals array
+  const hotDeals = useMemo(() => [
+    {
+      id: 101,
+      name: "Bulk Office Supplies Pack",
+      price: "₹1,999",
+      originalPrice: "₹2,999",
+      discount: "33%",
+      moq: "3 packs",
+      image: "../assests/A4 sheets.jpeg",
+    },
+    {
+      id: 102,
+      name: "Premium Cotton Bundle",
+      price: "₹1,299",
+      originalPrice: "₹1,899",
+      discount: "32%",
+      moq: "20 meters",
+      image: "../assests/cotton.jpeg",
+    },
+    {
+      id: 103,
+      name: "Electronics Starter Kit",
+      price: "₹899",
+      originalPrice: "₹1,299",
+      discount: "31%",
+      moq: "5 units",
+      image: "../assests/jumper wires.jpeg",
+    },
+    {
+      id: 104,
+      name: "Organic Food Pack",
+      price: "₹1,599",
+      originalPrice: "₹1,999",
+      discount: "20%",
+      moq: "10 units",
+      image: "../assests/honey.jpeg",
     }
+  ], []);
 
-    // Load wishlist from localStorage if available
-    const savedWishlist = localStorage.getItem('wishlist');
-    if (savedWishlist) {
-      setWishlist(JSON.parse(savedWishlist));
-    }
-
-    function handleClickOutside(event) {
-      if (showLocationDropdown && !event.target.closest('.location-selector')) {
-        setShowLocationDropdown(false);
-      }
-      if (showFilters && !event.target.closest('.filter-panel') && !event.target.closest('.filter-toggle-btn')) {
-        setShowFilters(false);
-      }
-    }
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    // Detect scroll for header animation
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 80);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    
-    // Simulate loading products
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [showLocationDropdown, showFilters]);
-
-  // useEffect to save cart to localStorage whenever it changes
+  // Save cart and wishlist to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
-  // useEffect to save wishlist to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
+  // Handle outside clicks and scroll events
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLocationDropdown && !event.target.closest('.location-selector')) {
+        setShowLocationDropdown(false);
+      }
+    };
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 80);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [showLocationDropdown]);
+
   const toggleLocationDropdown = () => {
-    setShowLocationDropdown(!showLocationDropdown);
+    setShowLocationDropdown((prev) => !prev);
   };
 
   const handleLocationSelect = (city) => {
@@ -90,100 +114,45 @@ const B_Homepage = () => {
     setShowLocationDropdown(false);
   };
 
-  // Function to toggle item in wishlist with animation
-  const toggleWishlist = useCallback((product) => {
-    const isInWishlist = wishlist.some(item => item.id === product.id);
-    
-    if (isInWishlist) {
-      setWishlist(wishlist.filter(item => item.id !== product.id));
-    } else {
-      setWishlist([...wishlist, product]);
-      
-      // Show brief animation or notification
-      const notification = document.createElement('div');
-      notification.className = 'wishlist-notification';
-      notification.innerHTML = `<i class="fas fa-heart"></i> Added to wishlist`;
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.classList.add('show');
-        setTimeout(() => {
-          notification.classList.remove('show');
-          setTimeout(() => {
-            document.body.removeChild(notification);
-          }, 300);
-        }, 1500);
-      }, 10);
-    }
-  }, [wishlist]);
+  const addToCart = useCallback((product, quantity = 1) => {
+    setCart((prevCart) => {
+      const existingItemIndex = prevCart.findIndex((item) => item.id === product.id);
+      if (existingItemIndex >= 0) {
+        const updatedCart = [...prevCart];
+        updatedCart[existingItemIndex].quantity += quantity;
+        return updatedCart;
+      }
+      return [...prevCart, { ...product, quantity }];
+    });
 
-  // Function to check if product is in wishlist
-  const isInWishlist = useCallback((productId) => {
-    return wishlist.some(item => item.id === productId);
-  }, [wishlist]);
-
-  // Function to view product details and track recently viewed
-  const viewProductDetails = useCallback((product) => {
-    // Add to recently viewed if not already there
-    if (!recentlyViewed.find(item => item.id === product.id)) {
-      const updatedRecent = [product, ...recentlyViewed].slice(0, 4);
-      setRecentlyViewed(updatedRecent);
-      // Store in localStorage for persistence
-      localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecent));
-    }
-    // Navigate to product details (placeholder)
-    // navigate(`/product/${product.id}`);
-    
-    // For now just show notification
-    alert(`Viewing ${product.name} details`);
-  }, [recentlyViewed]);
-
-  // Load recently viewed from localStorage on initial render
-  useEffect(() => {
-    const savedItems = localStorage.getItem('recentlyViewed');
-    if (savedItems) {
-      setRecentlyViewed(JSON.parse(savedItems));
-    }
+    setShowCartNotification(true);
+    setTimeout(() => setShowCartNotification(false), 2000);
   }, []);
 
-  const hotDeals = [
-    {
-      id: 'deal1',
-      name: "Bulk A4 Sheets Bundle",
-      price: "₹1000",
-      originalPrice: "₹1500",
-      category: "stationery",
-      seller: "Sunrise Stationers",
-      discount: "33%",
-      moq: "10 packs",
-      image: "../assests/A4 sheets.jpeg",
-      rating: 4.7,
-      deliveryTime: "1 day"
-    },
-    {
-      id: 'deal2',
-      name: "Premium Cotton Fabric",
-      price: "₹120",
-      originalPrice: "₹200",
-      category: "textiles",
-      seller: "Chennai Silks",
-      discount: "40%",
-      moq: "20 meters",
-      image: "../assests/cotton.jpeg",
-      rating: 4.5,
-      deliveryTime: "2-3 days"
-    }
-  ];
+  const toggleWishlist = useCallback((product) => {
+    setWishlist((prevWishlist) => {
+      const isInWishlist = prevWishlist.some((item) => item.id === product.id);
+      if (isInWishlist) {
+        return prevWishlist.filter((item) => item.id !== product.id);
+      }
+      return [...prevWishlist, product];
+    });
+  }, []);
 
-  const categories = [
-    { id: 'all', name: 'All Products', icon: 'fa-th-large' },
-    { id: 'electronics', name: 'Electronics', icon: 'fa-microchip' },
-    { id: 'stationery', name: 'Stationery', icon: 'fa-pencil-alt' },
-    { id: 'textiles', name: 'Textiles', icon: 'fa-tshirt' },
-    { id: 'food', name: 'Food & Beverages', icon: 'fa-utensils' }
-  ];
+  const isInWishlist = useCallback((productId) => {
+    return wishlist.some((item) => item.id === productId);
+  }, [wishlist]);
 
-  const products = [
+  const viewProductDetails = useCallback((product) => {
+    setRecentlyViewed((prevViewed) => {
+      const updatedRecent = [product, ...prevViewed.filter((item) => item.id !== product.id)].slice(0, 4);
+      localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecent));
+      return updatedRecent;
+    });
+    alert(`Viewing ${product.name} details`);
+  }, []);
+
+  const products = useMemo(() => [
     {
       id: 1,
       name: "A4 Sheets (500 sheets)",
@@ -304,76 +273,19 @@ const B_Homepage = () => {
         { user: "HandiworkStore", rating: 4.5, comment: "Our embroidery clients love this thread" }
       ]
     }
-  ];
+  ], []);
 
-  // Add product to cart with proper quantity and notification
-  const addToCart = useCallback((product, quantity = 1) => {
-    const newItem = {...product, quantity: quantity};
-    
-    // Check if product already in cart
-    const existingItemIndex = cart.findIndex(item => item.id === product.id);
-    
-    if (existingItemIndex >= 0) {
-      // Update quantity instead of adding new item
-      const updatedCart = [...cart];
-      updatedCart[existingItemIndex].quantity += quantity;
-      setCart(updatedCart);
-    } else {
-      setCart([...cart, newItem]);
-    }
-    
-    // Show notification
-    setShowCartNotification(true);
-    setTimeout(() => setShowCartNotification(false), 2000);
-  }, [cart]);
-
-  // Filter and sort products
-  const getFilteredProducts = useCallback(() => {
-    return products
-      .filter(product => 
-        // Category filter
-        (selectedCategory === 'all' || product.category === selectedCategory) && 
-        // Location filter
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      return (
+        (selectedCategory === 'all' || product.category === selectedCategory) &&
         product.location === selectedCity &&
-        // Search query
-        (searchQuery === '' || 
+        (searchQuery === '' ||
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase())) &&
-        // Price range filter
-        (product.numericPrice >= priceRange[0] && product.numericPrice <= priceRange[1]) &&
-        // Rating filter
-        (product.rating >= minRating) &&
-        // Availability filter
-        (availabilityFilter === 'all' || 
-         (availabilityFilter === 'inStock' && product.inStock) ||
-         (availabilityFilter === 'outOfStock' && !product.inStock))
-      )
-      .sort((a, b) => {
-        // Sorting logic
-        switch (sortBy) {
-          case 'priceLow':
-            return a.numericPrice - b.numericPrice;
-          case 'priceHigh':
-            return b.numericPrice - a.numericPrice;
-          case 'rating':
-            return b.rating - a.rating;
-          case 'deliveryTime':
-            // Simple string comparison for now - in real app would convert to hours/minutes
-            return a.deliveryTime.localeCompare(b.deliveryTime);
-          case 'popular':
-          default:
-            return b.popularity - a.popularity;
-        }
-      });
-  }, [selectedCategory, selectedCity, searchQuery, priceRange, minRating, availabilityFilter, sortBy]);
-
-  const filteredProducts = getFilteredProducts();
-
-  // Get trending products - in a real app this would come from backend analytics
-  const trendingProducts = [...products]
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, 3);
+          product.seller.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    });
+  }, [products, selectedCategory, selectedCity, searchQuery]);
 
   return (
     <div className="business-app">
@@ -474,7 +386,6 @@ const B_Homepage = () => {
 
       <Outlet />
 
-      {/* Main Content */}
       {!window.location.pathname.includes('my-shop') && !window.location.pathname.includes('profile') && (
         <main className="business-main full-width" id="main-content">
           {/* Cart Notification */}
@@ -484,363 +395,134 @@ const B_Homepage = () => {
             </div>
           )}
           
-          <section className="ordering-section">
+          <section className="hero-section">
             <div className="container">
-              {/* Header Section */}
-              <div className="section-header">
-                <h2 className="fade-in">B2B Marketplace</h2>
-                <p className="fade-in delayed-1">Order wholesale products from verified local businesses</p>
-              </div>
-
-              {/* Hot Deals Section */}
-              <div className="hot-deals-section fade-in delayed-2">
-                <h2>🔥 Hot Deals</h2>
-                <div className="hot-deals-grid">
-                  {hotDeals.map(deal => (
-                    <div className="deal-card" key={deal.id}>
-                      <div className="deal-img">
-                        <img src={deal.image} alt={deal.name} loading="lazy" />
-                        <span className="discount-badge">{deal.discount} OFF</span>
-                        <button 
-                          className={`wishlist-btn ${isInWishlist(deal.id) ? 'active' : ''}`}
-                          onClick={() => toggleWishlist(deal)}
-                          aria-label={isInWishlist(deal.id) ? "Remove from wishlist" : "Add to wishlist"}
-                        >
-                          <i className={`${isInWishlist(deal.id) ? 'fas' : 'far'} fa-heart`}></i>
-                        </button>
-                      </div>
-                      <div className="deal-content">
-                        <h3>{deal.name}</h3>
-                        <p className="seller">by {deal.seller}</p>
-                        <div className="price-container">
-                          <span className="current-price">{deal.price}</span>
-                          <span className="original-price">{deal.originalPrice}</span>
-                        </div>
-                        <div className="product-meta">
-                          <span className="rating">
-                            <i className="fas fa-star"></i> {deal.rating}
-                          </span>
-                          <span className="delivery">
-                            <i className="fas fa-truck"></i> {deal.deliveryTime}
-                          </span>
-                        </div>
-                        <p className="moq">MOQ: {deal.moq}</p>
-                        <div className="product-actions">
-                          <button className="view-product-btn" onClick={() => viewProductDetails(deal)}>
-                            <i className="fas fa-eye"></i> View
-                          </button>
-                          <button className="add-to-cart-btn" onClick={() => addToCart(deal)}>
-                            <i className="fas fa-cart-plus"></i> Add to Cart
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Trending Products */}
-              <div className="trending-section fade-in delayed-3">
-                <h2><i className="fas fa-chart-line"></i> Trending Products</h2>
-                <div className="trending-products">
-                  {trendingProducts.map(product => (
-                    <div className="trending-product-card" key={product.id}>
-                      <div className="trending-img">
-                        <img src={product.image} alt={product.name} loading="lazy" />
-                        <div className="trending-badge">Trending</div>
-                        <button 
-                          className={`wishlist-btn ${isInWishlist(product.id) ? 'active' : ''}`}
-                          onClick={() => toggleWishlist(product)}
-                          aria-label={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
-                        >
-                          <i className={`${isInWishlist(product.id) ? 'fas' : 'far'} fa-heart`}></i>
-                        </button>
-                      </div>
-                      <div className="trending-content">
-                        <h3>{product.name}</h3>
-                        <p className="trending-seller">{product.seller}</p>
-                        <div className="trending-meta">
-                          <span className="trending-price">{product.price}</span>
-                          <span className="trending-rating">
-                            <i className="fas fa-star"></i> {product.rating}
-                          </span>
-                        </div>
-                        <button className="view-trending" onClick={() => viewProductDetails(product)}>
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recently Viewed */}
-              {recentlyViewed.length > 0 && (
-                <div className="recently-viewed-section fade-in delayed-4">
-                  <h2><i className="fas fa-history"></i> Recently Viewed</h2>
-                  <div className="recently-viewed-products">
-                    {recentlyViewed.map(product => (
-                      <div className="recently-viewed-card" key={product.id}>
-                        <div className="recently-viewed-img">
-                          <img src={product.image} alt={product.name} loading="lazy" />
-                        </div>
-                        <div className="recently-viewed-content">
-                          <h3>{product.name}</h3>
-                          <p>{product.price}</p>
-                          <button 
-                            className="view-again-btn"
-                            onClick={() => viewProductDetails(product)}
-                          >
-                            View Again
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+              <div className="hero-content">
+                <h1>Welcome to LinkLocal Business</h1>
+                <p>Your one-stop B2B marketplace for wholesale products</p>
+                <div className="hero-stats">
+                  <div className="stat-item">
+                    <span className="stat-number">1000+</span>
+                    <span className="stat-label">Products</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">500+</span>
+                    <span className="stat-label">Sellers</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">50+</span>
+                    <span className="stat-label">Categories</span>
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
+          </section>
 
-              {/* Advanced Filters Section */}
-              <div className="filters-section fade-in delayed-5">
-                <div className="filters-header">
-                  <h3>Browse Products</h3>
-                  <button 
-                    className="filter-toggle-btn" 
-                    onClick={() => setShowFilters(!showFilters)}
+          {/* Categories Section with Icons */}
+          <section className="categories-section">
+            <div className="container">
+              <h2>Browse Categories</h2>
+              <div className="categories-grid">
+                {categories.map(category => (
+                  <div 
+                    key={category.id}
+                    className={`category-tile ${selectedCategory === category.id ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(category.id)}
                   >
-                    <i className="fas fa-sliders-h"></i> Filter & Sort
-                  </button>
-                </div>
+                    <i className={`fas ${category.icon}`}></i>
+                    <span>{category.name}</span>
+                    <span className="product-count">50+ Products</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
-                {/* Filter Panel */}
-                {showFilters && (
-                  <div className="filter-panel">
-                    <div className="filter-group">
-                      <h4>Sort By</h4>
-                      <div className="sort-options">
-                        <button 
-                          className={`sort-btn ${sortBy === 'popular' ? 'active' : ''}`}
-                          onClick={() => setSortBy('popular')}
-                        >
-                          Most Popular
-                        </button>
-                        <button 
-                          className={`sort-btn ${sortBy === 'priceLow' ? 'active' : ''}`}
-                          onClick={() => setSortBy('priceLow')}
-                        >
-                          Price: Low to High
-                        </button>
-                        <button 
-                          className={`sort-btn ${sortBy === 'priceHigh' ? 'active' : ''}`}
-                          onClick={() => setSortBy('priceHigh')}
-                        >
-                          Price: High to Low
-                        </button>
-                        <button 
-                          className={`sort-btn ${sortBy === 'rating' ? 'active' : ''}`}
-                          onClick={() => setSortBy('rating')}
-                        >
-                          Highest Rated
-                        </button>
-                        <button 
-                          className={`sort-btn ${sortBy === 'deliveryTime' ? 'active' : ''}`}
-                          onClick={() => setSortBy('deliveryTime')}
-                        >
-                          Fastest Delivery
-                        </button>
+          {/* Featured Deals Section */}
+          <section className="featured-deals">
+            <div className="container">
+              <div className="section-header">
+                <h2>Featured Deals</h2>
+                <button className="view-all">View All <i className="fas fa-arrow-right"></i></button>
+              </div>
+              <div className="deals-grid">
+                {hotDeals.map(deal => (
+                  <div key={deal.id} className="deal-card">
+                    <div className="deal-tag">HOT DEAL</div>
+                    <img src={deal.image} alt={deal.name} />
+                    <div className="deal-content">
+                      <h3>{deal.name}</h3>
+                      <div className="deal-price">
+                        <span className="current">{deal.price}</span>
+                        <span className="original">{deal.originalPrice}</span>
+                        <span className="discount">{deal.discount} OFF</span>
                       </div>
-                    </div>
-                    
-                    <div className="filter-group">
-                      <h4>Price Range</h4>
-                      <div className="price-slider">
-                        <div className="slider-labels">
-                          <span>₹{priceRange[0]}</span>
-                          <span>₹{priceRange[1]}</span>
-                        </div>
-                        <div className="double-range-slider">
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="5000" 
-                            value={priceRange[0]}
-                            onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
-                          />
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="5000" 
-                            value={priceRange[1]}
-                            onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                          />
-                        </div>
+                      <div className="deal-footer">
+                        <span className="moq">MOQ: {deal.moq}</span>
+                        <button onClick={() => addToCart(deal)}>Add to Cart</button>
                       </div>
-                    </div>
-                    
-                    <div className="filter-group">
-                      <h4>Minimum Rating</h4>
-                      <div className="rating-filter">
-                        {[0, 3, 3.5, 4, 4.5].map(rating => (
-                          <button
-                            key={rating}
-                            className={`rating-btn ${minRating === rating ? 'active' : ''}`}
-                            onClick={() => setMinRating(rating)}
-                          >
-                            {rating === 0 ? 'Any' : (
-                              <>
-                                {rating}+ <i className="fas fa-star"></i>
-                              </>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="filter-group">
-                      <h4>Availability</h4>
-                      <div className="availability-filter">
-                        <button
-                          className={`availability-btn ${availabilityFilter === 'all' ? 'active' : ''}`}
-                          onClick={() => setAvailabilityFilter('all')}
-                        >
-                          All Products
-                        </button>
-                        <button
-                          className={`availability-btn ${availabilityFilter === 'inStock' ? 'active' : ''}`}
-                          onClick={() => setAvailabilityFilter('inStock')}
-                        >
-                          In Stock Only
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="filter-actions">
-                      <button 
-                        className="clear-filters"
-                        onClick={() => {
-                          setSortBy('popular');
-                          setPriceRange([0, 5000]);
-                          setMinRating(0);
-                          setAvailabilityFilter('all');
-                        }}
-                      >
-                        Clear Filters
-                      </button>
-                      <button 
-                        className="apply-filters"
-                        onClick={() => setShowFilters(false)}
-                      >
-                        Apply Filters
-                      </button>
                     </div>
                   </div>
-                )}
-                
-                {/* Categories Section - Enhanced with category cards */}
-                <div className="categories-carousel">
-                  <button className="carousel-btn prev" aria-label="Previous categories">
-                    <i className="fas fa-chevron-left"></i>
-                  </button>
-                  <div className="categories-wrapper">
-                    {categories.map(category => (
-                      <div 
-                        key={category.id}
-                        className={`category-card ${selectedCategory === category.id ? 'active' : ''}`} 
-                        onClick={() => setSelectedCategory(category.id)}
-                      >
-                        <i className={`fas ${category.icon}`}></i>
-                        <span>{category.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="carousel-btn next" aria-label="Next categories">
-                    <i className="fas fa-chevron-right"></i>
-                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Main Products Section */}
+          <section className="products-section">
+            <div className="container">
+              <div className="filters-toolbar">
+                <div className="active-filters">
+                  {selectedCategory !== 'all' && (
+                    <span className="filter-tag">
+                      {categories.find(c => c.id === selectedCategory)?.name}
+                      <button onClick={() => setSelectedCategory('all')}>×</button>
+                    </span>
+                  )}
+                  {/* Add more active filter tags */}
                 </div>
-                
-                {/* City selector as cards */}
-                <div className="city-cards">
-                  {cities.map(city => (
-                    <div 
-                      key={city}
-                      className={`city-card ${selectedCity === city ? 'active' : ''}`}
-                      onClick={() => setSelectedCity(city)}
-                    >
-                      <i className="fas fa-city"></i>
-                      <span>{city}</span>
-                    </div>
-                  ))}
+                <div className="sort-options">
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="popular">Most Popular</option>
+                    <option value="priceLow">Price: Low to High</option>
+                    <option value="priceHigh">Price: High to Low</option>
+                    <option value="rating">Highest Rated</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Products Grid */}
-              {isLoading ? (
-                <div className="products-section">
-                  <div className="products-header">
-                    <h3>Loading Products...</h3>
-                  </div>
-                  <div className="products-grid">
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                      <div className="product-card" key={i}>
-                        <div className="skeleton skeleton-img"></div>
-                        <div className="product-content">
-                          <div className="skeleton skeleton-text lg"></div>
-                          <div className="skeleton skeleton-text sm"></div>
-                          <div className="skeleton skeleton-text"></div>
-                          <div className="skeleton skeleton-text sm"></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : filteredProducts.length > 0 ? (
-                <div className="products-section fade-in delayed-6">
-                  <div className="products-header">
-                    <h3>
-                      {filteredProducts.length} Product{filteredProducts.length !== 1 ? 's' : ''} Found
-                      {searchQuery && ` for "${searchQuery}"`}
-                      {selectedCategory !== 'all' && ` in ${categories.find(c => c.id === selectedCategory)?.name}`}
-                    </h3>
-                  </div>
-                  <div className="products-grid">
-                    {filteredProducts.map(product => (
-                      <Suspense fallback={
-                        <div className="product-card" key={`skeleton-${product.id}`}>
-                          <div className="skeleton skeleton-img"></div>
-                          <div className="product-content">
-                            <div className="skeleton skeleton-text lg"></div>
-                            <div className="skeleton skeleton-text sm"></div>
-                            <div className="skeleton skeleton-text"></div>
-                            <div className="skeleton skeleton-text sm"></div>
-                          </div>
-                        </div>
-                      } key={product.id}>
-                        <ProductCard 
-                          product={product} 
-                          viewProductDetails={viewProductDetails} 
-                          addToCart={addToCart} 
-                          toggleWishlist={toggleWishlist} 
-                          isInWishlist={isInWishlist(product.id)} 
-                        />
-                      </Suspense>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="no-products fade-in">
-                  <i className="fas fa-box-open"></i>
-                  <p>No products available for the current filters</p>
+              <div className="products-grid">
+                {filteredProducts.map(product => (
+                  <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
+                    <ProductCard 
+                      product={product}
+                      onAddToCart={addToCart}
+                      onViewDetails={viewProductDetails}
+                      isWishlisted={isInWishlist(product.id)}
+                      onToggleWishlist={() => toggleWishlist(product)}
+                    />
+                  </Suspense>
+                ))}
+              </div>
+
+              {filteredProducts.length === 0 && (
+                <div className="no-results">
+                  <i className="fas fa-search"></i>
+                  <h3>No products found</h3>
+                  <p>Try adjusting your filters or search terms</p>
                   <button onClick={() => {
                     setSelectedCategory('all');
                     setSearchQuery('');
-                    setPriceRange([0, 5000]);
-                    setMinRating(0);
-                    setAvailabilityFilter('all');
-                  }}>Reset Filters</button>
+                  }}>Clear Filters</button>
                 </div>
               )}
             </div>
           </section>
+
+
+          {/*  Removed the old ordering section, hot deals, trending products, recently viewed, and advanced filters sections. */}
+          {/* The new sections above replace these. */}
+
         </main>
       )}
 

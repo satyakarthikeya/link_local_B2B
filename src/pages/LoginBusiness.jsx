@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../styles/auth.css";
+import "../styles/auth.css"; // Only import the auth styles
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const LoginBusiness = () => {

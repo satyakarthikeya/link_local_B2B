@@ -2,8 +2,8 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
-import "../Styles/business_home.css";
-import "../Styles/profile.css"; // We'll create this next
+import "../styles/business_home.css";
+import "../styles/profile.css"; // We'll create this next
 
 const B_ProfilePage = () => {
   const navigate = useNavigate();
