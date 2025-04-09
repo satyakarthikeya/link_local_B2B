@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import Cart from '../components/Cart';
 
 // Creating the context
@@ -24,81 +24,86 @@ export const CartProvider = ({ children }) => {
     }
   }, []);
 
-  // Open cart modal
-  const openCart = () => {
-    setIsCartOpen(true);
-  };
+  const openCart = () => setIsCartOpen(true);
+  const closeCart = () => setIsCartOpen(false);
+  const toggleCart = () => setIsCartOpen(prev => !prev);
 
-  // Close cart modal
-  const closeCart = () => {
-    setIsCartOpen(false);
-  };
-
-  // Toggle cart modal
-  const toggleCart = () => {
-    setIsCartOpen(prev => !prev);
-  };
-
-  // Add item to cart
-  const addToCart = (item) => {
+  const addToCart = useCallback((item) => {
     setCartItems(prev => {
       const existingItemIndex = prev.findIndex(i => i.id === item.id);
       let newCart;
-      
+
       if (existingItemIndex >= 0) {
-        // Item exists, update quantity
         newCart = [...prev];
         newCart[existingItemIndex] = {
           ...newCart[existingItemIndex],
           quantity: newCart[existingItemIndex].quantity + 1
         };
       } else {
-        // New item
         newCart = [...prev, { ...item, quantity: 1 }];
       }
-      
-      // Save to localStorage
+
       localStorage.setItem('cart', JSON.stringify(newCart));
-      
-      // Update cart count
       setCartCount(newCart.reduce((sum, item) => sum + item.quantity, 0));
-      
-      // Set last added item for notifications
       setLastAddedItem(item);
-      
-      // Show notification
-      showAddedNotification();
-      
+
       return newCart;
     });
-  };
+  }, []);
 
-  // Show notification when item is added
-  const showAddedNotification = () => {
-    // Animation logic can be implemented here
-    // We'll use the cart-notification-badge class
+  // Add removeFromCart function
+  const removeFromCart = useCallback((itemId) => {
+    setCartItems(prev => {
+      const newCart = prev.filter(item => item.id !== itemId);
+      localStorage.setItem('cart', JSON.stringify(newCart));
+      setCartCount(newCart.reduce((sum, item) => sum + item.quantity, 0));
+      return newCart;
+    });
+  }, []);
+
+  // Add updateQuantity function
+  const updateQuantity = useCallback((itemId, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    setCartItems(prev => {
+      const newCart = prev.map(item => 
+        item.id === itemId ? { ...item, quantity: newQuantity } : item
+      );
+      
+      localStorage.setItem('cart', JSON.stringify(newCart));
+      setCartCount(newCart.reduce((sum, item) => sum + item.quantity, 0));
+      return newCart;
+    });
+  }, []);
+
+  const value = {
+    isCartOpen,
+    openCart,
+    closeCart,
+    toggleCart,
+    cartItems,
+    cartCount,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    lastAddedItem
   };
 
   return (
-    <CartContext.Provider
-      value={{
-        isCartOpen,
-        openCart,
-        closeCart,
-        toggleCart,
-        cartItems,
-        cartCount,
-        addToCart,
-        lastAddedItem
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
-      <Cart isOpen={isCartOpen} onClose={closeCart} />
+      <Cart 
+        isOpen={isCartOpen} 
+        onClose={closeCart} 
+        items={cartItems}
+        updateQuantity={updateQuantity}
+        removeFromCart={removeFromCart}
+        asOverlay={true} 
+      />
     </CartContext.Provider>
   );
 };
 
-// Custom hook to use cart context
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useCart } from '../context/CartContext';
 import '../styles/business_home.css';
 
-const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
+const ProductCard = ({ product, onViewDetails }) => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const { addToCart } = useCart();
   
   const calculateDiscount = () => {
     if (product.originalPrice) {
@@ -24,8 +26,8 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
     try {
       setIsAddingToCart(true);
       
-      // Call the parent component's add to cart function
-      onAddToCart(product);
+      // Use the context's addToCart function
+      addToCart(product);
       
       // Show success feedback
       setAddedToCart(true);
@@ -171,7 +173,6 @@ ProductCard.propTypes = {
     price: PropTypes.number.isRequired,
     originalPrice: PropTypes.number
   }).isRequired,
-  onAddToCart: PropTypes.func.isRequired,
   onViewDetails: PropTypes.func.isRequired
 };
 

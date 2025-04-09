@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from
 import { Outlet, useNavigate } from 'react-router-dom';
 import '../styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
+import { useCart } from '../context/CartContext'; // <-- New import
 
 const ProductCard = lazy(() => import('../components/ProductCard'));
 const Cart = lazy(() => import('../components/Cart'));
@@ -155,7 +156,7 @@ const B_Homepage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('Coimbatore');
-  const [cart, setCart] = useLocalStorage('cart', []);
+  const { cartItems, addToCart } = useCart(); // Update to use cartItems and addToCart
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
@@ -169,12 +170,6 @@ const B_Homepage = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const addToCart = useCallback((product) => {
-    setCart(prevCart => [...prevCart, product]);
-    setShowCartNotification(true);
-    setTimeout(() => setShowCartNotification(false), 2000);
-  }, [setCart]);
 
   const filteredProducts = useMemo(() => {
     let filtered = PRODUCTS.filter((product) => {
@@ -209,7 +204,7 @@ const B_Homepage = () => {
         setSelectedCity={setSelectedCity} 
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
-        cart={cart} 
+        cart={cartItems}  // <-- Pass the context cartItems
         setShowCart={setShowCart} 
         navigate={navigate} 
         showLocationDropdown={showLocationDropdown}
@@ -283,7 +278,7 @@ const B_Homepage = () => {
       {/* Cart Sidebar */}
       {showCart && (
         <Suspense fallback={<div>Loading cart...</div>}>
-          <Cart items={cart} onClose={() => setShowCart(false)} />
+          <Cart items={cartItems} onClose={() => setShowCart(false)} />
         </Suspense>
       )}
 

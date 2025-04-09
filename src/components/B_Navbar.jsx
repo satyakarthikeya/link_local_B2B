@@ -1,11 +1,11 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PropTypes from 'prop-types';
 import { AuthContext } from "../context/AuthContext";
+import { CartContext } from "../context/CartContext";
 import "../styles/navbar.css";
 import logo from "../assests/Logo.png";
 
-// Notification item component
 const NotificationItem = ({ notification, onRead }) => {
   const { id, type, message, time, read } = notification;
   
@@ -45,22 +45,17 @@ NotificationItem.propTypes = {
   onRead: PropTypes.func.isRequired
 };
 
-const B_Navbar = ({ 
-  selectedCity, 
-  setSelectedCity, 
-  searchQuery, 
-  setSearchQuery, 
-  cart, 
-  setShowCart, 
-  navigate, 
-  showLocationDropdown, 
-  setShowLocationDropdown 
-}) => {
+const B_Navbar = () => {
+  const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
+  const { cartCount, toggleCart } = useContext(CartContext);
+  
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(3); // This should come from a cart context or API
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedCity, setSelectedCity] = useState('Coimbatore');
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([
     { id: 1, type: 'order', message: 'New order received from Chennai Electronics', time: '2 mins ago', read: false },
     { id: 2, type: 'payment', message: 'Payment of ₹15,400 received', time: '1 hour ago', read: false },
@@ -77,16 +72,18 @@ const B_Navbar = ({
   }, []);
 
   useEffect(() => {
-    // Close notifications panel when clicking outside
     const handleClickOutside = (event) => {
       if (showNotifications && !event.target.closest('.notification-menu')) {
         setShowNotifications(false);
+      }
+      if (showLocationDropdown && !event.target.closest('.location-selector')) {
+        setShowLocationDropdown(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications]);
+  }, [showNotifications, showLocationDropdown]);
 
   const handleLogout = () => {
     logout();
@@ -97,19 +94,17 @@ const B_Navbar = ({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleSearch = (e) => {
+  const handleSearchSubmit = (e) => {
     e.preventDefault();
-    // Implement search functionality
-    console.log("Searching for:", searchQuery);
-    navigate(`/business-home/search?q=${encodeURIComponent(searchQuery)}`);
-    // Close mobile menu after search on mobile
-    if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+    if (searchQuery && searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
-  const handleProfileNavigation = (path) => {
+  const handleProfileNavigation = useCallback((path) => {
     navigate(path);
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
-  };
+  }, [navigate, isMobileMenuOpen]);
 
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
@@ -156,7 +151,7 @@ const B_Navbar = ({
               
               {showLocationDropdown && (
                 <div className="location-dropdown">
-                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Kolkata', 'Pune', 'Jaipur', 'Ahmedabad'].map(city => (
+                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad'].map(city => (
                     <div 
                       key={city} 
                       className={`location-option ${selectedCity === city ? 'active' : ''}`}
@@ -174,44 +169,35 @@ const B_Navbar = ({
           </div>
 
           <div className={`navbar-middle ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
-            <form onSubmit={handleSearch} className="search-bar">
-              <i className="fas fa-search"></i>
-              <input 
-                type="text" 
-                placeholder="Search products, suppliers, categories..."
+            <form className="search-box" onSubmit={handleSearchSubmit}>
+              <div className="search-icon-wrapper">
+                <i className="fas fa-search search-icon"></i>
+              </div>
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products, suppliers..."
                 aria-label="Search"
+                className="search-input"
               />
               <button type="submit" className="search-btn">Search</button>
             </form>
 
-            {/* Mobile Navigation Links */}
             <div className="mobile-links">
               <Link to="/business-home" className="mobile-link">
                 <i className="fas fa-home"></i>
                 <span>Home</span>
               </Link>
-              <div className="mobile-link location-selector-mobile">
-                <i className="fas fa-map-marker-alt"></i>
-                <select 
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                >
-                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Kolkata', 'Pune', 'Jaipur', 'Ahmedabad'].map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
-              </div>
               <Link to="/business-home/my-shop" className="mobile-link">
                 <i className="fas fa-store"></i>
                 <span>My Shop</span>
               </Link>
-              <Link to="/business-home/cart" className="mobile-link">
+              <button className="mobile-link" onClick={toggleCart}>
                 <i className="fas fa-shopping-cart"></i>
                 <span>Cart</span>
                 {cartCount > 0 && <span className="cart-badge-mobile">{cartCount}</span>}
-              </Link>
+              </button>
               <button 
                 onClick={() => handleProfileNavigation('/business-profile')} 
                 className="mobile-link"
@@ -232,11 +218,11 @@ const B_Navbar = ({
               <span>My Shop</span>
             </Link>
 
-            <Link to="/business-home/cart" className="nav-link cart-link">
+            <button onClick={toggleCart} className="nav-link cart-link">
               <i className="fas fa-shopping-cart"></i>
               <span>Cart</span>
               {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-            </Link>
+            </button>
 
             <div className="notification-menu">
               <button 
@@ -295,8 +281,10 @@ const B_Navbar = ({
                 onClick={() => handleProfileNavigation('/business-profile')}
                 aria-label="My Account"
               >
-                <i className="fas fa-user-circle"></i>
-                <span>My Account</span>
+                <div className="user-avatar">
+                  {user?.name?.[0] || 'U'}
+                </div>
+                <span className="user-name">{user?.name || 'User'}</span>
               </button>
             </div>
 
@@ -314,18 +302,6 @@ const B_Navbar = ({
       </div>
     </nav>
   );
-};
-
-B_Navbar.propTypes = {
-  selectedCity: PropTypes.string,
-  setSelectedCity: PropTypes.func,
-  searchQuery: PropTypes.string,
-  setSearchQuery: PropTypes.func,
-  cart: PropTypes.array,
-  setShowCart: PropTypes.func,
-  navigate: PropTypes.func,
-  showLocationDropdown: PropTypes.bool,
-  setShowLocationDropdown: PropTypes.func
 };
 
 export default B_Navbar;

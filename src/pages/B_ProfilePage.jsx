@@ -39,8 +39,8 @@ const B_ProfilePage = () => {
       sunday: { open: "", close: "" }
     },
     businessDescription: "Chennai Silks is a premier wholesale textile supplier specializing in silk fabrics, cotton materials, and other textile products for retail businesses, designers and manufacturers.",
-    profilePicture: "../assests/chennai silks.png",
-    coverPhoto: "../assests/brookfields.jpg",
+    profilePicture: "./src/assests/chennai silks.png",
+    coverPhoto: "./src/assests/brookfields.jpg",
   });
 
   // Bank account information
