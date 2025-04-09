@@ -239,10 +239,11 @@ const B_Homepage = () => {
         {/* Categories Section */}
         <section className="categories-section">
           <div className="container">
-            <div className="section-header">
+            <div className="section-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <h2>Explore Categories</h2>
               <p>Find everything your business needs</p>
             </div>
+           
             <div className="categories-grid">
               {CATEGORIES.map(category => (
                 <div

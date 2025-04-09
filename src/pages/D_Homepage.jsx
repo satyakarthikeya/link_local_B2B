@@ -183,7 +183,7 @@ const D_Homepage = () => {
           {/* Action Buttons */}
           <div className="action-buttons">
             
-            <button className="action-button" onClick={() => navigate('../pages/D_ProfilePage.jsx')}>
+            <button className="action-button" onClick={() => navigate('/delivery-profile')}>
               <i className="fas fa-user"></i>
               <span>Profile</span>
             </button>

@@ -319,7 +319,7 @@ const B_Navbar = () => {
                 <span className="user-name">{user?.name || 'User'}</span>
               </button>
               {showUserDropdown && (
-                <div className="user-dropdown-content" ref={userDropdownRef}>
+                <div className="dropdown-menu user-dropdown-content" ref={userDropdownRef}>
                   <Link to="/business-profile">
                     <i className="fas fa-user"></i> Profile
                   </Link>

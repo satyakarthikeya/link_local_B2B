@@ -17,11 +17,11 @@ const D_ProfilePage = () => {
   
   // Profile form state
   const [profileData, setProfileData] = useState({
-    fullName: "John Doe",
-    email: "john.doe@example.com",
+    fullName: "kenny",
+    email: "kenny@example.com",
     phone: "+91 98765 43210",
     gender: "Male",
-    dateOfBirth: "1992-06-15",
+    dateOfBirth: "2005-06-15",
     address: {
       street: "42 MG Road",
       area: "Saibaba Colony",
@@ -29,7 +29,7 @@ const D_ProfilePage = () => {
       state: "Tamil Nadu",
       pincode: "641011"
     },
-    profilePicture: "../assests/guddu.jpeg",
+    profilePicture: "./src/assests/guddu.jpeg",
     vehicleType: "Two Wheeler",
     vehicleNumber: "TN 66 AB 1234",
     licenseNumber: "TN5520220012345",

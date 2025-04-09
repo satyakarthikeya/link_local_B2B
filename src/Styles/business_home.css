@@ -315,6 +315,8 @@ body {
   opacity: 0;
   transform: translateY(20px);
   animation: fadeInUp 0.8s forwards;
+  align-items: center ;
+
 }
 
 .section-header p {
@@ -325,6 +327,7 @@ body {
   opacity: 0;
   transform: translateY(20px);
   animation: fadeInUp 0.8s forwards 0.2s;
+  align-items: center;
 }
 
 @keyframes fadeInUp {
@@ -3406,8 +3409,8 @@ select:focus {
 /* 1920px Screen Optimization */
 @media (min-width: 1920px) {
   .business-app {
-    max-width: 1800px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
   }
 
   .hero-section {

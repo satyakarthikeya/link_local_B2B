@@ -45,7 +45,7 @@ const Home = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="hero" style={{ background: "#4A6FFF" }}> 
+      <section className="hero" style={{ background: "#9897ff" }}> 
         <div className="container">
           <div className="hero-content">
             <h1>Connect Locally, Grow Globally</h1>
