@@ -121,7 +121,7 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
                 <div className="profile-dropdown">
                   <div className="profile-header">
                     <div className="profile-info">
-                      <h4>John Doe</h4>
+                      <h4>Kenny</h4>
                       <p>Delivery Partner</p>
                     </div>
                   </div>

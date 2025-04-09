@@ -182,11 +182,8 @@ const D_Homepage = () => {
 
           {/* Action Buttons */}
           <div className="action-buttons">
-            <button className="action-button" onClick={() => navigate('/delivery/schedule')}>
-              <i className="fas fa-calendar-alt"></i>
-              <span>My Schedule</span>
-            </button>
-            <button className="action-button" onClick={() => navigate('/delivery/profile')}>
+            
+            <button className="action-button" onClick={() => navigate('../pages/D_ProfilePage.jsx')}>
               <i className="fas fa-user"></i>
               <span>Profile</span>
             </button>
