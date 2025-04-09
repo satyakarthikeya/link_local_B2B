@@ -47,7 +47,7 @@ const D_ProfilePage = () => {
 
   // Bank account information
   const [bankData, setBankData] = useState({
-    accountHolderName: "John Doe",
+    accountHolderName: "KENNY",
     accountNumber: "••••••••4567",
     ifscCode: "SBIN0001235",
     bankName: "State Bank of India",
