@@ -29,7 +29,7 @@ const D_ProfilePage = () => {
       state: "Tamil Nadu",
       pincode: "641011"
     },
-    profilePicture: "./src/assests/guddu.jpeg",
+    profilePicture: "./src/assests/kenny.jpg",
     vehicleType: "Two Wheeler",
     vehicleNumber: "TN 66 AB 1234",
     licenseNumber: "TN5520220012345",
@@ -269,7 +269,7 @@ const D_ProfilePage = () => {
                     src={profileData.profilePicture} 
                     alt={profileData.fullName} 
                     className="profile-image"
-                    onError={(e) => {e.target.src = 'https://via.placeholder.com/150?text=Profile'; e.target.onerror = null;}}
+                    
                   />
                   {isEditing && (
                     <label className="image-upload-btn">
