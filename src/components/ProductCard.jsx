@@ -1,14 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import '../styles/business_home.css';
 
 const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  
   const calculateDiscount = () => {
     if (product.originalPrice) {
       const discount = ((product.originalPrice - product.price) / product.originalPrice) * 100;
       return Math.round(discount);
     }
     return null;
+  };
+
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!product.inStock || isAddingToCart) return;
+    
+    try {
+      setIsAddingToCart(true);
+      
+      // Call the parent component's add to cart function
+      onAddToCart(product);
+      
+      // Show success feedback
+      setAddedToCart(true);
+      
+      // Reset the success state after a delay
+      setTimeout(() => {
+        setAddedToCart(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to add item to cart:", error);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleViewDetails = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onViewDetails(product);
   };
 
   const discount = calculateDiscount();
@@ -27,21 +63,29 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
   } = product;
 
   return (
-    <div className="product-card">
+    <div 
+      className="product-card fade-in" 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="product-img-wrapper">
         {discount && (
           <span className="discount-badge">-{discount}%</span>
         )}
         <img src={image} alt={name} className="product-img" />
         {inStock ? (
-          <span className="stock-badge in-stock">In Stock</span>
+          <span className="stock-badge in-stock">
+            <i className="fas fa-check-circle"></i> In Stock
+          </span>
         ) : (
-          <span className="stock-badge out-of-stock">Out of Stock</span>
+          <span className="stock-badge out-of-stock">
+            <i className="fas fa-times-circle"></i> Out of Stock
+          </span>
         )}
-        <div className="product-overlay">
+        <div className={`product-overlay ${isHovered ? 'visible' : ''}`}>
           <button 
             className="quick-view-btn" 
-            onClick={() => onViewDetails(product)}
+            onClick={handleViewDetails}
             aria-label="Quick view"
           >
             <i className="fas fa-eye"></i>
@@ -66,7 +110,7 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
 
         <div className="product-details">
           <div className="delivery-info">
-            <i className="fas fa-clock"></i>
+            <i className="fas fa-truck"></i>
             <span>{deliveryTime}</span>
           </div>
           <div className="moq-info">
@@ -84,13 +128,27 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
 
         <div className="product-actions">
           <button 
-            className="add-cart-btn" 
-            onClick={() => onAddToCart(product)}
-            disabled={!inStock}
+            className={`add-cart-btn ${isAddingToCart ? 'loading' : ''} ${addedToCart ? 'added' : ''}`}
+            onClick={handleAddToCart}
+            disabled={!inStock || isAddingToCart}
             aria-label="Add to cart"
           >
-            <i className="fas fa-shopping-cart"></i>
-            <span>Add to Cart</span>
+            {isAddingToCart ? (
+              <>
+                <span className="cart-spinner"></span>
+                <span>Adding...</span>
+              </>
+            ) : addedToCart ? (
+              <>
+                <i className="fas fa-check"></i>
+                <span>Added!</span>
+              </>
+            ) : (
+              <>
+                <i className="fas fa-shopping-cart"></i>
+                <span>Add to Cart</span>
+              </>
+            )}
           </button>
         </div>
       </div>
