@@ -45,16 +45,17 @@ const Home = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="hero" >
+      <section className="hero" style={{ background: "#4A6FFF" }}> 
         <div className="container">
           <div className="hero-content">
             <h1>Connect Locally, Grow Globally</h1>
             <p>Connect with trusted local suppliers and streamline your procurement process</p>
             <div className="hero-actions">
               <button 
-                className="cta-btn primary-btn" 
+                className="cta-btn primary-btn"
                 onClick={handleGetStarted}
                 aria-label="Get started with LinkLocal"
+
               >
                 Get Started
               </button>
@@ -96,7 +97,7 @@ const Home = () => {
       {/* Features Section */}
       <section className="features">
         <div className="container">
-          <div className="section-header">
+          <div className="stats-title">
             <h2>Why Choose LinkLocal?</h2>
             <p>Our platform is designed to meet your unique business needs</p>
           </div>
@@ -117,7 +118,7 @@ const Home = () => {
       {/* How It Works Section */}
       <section className="how-it-works">
         <div className="container">
-          <div className="section-header">
+          <div className="stats-title">
             <h2>How It Works</h2>
             <p>Get started in just three simple steps</p>
           </div>
@@ -135,7 +136,7 @@ const Home = () => {
           </div>
           <div className="cta-center">
             <button 
-              className="cta-btn primary-btn" 
+              className="cta-btn_1 primary-btn" 
               onClick={handleGetStarted}
               aria-label="Sign up now"
             >

@@ -12,9 +12,10 @@ import D_Homepage from "./pages/D_Homepage";
 import D_MapView from "./pages/D_MapView";
 import D_ProfilePage from "./pages/D_ProfilePage";
 import MyShop from "./pages/Myshop";
-import B_Homepage from "./pages/B_homepage";
+import B_Homepage from "./pages/B_Homepage";
 import B_ProfilePage from "./pages/B_ProfilePage";
 import SearchResults from "./pages/SearchResults";
+import OrderHistory from "./pages/OrderHistory";
 
 function App() {
   return (
@@ -35,6 +36,8 @@ function App() {
             <Route path="/business-home/my-shop" element={<MyShop />} />
             <Route path="/business-profile" element={<B_ProfilePage />} />
             <Route path="/search" element={<SearchResults />} />
+            <Route path="/order-history" element={<OrderHistory />} />
+            <Route path="/business-home/notifications" element={<div>Notifications Page</div>} />
           </Routes>
         </CartProvider>
       </AuthProvider>

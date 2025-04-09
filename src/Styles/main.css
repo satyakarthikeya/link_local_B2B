@@ -258,6 +258,15 @@ header {
     font-weight: 600;
     font-size: 1rem;
     transition: var(--transition);
+    margin-left: 200px;
+}
+.cta-btn_1 {
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: var(--transition);
+    
 }
 
 .primary-btn {
@@ -301,8 +310,9 @@ header {
 }
 
 .trusted-logos img {
-    height: 40px;
+    height: 80px;
     opacity: 0.8;
+    margin-left: 30px;
 }
 
 .hero-image {

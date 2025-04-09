@@ -139,6 +139,17 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
                       <span>Help & Support</span>
                     </Link>
                     <div className="dropdown-divider"></div>
+                    <div className="user-dropdown" ref={dropdownRef}>
+                      <Link to="/delivery-profile" className="dropdown-item">
+                        <i className="fas fa-user"></i> My Profile
+                      </Link>
+                      <Link to="/earning-history" className="dropdown-item">
+                        <i className="fas fa-wallet"></i> Earnings
+                      </Link>
+                      <button onClick={handleLogout} className="dropdown-item">
+                        <i className="fas fa-sign-out-alt"></i> Logout
+                      </button>
+                    </div>
                     <button onClick={handleLogout} className="profile-link logout-link">
                       <i className="fas fa-sign-out-alt"></i>
                       <span>Logout</span>

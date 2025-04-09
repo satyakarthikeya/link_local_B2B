@@ -69,38 +69,30 @@
   padding: 0.8rem 1.2rem;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  transition: all 0.25s ease;
+  gap: 1rem;
+  transition: var(--transition);
   border: 2px solid transparent;
   max-width: 600px;
   width: 100%;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-  position: relative;
 }
 
 .search-bar:focus-within {
   background: white;
   border-color: var(--primary-color);
-  box-shadow: 0 4px 20px rgba(74, 111, 255, 0.18);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(74, 111, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .search-bar:hover:not(:focus-within) {
   background: #f1f3f9;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
 }
 
 .search-bar i {
-  color: var(--primary-color);
-  font-size: 1.2rem;
+  color: var(--gray-color);
+  font-size: 1.1rem;
   flex-shrink: 0;
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-}
-
-.search-bar:focus-within i {
-  opacity: 1;
 }
 
 .search-bar input {
@@ -108,173 +100,59 @@
   background: transparent;
   outline: none;
   flex-grow: 1;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--dark-color);
   padding: 0 0.5rem;
   font-family: inherit;
-  font-weight: 500;
 }
 
 .search-bar input::placeholder {
   color: #a0a3af;
   font-weight: 400;
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-}
-
-.search-bar:focus-within input::placeholder {
-  opacity: 0.6;
 }
 
 .search-btn {
   background: var(--primary-color);
   color: white;
   border: none;
-  padding: 0.7rem 1.3rem;
+  padding: 0.7rem 1.2rem;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: var(--transition);
   font-size: 0.95rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-left: 0.5rem;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(74, 111, 255, 0.25);
 }
 
 .search-btn i {
   color: white;
   font-size: 0.9rem;
-  opacity: 1;
 }
 
 .search-btn:hover {
   background: #3d5ce0;
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(74, 111, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 111, 255, 0.25);
 }
 
 .search-btn:active {
-  transform: translateY(-1px);
+  transform: translateY(0);
   box-shadow: 0 2px 8px rgba(74, 111, 255, 0.2);
-}
-
-/* "I have said" feature - User's previous input display */
-.user-said-container {
-  display: flex;
-  align-items: center;
-  margin-left: 1rem;
-  background-color: #f1f3f9;
-  border-radius: 20px;
-  padding: 0.4rem 0.8rem;
-  max-width: 280px;
-  transition: var(--transition);
-}
-
-.user-said-container:hover {
-  background-color: #e8eaf2;
-  transform: translateY(-1px);
-}
-
-.user-said-label {
-  font-size: 0.75rem;
-  color: var(--gray-color);
-  margin-right: 0.5rem;
-  white-space: nowrap;
-}
-
-.user-said-text {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--dark-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 180px;
-}
-
-.user-said-icon {
-  color: var(--primary-color);
-  font-size: 0.8rem;
-  margin-left: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.clear-said-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  margin-left: 0.5rem;
-  color: var(--gray-color);
-  cursor: pointer;
-  font-size: 0.7rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.clear-said-btn:hover {
-  opacity: 1;
-  color: var(--danger-color);
-}
-
-/* Animation for the "I have said" feature */
-@keyframes fadeIn {
-  from { 
-    opacity: 0;
-    transform: translateY(-5px); 
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0); 
-  }
-}
-
-.user-said-container.new {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Responsive styles for "I have said" feature */
-@media (max-width: 992px) {
-  .user-said-container {
-    max-width: 200px;
-  }
-  
-  .user-said-text {
-    max-width: 120px;
-  }
-}
-
-@media (max-width: 768px) {
-  .user-said-container {
-    margin-top: 1rem;
-    margin-left: 0;
-    width: 100%;
-    max-width: 100%;
-    justify-content: space-between;
-  }
-  
-  .user-said-text {
-    max-width: unset;
-    flex: 1;
-  }
 }
 
 /* Search Suggestions (for future implementation) */
 .search-suggestions {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 10px);
   left: 0;
   width: 100%;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
   padding: 0.8rem 0;
   z-index: 100;
   max-height: 350px;
@@ -282,7 +160,7 @@
   opacity: 0;
   visibility: hidden;
   transform: translateY(10px);
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.2s ease;
 }
 
 .search-bar:focus-within .search-suggestions {
@@ -292,28 +170,26 @@
 }
 
 .suggestion-item {
-  padding: 0.9rem 1.2rem;
+  padding: 0.8rem 1.2rem;
   cursor: pointer;
   transition: var(--transition);
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  border-left: 3px solid transparent;
 }
 
 .suggestion-item:hover {
-  background: rgba(74, 111, 255, 0.08);
-  border-left-color: var(--primary-color);
+  background: rgba(74, 111, 255, 0.06);
 }
 
 .suggestion-item i {
   color: var(--gray-color);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .search-empty {
   text-align: center;
-  padding: 1.8rem;
+  padding: 1.5rem;
   color: var(--gray-color);
   font-size: 0.9rem;
 }
@@ -332,21 +208,19 @@
   }
   
   .search-btn {
-    padding: 0.7rem 1.1rem;
+    padding: 0.6rem 1rem;
   }
 }
 
 @media (max-width: 576px) {
   .search-bar {
     padding: 0.7rem 1rem;
-    border-radius: 10px;
   }
   
   .search-btn {
     padding: 0.6rem;
-    min-width: 42px;
+    min-width: 40px;
     justify-content: center;
-    border-radius: 8px;
   }
   
   .search-btn span {
@@ -354,7 +228,7 @@
   }
   
   .search-bar input {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 }
 

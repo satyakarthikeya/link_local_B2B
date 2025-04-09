@@ -1,8 +1,9 @@
-import React, { useContext, useState, useEffect, useCallback } from "react";
+import React, { useContext, useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PropTypes from 'prop-types';
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
+import ReviewForm from './ReviewForm';
 import "../styles/navbar.css";
 import logo from "../assests/Logo.png";
 
@@ -61,6 +62,10 @@ const B_Navbar = () => {
     { id: 2, type: 'payment', message: 'Payment of ₹15,400 received', time: '1 hour ago', read: false },
     { id: 3, type: 'system', message: 'System maintenance scheduled for tonight', time: '3 hours ago', read: true },
   ]);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -79,11 +84,14 @@ const B_Navbar = () => {
       if (showLocationDropdown && !event.target.closest('.location-selector')) {
         setShowLocationDropdown(false);
       }
+      if (showUserDropdown && !userDropdownRef.current.contains(event.target)) {
+        setShowUserDropdown(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications, showLocationDropdown]);
+  }, [showNotifications, showLocationDropdown, showUserDropdown]);
 
   const handleLogout = () => {
     logout();
@@ -128,9 +136,24 @@ const B_Navbar = () => {
     return notifications.filter(n => !n.read).length;
   };
 
+  const handleShowReview = (order) => {
+    setSelectedOrder(order);
+    setShowReviewForm(true);
+  };
+
+  const handleCloseReview = () => {
+    setShowReviewForm(false);
+    setSelectedOrder(null);
+  };
+
+  const handleSubmitReview = (reviewData) => {
+    console.log('Review submitted:', reviewData);
+    handleCloseReview();
+  };
+
   return (
     <nav className={`business-navbar ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="container">
+      <div className="container wide-container">
         <div className="navbar-content">
           <div className="navbar-left">
             <Link to="/business-home" className="logo">
@@ -193,6 +216,10 @@ const B_Navbar = () => {
                 <i className="fas fa-store"></i>
                 <span>My Shop</span>
               </Link>
+              <Link to="/order-history" className="mobile-link">
+                <i className="fas fa-clipboard-list"></i>
+                <span>Orders</span>
+              </Link>
               <button className="mobile-link" onClick={toggleCart}>
                 <i className="fas fa-shopping-cart"></i>
                 <span>Cart</span>
@@ -216,6 +243,11 @@ const B_Navbar = () => {
             <Link to="/business-home/my-shop" className="nav-link shop-link">
               <i className="fas fa-store"></i>
               <span>My Shop</span>
+            </Link>
+
+            <Link to="/order-history" className="nav-link orders-link">
+              <i className="fas fa-clipboard-list"></i>
+              <span>Orders</span>
             </Link>
 
             <button onClick={toggleCart} className="nav-link cart-link">
@@ -278,7 +310,7 @@ const B_Navbar = () => {
             <div className="user-menu">
               <button 
                 className="user-btn" 
-                onClick={() => handleProfileNavigation('/business-profile')}
+                onClick={() => setShowUserDropdown(!showUserDropdown)}
                 aria-label="My Account"
               >
                 <div className="user-avatar">
@@ -286,6 +318,22 @@ const B_Navbar = () => {
                 </div>
                 <span className="user-name">{user?.name || 'User'}</span>
               </button>
+              {showUserDropdown && (
+                <div className="user-dropdown-content" ref={userDropdownRef}>
+                  <Link to="/business-profile">
+                    <i className="fas fa-user"></i> Profile
+                  </Link>
+                  <Link to="/business-home/my-shop">
+                    <i className="fas fa-store"></i> My Shop
+                  </Link>
+                  <Link to="/order-history">
+                    <i className="fas fa-history"></i> Order History
+                  </Link>
+                  <button onClick={handleLogout} className="dropdown-logout">
+                    <i className="fas fa-sign-out-alt"></i> Logout
+                  </button>
+                </div>
+              )}
             </div>
 
             <button 
@@ -300,6 +348,13 @@ const B_Navbar = () => {
           </div>
         </div>
       </div>
+      {showReviewForm && selectedOrder && (
+        <ReviewForm 
+          order={selectedOrder}
+          onClose={handleCloseReview}
+          onSubmit={handleSubmitReview}
+        />
+      )}
     </nav>
   );
 };

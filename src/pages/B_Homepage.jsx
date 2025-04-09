@@ -32,7 +32,7 @@ const PRODUCTS = [
     area: "RS Puram",
     rating: 4.5,
     deliveryTime: "1-2 days",
-    image: "../assests/A4 sheets.jpeg",
+    image: "./src/assests/A4 sheets.jpeg",
     inStock: true,
     popularity: 95
   },
@@ -48,7 +48,7 @@ const PRODUCTS = [
     area: "Town Hall",
     rating: 4.2,
     deliveryTime: "2-3 days",
-    image: "../assests/cotton.jpeg",
+    image: "./src/assests/cotton.jpeg",
     inStock: true,
     popularity: 87
   },
@@ -64,7 +64,7 @@ const PRODUCTS = [
     area: "Gandhipuram",
     rating: 4.0,
     deliveryTime: "1 day",
-    image: "../assests/jumper wires.jpeg",
+    image: "./src/assests/jumper wires.jpeg",
     inStock: true,
     popularity: 76
   },
@@ -80,7 +80,7 @@ const PRODUCTS = [
     area: "Peelamedu",
     rating: 4.7,
     deliveryTime: "Same day",
-    image: "../assests/honey.jpeg",
+    image: "./src/assests/honey.jpeg",
     inStock: true,
     popularity: 92
   },
@@ -96,7 +96,7 @@ const PRODUCTS = [
     area: "Gandhipuram",
     rating: 4.6,
     deliveryTime: "2-3 days",
-    image: "../assests/headphones.jpeg",
+    image: "./src/assests/headphones.jpeg",
     inStock: true,
     popularity: 84,
   },
@@ -112,7 +112,7 @@ const PRODUCTS = [
     area: "Brookfields",
     rating: 4.3,
     deliveryTime: "1-2 days",
-    image: "../assests/silk thread.jpeg",
+    image: "./src/assests/silk thread.jpeg",
     inStock: false,
     popularity: 78,
   }
