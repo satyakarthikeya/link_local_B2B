@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../styles/delivery_home.css"; // Ensure correct path
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   // Use the global status if provided, otherwise use local state
   const [isOnline, setIsOnline] = useState(true);
 
@@ -44,11 +47,17 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
   }, []);
 
   // Handle logout
-  const handleLogout = () => {
-    // Add your logout logic here
-    console.log("Logging out...");
-    // Navigate to login page
-    navigate('/login-delivery');
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      setIsLoggingOut(false);
+      navigate('/login-delivery', { replace: true });
+    } catch (error) {
+      console.error("Failed to log out:", error);
+      alert("Failed to log out. Please try again.");
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -84,12 +93,7 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
                   <span>Map</span>
                 </Link>
               </li>
-              <li>
-                <Link to="/earnings">
-                  <i className="fas fa-wallet"></i>
-                  <span>Earnings</span>
-                </Link>
-              </li>
+              
             </ul>
           </nav>
 
@@ -126,34 +130,22 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
                     </div>
                   </div>
                   <div className="profile-links">
-                    <Link to="/delivery-profile" className="profile-link">
-                      <i className="fas fa-user"></i>
-                      <span>My Profile</span>
-                    </Link>
-                    <Link to="/settings" className="profile-link">
-                      <i className="fas fa-cog"></i>
-                      <span>Settings</span>
-                    </Link>
-                    <Link to="/help" className="profile-link">
-                      <i className="fas fa-question-circle"></i>
-                      <span>Help & Support</span>
-                    </Link>
-                    <div className="dropdown-divider"></div>
                     <div className="user-dropdown" ref={dropdownRef}>
                       <Link to="/delivery-profile" className="dropdown-item">
                         <i className="fas fa-user"></i> My Profile
                       </Link>
-                      <Link to="/earning-history" className="dropdown-item">
-                        <i className="fas fa-wallet"></i> Earnings
+                      <Link to="/map-view" className="dropdown-item">
+                        <i className="fas fa-map"></i> Map View
                       </Link>
-                      <button onClick={handleLogout} className="dropdown-item">
-                        <i className="fas fa-sign-out-alt"></i> Logout
+                      <button 
+                        onClick={handleLogout} 
+                        className="dropdown-item" 
+                        disabled={isLoggingOut}
+                      >
+                        <i className="fas fa-sign-out-alt"></i>
+                        <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                       </button>
                     </div>
-                    <button onClick={handleLogout} className="profile-link logout-link">
-                      <i className="fas fa-sign-out-alt"></i>
-                      <span>Logout</span>
-                    </button>
                   </div>
                 </div>
               )}
