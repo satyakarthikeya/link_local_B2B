@@ -317,10 +317,11 @@ const MyShop = () => {
           return product;
         });
         
-        // Update stats right after updating products
+        // Update all stats immediately
         setTimeout(() => {
           const newStats = {
             ...stats,
+            totalProducts: updatedProducts.length,
             lowStock: updatedProducts.filter(p => p.quantity_available <= p.reorder_point && p.quantity_available > 0).length,
             outOfStock: updatedProducts.filter(p => !p.quantity_available || p.quantity_available <= 0).length
           };

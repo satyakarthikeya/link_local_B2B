@@ -349,7 +349,7 @@
 }
 
 .product-card.out-of-stock {
-  border-color: var(--secondary-color);
+  border-color: var(--light-color);
   opacity: 0.85;
 }
 
@@ -395,7 +395,7 @@
 }
 
 .stock-label.out-of-stock {
-  background-color: var(--secondary-color);
+  background-color: var(--light-color);
   color: white;
   box-shadow: 0 3px 8px rgba(255, 90, 96, 0.3);
 }

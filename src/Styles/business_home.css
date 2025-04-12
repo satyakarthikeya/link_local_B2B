@@ -3123,7 +3123,7 @@ select:focus {
 }
 
 .out-of-stock {
-  background: rgba(255, 90, 96, 0.9);
+  background:white;
   color: white;
 }
 
