@@ -1,33 +1,33 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
 import "../styles/business_home.css";
 import "../styles/profile.css"; // We'll create this next
 
 const B_ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
   // Profile form state
   const [profileData, setProfileData] = useState({
-    businessName: "Chennai Silks",
-    ownerName: "Ravi Kumar",
-    email: "info@chennaisilks.com",
-    phone: "+91 98765 43210",
-    gstNumber: "33AABCT3518Q1ZW",
-    businessType: "Textile Wholesale",
-    establishedYear: "1998",
-    website: "www.chennaisilks.com",
+    businessName: "",
+    ownerName: "",
+    email: "",
+    phone: "",
+    gstNumber: "",
+    businessType: "",
+    establishedYear: "",
+    website: "",
     address: {
-      street: "42 Town Hall Road",
-      area: "Gandhipuram",
-      city: "Coimbatore",
-      state: "Tamil Nadu",
-      pincode: "641001"
+      street: "",
+      area: "",
+      city: "",
+      state: "",
+      pincode: ""
     },
     businessHours: {
       monday: { open: "09:00", close: "18:00" },
@@ -38,19 +38,60 @@ const B_ProfilePage = () => {
       saturday: { open: "10:00", close: "16:00" },
       sunday: { open: "", close: "" }
     },
-    businessDescription: "Chennai Silks is a premier wholesale textile supplier specializing in silk fabrics, cotton materials, and other textile products for retail businesses, designers and manufacturers.",
-    profilePicture: "./src/assests/chennai silks.png",
-    coverPhoto: "./src/assests/brookfields.jpg",
+    businessDescription: "",
+    profilePicture: "./src/assests/chennai silks.png", // Default image
+    coverPhoto: "./src/assests/brookfields.jpg", // Default image
   });
 
   // Bank account information
   const [bankData, setBankData] = useState({
-    accountHolderName: "Chennai Silks Pvt Ltd",
-    accountNumber: "••••••••3456",
-    ifscCode: "SBIN0001234",
-    bankName: "State Bank of India",
-    branchName: "Gandhipuram Branch"
+    accountHolderName: "",
+    accountNumber: "••••••••0000",
+    ifscCode: "",
+    bankName: "",
+    branchName: ""
   });
+
+  // Load user data from context when component mounts
+  useEffect(() => {
+    if (user) {
+      // In a real app, you would fetch complete profile data from an API endpoint
+      // using the user's ID or token from the context
+      
+      // For now, populate with data from auth context and add mock data
+      setProfileData(prevData => ({
+        ...prevData,
+        businessName: user.businessName || "Chennai Silks",
+        ownerName: user.name || "Ravi Kumar",
+        email: user.email || "info@chennaisilks.com",
+        phone: user.phone || "+91 98765 43210",
+        gstNumber: user.gstNumber || "33AABCT3518Q1ZW",
+        businessType: user.businessType || "Textile Wholesale",
+        establishedYear: user.establishedYear || "1998",
+        website: user.website || "www.chennaisilks.com",
+        address: {
+          street: user.address?.street || "42 Town Hall Road",
+          area: user.address?.area || "Gandhipuram",
+          city: user.address?.city || "Coimbatore",
+          state: user.address?.state || "Tamil Nadu",
+          pincode: user.address?.pincode || "641001"
+        },
+        businessDescription: user.businessDescription || 
+          "Chennai Silks is a premier wholesale textile supplier specializing in silk fabrics, cotton materials, and other textile products for retail businesses, designers and manufacturers."
+      }));
+      
+      // Load banking data if available
+      if (user.bankingDetails) {
+        setBankData({
+          accountHolderName: user.bankingDetails.accountHolderName || "Chennai Silks Pvt Ltd",
+          accountNumber: "••••••••" + (user.bankingDetails.accountNumberLast4 || "3456"),
+          ifscCode: user.bankingDetails.ifscCode || "SBIN0001234",
+          bankName: user.bankingDetails.bankName || "State Bank of India",
+          branchName: user.bankingDetails.branchName || "Gandhipuram Branch"
+        });
+      }
+    }
+  }, [user]);
 
   // Form validation state
   const [errors, setErrors] = useState({});
@@ -190,25 +231,41 @@ const B_ProfilePage = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
     
-    // In a real app, you would save the profile data to your backend
-    console.log("Saving profile data:", profileData);
-    console.log("Saving bank data:", bankData);
-    
-    // Show success message
-    setSaveSuccess(true);
-    
-    // Hide success message after 3 seconds
-    setTimeout(() => {
-      setSaveSuccess(false);
-      setIsEditing(false);
-    }, 3000);
+    try {
+      // Prepare the data for API submission
+      const userData = {
+        ...profileData,
+        // For masked data like account numbers, handle differently
+        bankDetails: {
+          ...bankData,
+          // Only update account number if it was changed (not masked)
+          accountNumber: bankData.accountNumber.includes('•') ? undefined : bankData.accountNumber,
+        }
+      };
+      
+      // Call the update profile method from AuthContext
+      await updateProfile(userData);
+      
+      // Show success message
+      setSaveSuccess(true);
+      
+      // Hide success message after 3 seconds and exit editing mode
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setIsEditing(false);
+      }, 3000);
+    } catch (error) {
+      // Handle error (could add error state variables)
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
   };
 
   // Handle tab click

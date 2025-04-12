@@ -2,7 +2,8 @@ import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from
 import { Outlet, useNavigate } from 'react-router-dom';
 import '../styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
-import { useCart } from '../context/CartContext'; // <-- New import
+import { useCart } from '../context/CartContext';
+import api from '../utils/api';
 
 const ProductCard = lazy(() => import('../components/ProductCard'));
 const Cart = lazy(() => import('../components/Cart'));
@@ -10,112 +11,13 @@ const Cart = lazy(() => import('../components/Cart'));
 const CITIES = ['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi'];
 const CATEGORIES = [
   { id: 'all', name: 'All Categories', icon: 'fa-th-large' },
-  { id: 'stationery', name: 'Stationery', icon: 'fa-pencil-alt' },
-  { id: 'electronics', name: 'Electronics', icon: 'fa-laptop' },
-  { id: 'textiles', name: 'Textiles', icon: 'fa-tshirt' },
-  { id: 'food', name: 'Food & Beverages', icon: 'fa-utensils' },
+  { id: 'SuperMarket', name: 'Supermarket', icon: 'fa-shopping-basket' },
+  { id: 'Electronics', name: 'Electronics', icon: 'fa-laptop' },
+  { id: 'Wholesale', name: 'Wholesale', icon: 'fa-warehouse' },
+  { id: 'Restaurant', name: 'Food & Beverages', icon: 'fa-utensils' },
   { id: 'furniture', name: 'Furniture', icon: 'fa-chair' },
   { id: 'tools', name: 'Tools & Hardware', icon: 'fa-tools' },
   { id: 'packaging', name: 'Packaging', icon: 'fa-box-open' }
-];
-
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "A4 Sheets (500 sheets)",
-    price: "₹250",
-    numericPrice: 250,
-    category: "stationery",
-    seller: "Sunrise Stationers",
-    moq: "5 packs",
-    location: "Coimbatore",
-    area: "RS Puram",
-    rating: 4.5,
-    deliveryTime: "1-2 days",
-    image: "./src/assests/A4 sheets.jpeg",
-    inStock: true,
-    popularity: 95
-  },
-  {
-    id: 2,
-    name: "Cotton Fabric (per meter)",
-    price: "₹150",
-    numericPrice: 150,
-    category: "textiles",
-    seller: "Chennai Silks",
-    moq: "10 meters",
-    location: "Coimbatore",
-    area: "Town Hall",
-    rating: 4.2,
-    deliveryTime: "2-3 days",
-    image: "./src/assests/cotton.jpeg",
-    inStock: true,
-    popularity: 87
-  },
-  {
-    id: 3,
-    name: "Jumper Wires Set",
-    price: "₹199",
-    numericPrice: 199,
-    category: "electronics",
-    seller: "Sunrise Electronics",
-    moq: "20 sets",
-    location: "Coimbatore",
-    area: "Gandhipuram",
-    rating: 4.0,
-    deliveryTime: "1 day",
-    image: "./src/assests/jumper wires.jpeg",
-    inStock: true,
-    popularity: 76
-  },
-  {
-    id: 4,
-    name: "Honey (1kg)",
-    price: "₹450",
-    numericPrice: 450,
-    category: "food",
-    seller: "Lulu Market",
-    moq: "5 units",
-    location: "Coimbatore",
-    area: "Peelamedu",
-    rating: 4.7,
-    deliveryTime: "Same day",
-    image: "./src/assests/honey.jpeg",
-    inStock: true,
-    popularity: 92
-  },
-  {
-    id: 5,
-    name: "Premium Headphones (Bulk)",
-    price: "₹1200",
-    numericPrice: 1200,
-    category: "electronics",
-    seller: "Sunrise Electronics",
-    moq: "10 units",
-    location: "Coimbatore",
-    area: "Gandhipuram",
-    rating: 4.6,
-    deliveryTime: "2-3 days",
-    image: "./src/assests/headphones.jpeg",
-    inStock: true,
-    popularity: 84,
-  },
-  {
-    id: 6,
-    name: "Silk Thread Bundle",
-    price: "₹350",
-    numericPrice: 350,
-    category: "textiles",
-    seller: "Brookfields Textiles",
-    moq: "15 bundles",
-    location: "Coimbatore",
-    area: "Brookfields",
-    rating: 4.3,
-    deliveryTime: "1-2 days",
-    image: "./src/assests/silk thread.jpeg",
-    inStock: false,
-    popularity: 78,
-  }
 ];
 
 const useLocalStorage = (key, initialValue) => {
@@ -156,14 +58,57 @@ const B_Homepage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('Coimbatore');
-  const { cartItems, addToCart } = useCart(); // Update to use cartItems and addToCart
+  const { cartItems, addToCart } = useCart();
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [sortBy, setSortBy] = useState('popular');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
+  
+  // New state for products loaded from API
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Fetch products from backend API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const productsData = await api.products.getAll();
+        
+        // Transform the products to match the expected format
+        const transformedProducts = productsData.map(product => ({
+          id: product.product_id,
+          name: product.product_name,
+          price: `₹${product.price}`,
+          numericPrice: product.price,
+          category: product.category || 'uncategorized',
+          seller: product.business_name,
+          moq: `${Math.ceil(product.quantity_available * 0.1)} units`, // Just an example
+          location: product.area || 'Coimbatore',
+          area: product.street || 'Local Area',
+          rating: 4.5, // Example default rating
+          deliveryTime: "1-3 days",
+          image: product.image_url || "./src/assests/guddu.jpeg", // Default image if none provided
+          inStock: product.quantity_available > 0,
+          popularity: 80, // Example default popularity
+          description: product.description || 'No description available',
+          quantity_available: product.quantity_available
+        }));
+        
+        setProducts(transformedProducts);
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+        setError('Failed to load products. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 80);
@@ -171,11 +116,19 @@ const B_Homepage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle add to cart with notification
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    setShowCartNotification(true);
+    setTimeout(() => setShowCartNotification(false), 2000);
+  };
+
   const filteredProducts = useMemo(() => {
-    let filtered = PRODUCTS.filter((product) => {
+    if (!products.length) return [];
+    
+    let filtered = products.filter((product) => {
       return (
         (selectedCategory === 'all' || product.category === selectedCategory) &&
-        product.location === selectedCity &&
         (searchQuery === '' ||
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           product.seller.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -195,7 +148,7 @@ const B_Homepage = () => {
           return b.popularity - a.popularity;
       }
     });
-  }, [selectedCategory, selectedCity, searchQuery, sortBy]);
+  }, [products, selectedCategory, searchQuery, sortBy]);
 
   return (
     <div className="business-app">
@@ -204,7 +157,7 @@ const B_Homepage = () => {
         setSelectedCity={setSelectedCity} 
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
-        cart={cartItems}  // <-- Pass the context cartItems
+        cart={cartItems}
         setShowCart={setShowCart} 
         navigate={navigate} 
         showLocationDropdown={showLocationDropdown}
@@ -262,9 +215,11 @@ const B_Homepage = () => {
         {/* Products Section */}
         <ProductsSection
           filteredProducts={filteredProducts}
+          loading={loading}
+          error={error}
           sortBy={sortBy}
           setSortBy={setSortBy}
-          addToCart={addToCart}
+          addToCart={handleAddToCart}
           setSelectedCategory={setSelectedCategory}
           setSearchQuery={setSearchQuery}
         />
@@ -315,7 +270,9 @@ const B_Homepage = () => {
 };
 
 const ProductsSection = ({ 
-  filteredProducts, 
+  filteredProducts,
+  loading,
+  error, 
   sortBy, 
   setSortBy, 
   addToCart, 
@@ -336,15 +293,28 @@ const ProductsSection = ({
         </div>
       </div>
 
-      <div className="products-grid">
-        {filteredProducts.map(product => (
-          <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
-            <ProductCard product={product} onAddToCart={addToCart} />
-          </Suspense>
-        ))}
-      </div>
+      {loading ? (
+        <div className="loading-container">
+          <i className="fas fa-spinner fa-spin"></i>
+          <p>Loading products...</p>
+        </div>
+      ) : error ? (
+        <div className="error-container">
+          <i className="fas fa-exclamation-circle"></i>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()}>Try Again</button>
+        </div>
+      ) : (
+        <div className="products-grid">
+          {filteredProducts.map(product => (
+            <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
+              <ProductCard product={product} onAddToCart={addToCart} />
+            </Suspense>
+          ))}
+        </div>
+      )}
 
-      {filteredProducts.length === 0 && (
+      {!loading && !error && filteredProducts.length === 0 && (
         <div className="no-products">
           <i className="fas fa-search"></i>
           <h3>No products found</h3>

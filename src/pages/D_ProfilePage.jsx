@@ -1,6 +1,6 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import D_Navbar from '../components/D_Navbar';
 import D_Footer from '../components/D_Footer';
 import "../styles/delivery_home.css";
@@ -9,7 +9,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -17,22 +17,22 @@ const D_ProfilePage = () => {
   
   // Profile form state
   const [profileData, setProfileData] = useState({
-    fullName: "kenny",
-    email: "kenny@example.com",
-    phone: "+91 98765 43210",
+    fullName: "",
+    email: "",
+    phone: "",
     gender: "Male",
-    dateOfBirth: "2005-06-15",
+    dateOfBirth: "",
     address: {
-      street: "42 MG Road",
-      area: "Saibaba Colony",
-      city: "Coimbatore",
-      state: "Tamil Nadu",
-      pincode: "641011"
+      street: "",
+      area: "",
+      city: "",
+      state: "",
+      pincode: ""
     },
-    profilePicture: "./src/assests/kenny.jpg",
+    profilePicture: "./src/assests/kenny.jpg", // Default image
     vehicleType: "Two Wheeler",
-    vehicleNumber: "TN 66 AB 1234",
-    licenseNumber: "TN5520220012345",
+    vehicleNumber: "",
+    licenseNumber: "",
     preferredWorkingHours: {
       monday: { working: true, start: "09:00", end: "18:00" },
       tuesday: { working: true, start: "09:00", end: "18:00" },
@@ -42,17 +42,56 @@ const D_ProfilePage = () => {
       saturday: { working: true, start: "10:00", end: "16:00" },
       sunday: { working: false, start: "", end: "" }
     },
-    about: "Experienced delivery partner with 3+ years in food and package delivery. Known for timely deliveries and excellent customer service.",
+    about: "",
   });
 
   // Bank account information
   const [bankData, setBankData] = useState({
-    accountHolderName: "KENNY",
-    accountNumber: "••••••••4567",
-    ifscCode: "SBIN0001235",
-    bankName: "State Bank of India",
-    branchName: "Saibaba Colony Branch"
+    accountHolderName: "",
+    accountNumber: "••••••••0000",
+    ifscCode: "",
+    bankName: "",
+    branchName: ""
   });
+
+  // Load user data from context when component mounts
+  useEffect(() => {
+    if (user) {
+      // In a real app, you would fetch complete profile data from an API endpoint
+      // using the user's ID or token from the context
+      
+      // For now, populate with data from auth context and add mock data
+      setProfileData(prevData => ({
+        ...prevData,
+        fullName: user.name || "Kenny",
+        email: user.email || "kenny@example.com",
+        phone: user.phone || "+91 98765 43210",
+        gender: user.gender || "Male",
+        dateOfBirth: user.dateOfBirth || "2005-06-15",
+        address: {
+          street: user.address?.street || "42 MG Road",
+          area: user.address?.area || "Saibaba Colony",
+          city: user.address?.city || "Coimbatore",
+          state: user.address?.state || "Tamil Nadu",
+          pincode: user.address?.pincode || "641011"
+        },
+        vehicleNumber: user.vehicleNumber || "TN 66 AB 1234",
+        licenseNumber: user.licenseNumber || "TN5520220012345",
+        about: user.about || "Experienced delivery partner with 3+ years in food and package delivery. Known for timely deliveries and excellent customer service."
+      }));
+      
+      // Load banking data if available
+      if (user.bankingDetails) {
+        setBankData({
+          accountHolderName: user.bankingDetails.accountHolderName || "KENNY",
+          accountNumber: "••••••••" + (user.bankingDetails.accountNumberLast4 || "4567"),
+          ifscCode: user.bankingDetails.ifscCode || "SBIN0001235",
+          bankName: user.bankingDetails.bankName || "State Bank of India",
+          branchName: user.bankingDetails.branchName || "Saibaba Colony Branch"
+        });
+      }
+    }
+  }, [user]);
 
   // Form validation state
   const [errors, setErrors] = useState({});
@@ -205,25 +244,41 @@ const D_ProfilePage = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
     
-    // In a real app, you would save the profile data to your backend
-    console.log("Saving profile data:", profileData);
-    console.log("Saving bank data:", bankData);
-    
-    // Show success message
-    setSaveSuccess(true);
-    
-    // Hide success message after 3 seconds
-    setTimeout(() => {
-      setSaveSuccess(false);
-      setIsEditing(false);
-    }, 3000);
+    try {
+      // Prepare the data for API submission
+      const userData = {
+        ...profileData,
+        // For masked data like account numbers, handle differently
+        bankDetails: {
+          ...bankData,
+          // Only update account number if it was changed (not masked)
+          accountNumber: bankData.accountNumber.includes('•') ? undefined : bankData.accountNumber,
+        }
+      };
+      
+      // Call the update profile method from AuthContext
+      await updateProfile(userData);
+      
+      // Show success message
+      setSaveSuccess(true);
+      
+      // Hide success message after 3 seconds and exit editing mode
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setIsEditing(false);
+      }, 3000);
+    } catch (error) {
+      // Handle error
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
   };
 
   // Handle tab click

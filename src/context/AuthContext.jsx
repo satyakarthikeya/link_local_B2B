@@ -1,80 +1,149 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// Import your authentication service here, e.g. Firebase
-// import { auth } from '../firebase';
+import api from '../utils/api';
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userType, setUserType] = useState(null); // 'business' or 'delivery'
+  const [token, setToken] = useState(localStorage.getItem('authToken') || null);
 
-  // Function to sign up users
-  const signup = async (email, password, userData) => {
-    // Implement your signup logic here
-    // Example: return auth.createUserWithEmailAndPassword(email, password);
-    console.log("Signup with:", email, userData);
+  // Function to register a business
+  const registerBusiness = async (userData) => {
+    try {
+      const response = await api.auth.businessRegister(userData);
+      setToken(response.token);
+      setCurrentUser(response.user);
+      setUserType('business');
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('userType', 'business');
+      return response;
+    } catch (error) {
+      console.error("Business registration error:", error);
+      throw error;
+    }
   };
 
-  // Function to log in users
-  const login = async (email, password) => {
-    // Implement your login logic here
-    // Example: return auth.signInWithEmailAndPassword(email, password);
-    console.log("Login with:", email);
-    // Simulate successful login for development
-    setCurrentUser({ 
-      email, 
-      displayName: "Test User", 
-      uid: "test123" 
-    });
-    return Promise.resolve();
+  // Function to register a delivery agent
+  const registerDelivery = async (userData) => {
+    try {
+      const response = await api.auth.deliveryRegister(userData);
+      setToken(response.token);
+      setCurrentUser(response.user);
+      setUserType('delivery');
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('userType', 'delivery');
+      return response;
+    } catch (error) {
+      console.error("Delivery registration error:", error);
+      throw error;
+    }
   };
 
-  // Function to log out users
-  const logout = async () => {
-    // Implement your logout logic here
-    // Example: return auth.signOut();
-    console.log("Logging out");
+  // Function to log in business user
+  const loginBusiness = async (credentials) => {
+    try {
+      const response = await api.auth.businessLogin(credentials);
+      setToken(response.token);
+      setCurrentUser(response.user);
+      setUserType('business');
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('userType', 'business');
+      return response;
+    } catch (error) {
+      console.error("Business login error:", error);
+      throw error;
+    }
+  };
+
+  // Function to log in delivery agent
+  const loginDelivery = async (credentials) => {
+    try {
+      const response = await api.auth.deliveryLogin(credentials);
+      setToken(response.token);
+      setCurrentUser(response.user);
+      setUserType('delivery');
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('userType', 'delivery');
+      return response;
+    } catch (error) {
+      console.error("Delivery login error:", error);
+      throw error;
+    }
+  };
+
+  // Function to log out user
+  const logout = () => {
     setCurrentUser(null);
-    return Promise.resolve();
-  };
-
-  // Function to reset password
-  const resetPassword = async (email) => {
-    // Implement password reset
-    // Example: return auth.sendPasswordResetEmail(email);
-    console.log("Reset password for:", email);
+    setToken(null);
+    setUserType(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userType');
   };
 
   // Function to update user profile
   const updateProfile = async (userData) => {
-    // Implement profile update
-    console.log("Update profile with:", userData);
-    setCurrentUser(prev => ({...prev, ...userData}));
+    try {
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      // Call the API to update the profile
+      const updatedUser = await api.auth.updateProfile(userData, token);
+      
+      // Update the local state with the updated user data
+      setCurrentUser(updatedUser);
+      
+      return updatedUser;
+    } catch (error) {
+      console.error("Profile update error:", error);
+      throw error;
+    }
   };
 
-  // Listen for auth state changes when the component mounts
+  // Get the current user from the token when the component mounts
   useEffect(() => {
-    // Implement auth state listener
-    // Example:
-    // const unsubscribe = auth.onAuthStateChanged(user => {
-    //   setCurrentUser(user);
-    //   setLoading(false);
-    // });
-    
-    // For development without actual auth service
-    setLoading(false);
-    
-    // Cleanup subscription on unmount
-    // return unsubscribe;
-  }, []);
+    const fetchUser = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const savedUserType = localStorage.getItem('userType');
+        setUserType(savedUserType);
+        
+        const user = await api.auth.getCurrentUser(token);
+        setCurrentUser(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        // If the token is invalid, clear it
+        setToken(null);
+        setUserType(null);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userType');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [token]);
 
   const value = {
     currentUser,
-    signup,
-    login,
+    userType,
+    token,
+    registerBusiness,
+    registerDelivery,
+    loginBusiness,
+    loginDelivery,
     logout,
-    resetPassword,
-    updateProfile
+    updateProfile,
+    isAuthenticated: !!token,
+    isBusinessUser: userType === 'business',
+    isDeliveryUser: userType === 'delivery'
   };
 
   return (
