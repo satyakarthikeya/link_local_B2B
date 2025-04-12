@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import '../styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 const ProductCard = lazy(() => import('../components/ProductCard'));
@@ -56,6 +57,7 @@ const B_Homepage = () => {
     };
   }, []);
   const navigate = useNavigate();
+  const { currentUser, getProfileName } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('Coimbatore');
   const { cartItems, addToCart } = useCart();
@@ -70,6 +72,14 @@ const B_Homepage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Get business owner name
+  const getBusinessOwnerName = () => {
+    if (currentUser && currentUser.owner_name) {
+      return currentUser.owner_name;
+    }
+    return 'Business Owner';
+  };
 
   // Fetch products from backend API
   useEffect(() => {
@@ -165,6 +175,14 @@ const B_Homepage = () => {
       />
 
       <main className="business-main">
+        {/* Welcome Message */}
+        <div className="welcome-banner">
+          <div className="container">
+            <h2>Welcome, {getBusinessOwnerName()}! 👋</h2>
+            <p>Find everything you need for your business growth today.</p>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <section className="hero-section">
           <div className="container">

@@ -11,7 +11,7 @@ const AuthController = {
   // Register a new business user
   async registerBusiness(req, res) {
     try {
-      const { name, business_name, area, street, category, email, password, phone_no } = req.body;
+      const { business_name, name, owner_name, area, street, category, email, password, phone_no, gst_number = '' } = req.body;
       
       // Check if email already exists
       const existingBusiness = await BusinessModel.findByEmail(email);
@@ -19,16 +19,25 @@ const AuthController = {
         return res.status(400).json({ error: 'Email already in use' });
       }
       
+      // Validate required fields
+      if (!business_name || !email || !password || !phone_no || !area || !category) {
+        return res.status(422).json({ 
+          error: 'Missing required fields',
+          details: 'Please provide business_name, email, password, phone_no, area, and category'
+        });
+      }
+      
       // Create new business user
       const business = await BusinessModel.create({
-        name,
         business_name,
+        owner_name: owner_name || name || business_name, // Use owner_name or name if provided, otherwise use business_name
         area,
         street,
         category,
         email,
         password,
-        phone_no
+        phone_no,
+        gst_number
       });
       
       // Generate JWT token
@@ -47,8 +56,8 @@ const AuthController = {
         user: businessData
       });
     } catch (error) {
-      console.error('Registration error:', error.message);
-      res.status(500).json({ error: 'Server error during registration' });
+      console.error('Registration error:', error.message, error.stack);
+      res.status(500).json({ error: 'Server error during registration', details: error.message });
     }
   },
   
@@ -200,6 +209,48 @@ const AuthController = {
     } catch (error) {
       console.error('Auth error:', error.message);
       res.status(500).json({ error: 'Server error fetching user data' });
+    }
+  },
+  
+  // Update user profile
+  async updateProfile(req, res) {
+    try {
+      const { id, type } = req.user;
+      const profileData = req.body;
+      let updatedUser;
+      
+      if (type === 'business') {
+        // Update business user profile
+        updatedUser = await BusinessModel.update(id, profileData);
+        if (!updatedUser) {
+          return res.status(404).json({ error: 'Business user not found' });
+        }
+        
+        // Remove password from response
+        const { password, ...businessData } = updatedUser;
+        return res.json({
+          message: 'Business profile updated successfully',
+          user: businessData
+        });
+      } else if (type === 'delivery') {
+        // Update delivery agent profile
+        updatedUser = await DeliveryModel.update(id, profileData);
+        if (!updatedUser) {
+          return res.status(404).json({ error: 'Delivery agent not found' });
+        }
+        
+        // Remove password from response
+        const { password, ...agentData } = updatedUser;
+        return res.json({
+          message: 'Delivery profile updated successfully',
+          user: agentData
+        });
+      } else {
+        return res.status(400).json({ error: 'Invalid user type' });
+      }
+    } catch (error) {
+      console.error('Profile update error:', error.message);
+      res.status(500).json({ error: 'Server error updating profile' });
     }
   }
 };

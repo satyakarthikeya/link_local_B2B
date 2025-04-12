@@ -9,7 +9,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_ProfilePage = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useAuth();
+  const { currentUser, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -56,42 +56,56 @@ const D_ProfilePage = () => {
 
   // Load user data from context when component mounts
   useEffect(() => {
-    if (user) {
-      // In a real app, you would fetch complete profile data from an API endpoint
-      // using the user's ID or token from the context
+    if (currentUser) {
+      console.log('Current user data:', currentUser); // Debug log to see what data we get
       
-      // For now, populate with data from auth context and add mock data
+      // Populate with data from auth context, using database values when available
       setProfileData(prevData => ({
         ...prevData,
-        fullName: user.name || "Kenny",
-        email: user.email || "kenny@example.com",
-        phone: user.phone || "+91 98765 43210",
-        gender: user.gender || "Male",
-        dateOfBirth: user.dateOfBirth || "2005-06-15",
+        fullName: currentUser.name || "",
+        email: currentUser.email || "",
+        phone: currentUser.contact_number || "",
+        gender: currentUser.gender || "Male",
+        dateOfBirth: currentUser.date_of_birth || "",
         address: {
-          street: user.address?.street || "42 MG Road",
-          area: user.address?.area || "Saibaba Colony",
-          city: user.address?.city || "Coimbatore",
-          state: user.address?.state || "Tamil Nadu",
-          pincode: user.address?.pincode || "641011"
+          street: currentUser.street || "",
+          area: currentUser.area || "",
+          city: currentUser.city || "",
+          state: currentUser.state || "",
+          pincode: currentUser.pincode || ""
         },
-        vehicleNumber: user.vehicleNumber || "TN 66 AB 1234",
-        licenseNumber: user.licenseNumber || "TN5520220012345",
-        about: user.about || "Experienced delivery partner with 3+ years in food and package delivery. Known for timely deliveries and excellent customer service."
+        vehicleType: currentUser.vehicle_type || "Two Wheeler",
+        vehicleNumber: currentUser.vehicle_number || "",
+        licenseNumber: currentUser.license_no || "",
+        about: currentUser.about || ""
       }));
       
       // Load banking data if available
-      if (user.bankingDetails) {
-        setBankData({
-          accountHolderName: user.bankingDetails.accountHolderName || "KENNY",
-          accountNumber: "••••••••" + (user.bankingDetails.accountNumberLast4 || "4567"),
-          ifscCode: user.bankingDetails.ifscCode || "SBIN0001235",
-          bankName: user.bankingDetails.bankName || "State Bank of India",
-          branchName: user.bankingDetails.branchName || "Saibaba Colony Branch"
-        });
-      }
+      // Check database records for bank details
+      const fetchBankDetails = async () => {
+        try {
+          // We can use auth context's token here to make a request for banking details
+          // But for now we'll use what's available in the currentUser
+          setBankData({
+            accountHolderName: currentUser.bank_account_holder || "",
+            accountNumber: currentUser.bank_account_number ? 
+              ("••••••••" + currentUser.bank_account_number.slice(-4)) : 
+              "••••••••0000",
+            ifscCode: currentUser.bank_ifsc_code || "",
+            bankName: currentUser.bank_name || "",
+            branchName: currentUser.bank_branch || ""
+          });
+        } catch (error) {
+          console.error("Error fetching bank details:", error);
+        }
+      };
+      
+      fetchBankDetails();
+      
+      // Ideally we would fetch working hours data from API
+      // For now we'll keep the default values set in the initial state
     }
-  }, [user]);
+  }, [currentUser]);
 
   // Form validation state
   const [errors, setErrors] = useState({});

@@ -55,40 +55,73 @@ const B_ProfilePage = () => {
   // Load user data from context when component mounts
   useEffect(() => {
     if (user) {
-      // In a real app, you would fetch complete profile data from an API endpoint
-      // using the user's ID or token from the context
+      console.log('Business user data:', user); // Debug log to see what data we get
       
-      // For now, populate with data from auth context and add mock data
+      // Populate with data from auth context, using database values when available
       setProfileData(prevData => ({
         ...prevData,
-        businessName: user.businessName || "Chennai Silks",
-        ownerName: user.name || "Ravi Kumar",
-        email: user.email || "info@chennaisilks.com",
-        phone: user.phone || "+91 98765 43210",
-        gstNumber: user.gstNumber || "33AABCT3518Q1ZW",
-        businessType: user.businessType || "Textile Wholesale",
-        establishedYear: user.establishedYear || "1998",
-        website: user.website || "www.chennaisilks.com",
+        businessName: user.business_name || "",
+        ownerName: user.name || "",
+        email: user.email || "",
+        phone: user.phone_no || "",
+        gstNumber: user.gst_number || "",
+        businessType: user.category || "",
+        establishedYear: user.established_year || "",
+        website: user.website || "",
         address: {
-          street: user.address?.street || "42 Town Hall Road",
-          area: user.address?.area || "Gandhipuram",
-          city: user.address?.city || "Coimbatore",
-          state: user.address?.state || "Tamil Nadu",
-          pincode: user.address?.pincode || "641001"
+          street: user.street || "",
+          area: user.area || "",
+          city: user.city || "",
+          state: user.state || "",
+          pincode: user.pincode || ""
         },
-        businessDescription: user.businessDescription || 
-          "Chennai Silks is a premier wholesale textile supplier specializing in silk fabrics, cotton materials, and other textile products for retail businesses, designers and manufacturers."
+        businessDescription: user.business_description || ""
       }));
       
       // Load banking data if available
-      if (user.bankingDetails) {
-        setBankData({
-          accountHolderName: user.bankingDetails.accountHolderName || "Chennai Silks Pvt Ltd",
-          accountNumber: "••••••••" + (user.bankingDetails.accountNumberLast4 || "3456"),
-          ifscCode: user.bankingDetails.ifscCode || "SBIN0001234",
-          bankName: user.bankingDetails.bankName || "State Bank of India",
-          branchName: user.bankingDetails.branchName || "Gandhipuram Branch"
+      const fetchBankDetails = async () => {
+        try {
+          // Check for banking details in the user object
+          setBankData({
+            accountHolderName: user.account_holder_name || "",
+            accountNumber: user.account_number ? 
+              ("••••••••" + user.account_number.slice(-4)) : 
+              "••••••••0000",
+            ifscCode: user.ifsc_code || "",
+            bankName: user.bank_name || "",
+            branchName: user.branch_name || ""
+          });
+        } catch (error) {
+          console.error("Error fetching bank details:", error);
+        }
+      };
+      
+      fetchBankDetails();
+      
+      // Load business hours if available
+      if (user.business_hours && Array.isArray(user.business_hours)) {
+        const hoursObject = {};
+        
+        // Convert API format to our frontend format
+        user.business_hours.forEach(hour => {
+          if (hour.day && (hour.open_time || hour.close_time)) {
+            hoursObject[hour.day.toLowerCase()] = {
+              open: hour.open_time || "",
+              close: hour.close_time || ""
+            };
+          }
         });
+        
+        // Only update hours if we have data from the API
+        if (Object.keys(hoursObject).length > 0) {
+          setProfileData(prevData => ({
+            ...prevData,
+            businessHours: {
+              ...prevData.businessHours,
+              ...hoursObject
+            }
+          }));
+        }
       }
     }
   }, [user]);

@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import "../styles/delivery_home.css"; // Correct path to delivery_home.css
 import D_Navbar from "../components/D_Navbar";
 import D_Footer from "../components/D_Footer";
+import { useAuth } from "../context/AuthContext";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_Homepage = () => {
   const navigate = useNavigate();
+  const { currentUser, getProfileName } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [currentLocation, setCurrentLocation] = useState("Coimbatore, Tamil Nadu");
   const [activeTab, setActiveTab] = useState("all");
@@ -130,10 +132,10 @@ const D_Homepage = () => {
 
       <main className="delivery-dashboard">
         <div className="container">
-          {/* Enhanced Welcome Section with Location Picker */}
+          {/* Enhanced Welcome Section with Location Picker and Username */}
           <div className="welcome-bar">
             <div className="welcome-status">
-              <h2>Delivery Dashboard</h2>
+              <h2>Welcome, {getProfileName() || 'Delivery Partner'}! 👋</h2>
               <div className="location-picker" onClick={openLocationModal}>
                 <i className="fas fa-map-marker-alt"></i>
                 <p>{currentLocation}</p>

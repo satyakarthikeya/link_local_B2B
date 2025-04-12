@@ -1,237 +1,191 @@
-// API client utility for making requests to the backend
+import axios from 'axios';
 
-// Base URL for all API requests
-const API_URL = 'http://localhost:5000/api';
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
 
-// Helper function to handle errors from fetch calls
-const handleResponse = async (response) => {
-  const data = await response.json();
-  
-  if (!response.ok) {
-    // If server returns an error, throw it to be caught by the caller
-    const error = (data && data.error) || response.statusText;
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken'); // Changed from 'token' to 'authToken' to match AuthContext
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding auth token to request:', config.url);
+    } else {
+      console.log('No auth token found for request:', config.url);
+    }
+    return config;
+  },
+  (error) => {
     return Promise.reject(error);
   }
-  
-  return data;
-};
+);
 
-// API utility functions
-const api = {
-  // Auth endpoints
-  auth: {
-    // Business authentication
-    businessLogin: async (credentials) => {
-      const response = await fetch(`${API_URL}/auth/business/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
-      });
-      return handleResponse(response);
-    },
-    
-    businessRegister: async (userData) => {
-      const response = await fetch(`${API_URL}/auth/business/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-      return handleResponse(response);
-    },
-    
-    // Delivery agent authentication
-    deliveryLogin: async (credentials) => {
-      const response = await fetch(`${API_URL}/auth/delivery/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
-      });
-      return handleResponse(response);
-    },
-    
-    deliveryRegister: async (userData) => {
-      const response = await fetch(`${API_URL}/auth/delivery/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-      return handleResponse(response);
-    },
-    
-    // Get current user info
-    getCurrentUser: async (token) => {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return handleResponse(response);
-    },
-    
-    // Update user profile
-    updateProfile: async (userData, token) => {
-      const response = await fetch(`${API_URL}/auth/update-profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(userData)
-      });
-      return handleResponse(response);
+// Add response interceptor to handle common errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      if (error.response.status === 401) {
+        console.log('Unauthorized request. Redirecting to login...');
+        // Uncomment the following to redirect to login on 401
+        // window.location.href = '/login-business';
+      }
+      if (error.response.status === 500) {
+        console.error('Server error:', error.response.data || 'Unknown server error');
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Products and Inventory API
+export const productAPI = {
+  // Get all products with optional filters
+  getProducts: (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return api.get(`/products?${params}`);
+  },
+
+  // New method to get all products (for compatibility with existing code)
+  getAll: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams(filters);
+      const response = await api.get(`/products?${params}`);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return [];
     }
   },
-  
-  // Product endpoints
-  products: {
-    // Get all products with optional filtering
-    getAll: async (filters = {}) => {
-      // Convert filters object to query string
-      const queryString = Object.entries(filters)
-        .filter(([_, value]) => value !== undefined && value !== null && value !== '')
-        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-        .join('&');
-      
-      const url = queryString ? `${API_URL}/products?${queryString}` : `${API_URL}/products`;
-      const response = await fetch(url);
-      return handleResponse(response);
-    },
+
+  // Get business's products
+  getBusinessProducts: () => api.get('/products/business/myproducts'),
+
+  // Get low stock products
+  getLowStockProducts: () => api.get('/products/business/low-stock'),
+
+  // Create new product
+  createProduct: (productData) => {
+    console.log('Creating product with data:', productData);
     
-    // Search products
-    search: async (query) => {
-      const response = await fetch(`${API_URL}/products/search?query=${encodeURIComponent(query)}`);
-      return handleResponse(response);
-    },
-    
-    // Get single product by ID
-    getById: async (productId) => {
-      const response = await fetch(`${API_URL}/products/${productId}`);
-      return handleResponse(response);
-    },
-    
-    // Create new product (requires authentication)
-    create: async (productData, token) => {
-      const response = await fetch(`${API_URL}/products`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(productData)
-      });
-      return handleResponse(response);
-    },
-    
-    // Update product (requires authentication)
-    update: async (productId, productData, token) => {
-      const response = await fetch(`${API_URL}/products/${productId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(productData)
-      });
-      return handleResponse(response);
-    },
-    
-    // Delete product (requires authentication)
-    delete: async (productId, token) => {
-      const response = await fetch(`${API_URL}/products/${productId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return handleResponse(response);
-    },
-    
-    // Get business products (requires authentication)
-    getBusinessProducts: async (token) => {
-      const response = await fetch(`${API_URL}/products/business/myproducts`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return handleResponse(response);
+    // For regular JSON data (no file uploads)
+    if (!productData.image) {
+      return api.post('/products', productData);
     }
+    
+    // For multipart form data (with file uploads)
+    const formData = new FormData();
+    Object.keys(productData).forEach(key => {
+      if (productData[key] !== null && productData[key] !== undefined) {
+        formData.append(key, productData[key]);
+      }
+    });
+    
+    return api.post('/products', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
   },
-  
-  // Order endpoints
-  orders: {
-    // Create a new order (requires authentication)
-    create: async (orderData, token) => {
-      const response = await fetch(`${API_URL}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(orderData)
-      });
-      return handleResponse(response);
-    },
-    
-    // Get order by ID (requires authentication)
-    getById: async (orderId, token) => {
-      const response = await fetch(`${API_URL}/orders/${orderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return handleResponse(response);
-    },
-    
-    // Update order status (requires authentication)
-    updateStatus: async (orderId, statusData, token) => {
-      const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(statusData)
-      });
-      return handleResponse(response);
-    },
-    
-    // Get business orders (requires authentication)
-    getBusinessOrders: async (token, role) => {
-      const url = role 
-        ? `${API_URL}/orders/business/orders?role=${role}`
-        : `${API_URL}/orders/business/orders`;
-        
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return handleResponse(response);
-    },
-    
-    // Get delivery orders (requires authentication)
-    getDeliveryOrders: async (token) => {
-      const response = await fetch(`${API_URL}/orders/delivery/orders`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return handleResponse(response);
-    },
-    
-    // Assign delivery agent (requires authentication)
-    assignDeliveryAgent: async (assignData, token) => {
-      const response = await fetch(`${API_URL}/orders/assign-delivery`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(assignData)
-      });
-      return handleResponse(response);
-    }
+
+  // Update product
+  updateProduct: (id, productData) => {
+    const formData = new FormData();
+    Object.keys(productData).forEach(key => {
+      if (productData[key] !== null && productData[key] !== undefined) {
+        formData.append(key, productData[key]);
+      }
+    });
+    return api.put(`/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // Delete product
+  deleteProduct: (id) => api.delete(`/products/${id}`),
+
+  // Update product quantity
+  updateQuantity: (id, quantity, operation = 'set') => 
+    api.patch(`/products/${id}/quantity`, { quantity, operation }),
+
+  // Search products
+  searchProducts: (query) => api.get(`/products/search?query=${query}`),
+
+  // Upload product image
+  uploadProductImage: (productId, formData) => {
+    return api.post(`/products/${productId}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
   }
 };
+
+// Orders API
+export const orderAPI = {
+  // Create a new order
+  createOrder: (orderData) => api.post('/orders', orderData),
+
+  // Get order by ID
+  getOrderById: (orderId) => api.get(`/orders/${orderId}`),
+
+  // Update order status
+  updateOrderStatus: (orderId, statusData) => api.patch(`/orders/${orderId}/status`, statusData),
+
+  // Get business orders
+  getBusinessOrders: (role) => {
+    const params = role ? `?role=${role}` : '';
+    return api.get(`/orders/business/orders${params}`);
+  },
+
+  // Get delivery orders
+  getDeliveryOrders: () => api.get('/orders/delivery/orders'),
+
+  // Assign delivery agent
+  assignDeliveryAgent: (assignData) => api.post('/orders/assign-delivery', assignData)
+};
+
+// Auth API
+export const authAPI = {
+  // Business authentication
+  businessLogin: (credentials) => api.post('/auth/business/login', credentials),
+
+  businessRegister: (userData) => api.post('/auth/business/register', userData),
+
+  // Delivery agent authentication
+  deliveryLogin: (credentials) => api.post('/auth/delivery/login', credentials),
+
+  deliveryRegister: (userData) => api.post('/auth/delivery/register', userData),
+
+  // Get current user info
+  getCurrentUser: () => api.get('/auth/me'),
+
+  // Update user profile
+  updateProfile: (userData) => api.put('/auth/update-profile', userData)
+};
+
+// Image Upload API
+export const uploadImage = async (formData) => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}` // Include token if required
+      }
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to upload image:', error);
+    throw error;
+  }
+};
+
+// Assign APIs to the api object
+api.auth = authAPI;
+api.products = productAPI;
+api.orders = orderAPI;
+api.uploadImage = uploadImage;
 
 export default api;

@@ -1,19 +1,107 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { logger } from '../utils/logger.js';
 
 dotenv.config();
 
+/**
+ * Middleware to authenticate JWT tokens
+ * Verifies the token and attaches user data to the request
+ */
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  
-  if (token == null) return res.status(401).json({ error: 'Authentication token required' });
-  
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
-    req.user = user;
-    next();
-  });
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ 
+        error: 'Authentication token required',
+        message: 'Please provide a valid authentication token'
+      });
+    }
+    
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        logger.error('JWT verification error:', { error: err.message, token: token.substring(0, 10) + '...' });
+        
+        if (err.name === 'TokenExpiredError') {
+          return res.status(401).json({ 
+            error: 'Token expired',
+            message: 'Your session has expired. Please log in again.'
+          });
+        }
+        
+        if (err.name === 'JsonWebTokenError') {
+          return res.status(403).json({ 
+            error: 'Invalid token',
+            message: 'Authentication failed. Please log in again.'
+          });
+        }
+        
+        return res.status(403).json({ 
+          error: 'Authentication failed',
+          message: 'Please log in again.'
+        });
+      }
+      
+      if (!user.type || !user.id) {
+        logger.error('Invalid token payload:', { user });
+        return res.status(403).json({
+          error: 'Invalid token format',
+          message: 'Authentication token is malformed. Please log in again.'
+        });
+      }
+      
+      req.user = user;
+      next();
+    });
+  } catch (error) {
+    logger.error('Authentication middleware error:', error);
+    res.status(500).json({ 
+      error: 'Authentication failed',
+      message: 'An unexpected error occurred. Please try again.'
+    });
+  }
 }
 
-export { authenticateToken };
+/**
+ * Middleware to check if user has a specific role
+ * Uses the authenticateToken middleware first, then checks the user type
+ */
+function authorizeRole(role) {
+  return [
+    authenticateToken,
+    (req, res, next) => {
+      if (req.user.type !== role) {
+        return res.status(403).json({ 
+          error: 'Access denied',
+          message: `Access requires ${role} role`
+        });
+      }
+      next();
+    }
+  ];
+}
+
+// Specific role middleware functions
+const authorizeBusiness = authorizeRole('business');
+const authorizeDelivery = authorizeRole('delivery');
+
+// Middleware to allow either business or delivery user
+function authorizeBusinessOrDelivery(req, res, next) {
+  if (req.user.type !== 'business' && req.user.type !== 'delivery') {
+    return res.status(403).json({ 
+      error: 'Access denied',
+      message: 'Access requires business or delivery role' 
+    });
+  }
+  next();
+}
+
+export { 
+  authenticateToken, 
+  authorizeRole,
+  authorizeBusiness,
+  authorizeDelivery,
+  authorizeBusinessOrDelivery
+};

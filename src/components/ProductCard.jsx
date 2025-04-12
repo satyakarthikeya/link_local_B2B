@@ -1,38 +1,23 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { useCart } from '../context/CartContext';
-import '../styles/business_home.css';
+import '../styles/Cart.css';
 
-const ProductCard = ({ product, onViewDetails }) => {
+const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateStock, onEdit, onDelete }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const { addToCart } = useCart();
-  
-  const calculateDiscount = () => {
-    if (product.originalPrice) {
-      const discount = ((product.originalPrice - product.price) / product.originalPrice) * 100;
-      return Math.round(discount);
-    }
-    return null;
-  };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!product.inStock || isAddingToCart) return;
-    
+
+    if (!product.in_stock || isAddingToCart) return;
+
     try {
       setIsAddingToCart(true);
-      
-      // Use the context's addToCart function
-      addToCart(product);
-      
-      // Show success feedback
+      await onAddToCart(product);
       setAddedToCart(true);
       
-      // Reset the success state after a delay
       setTimeout(() => {
         setAddedToCart(false);
       }, 2000);
@@ -43,116 +28,156 @@ const ProductCard = ({ product, onViewDetails }) => {
     }
   };
 
-  const handleViewDetails = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onViewDetails(product);
+  const handleStockUpdate = async (newQuantity) => {
+    if (newQuantity < 0) return;
+    try {
+      await onUpdateStock(product.product_id, newQuantity);
+    } catch (error) {
+      console.error("Failed to update stock:", error);
+    }
   };
 
-  const discount = calculateDiscount();
   const {
-    image,
-    name,
-    inStock,
-    rating,
-    reviews = [],
-    area,
-    location,
-    deliveryTime,
-    moq,
+    product_name,
     price,
-    originalPrice
+    quantity_available,
+    image_url,
+    category,
+    moq = 1,
+    reorder_point = 10,
+    business_name,
+    area
   } = product;
+
+  const stockStatus = quantity_available === 0 ? 'Out of Stock' : 
+                     quantity_available <= reorder_point ? 'Low Stock' : 
+                     'In Stock';
+
+  const stockStatusColor = {
+    'Out of Stock': 'red',
+    'Low Stock': 'orange',
+    'In Stock': 'green'
+  };
 
   return (
     <div 
-      className="product-card fade-in" 
+      className="product-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="product-img-wrapper">
-        {discount && (
-          <span className="discount-badge">-{discount}%</span>
-        )}
-        <img src={image} alt={name} className="product-img" />
-        {inStock ? (
-          <span className="stock-badge in-stock">
-            <i className="fas fa-check-circle"></i> In Stock
-          </span>
-        ) : (
-          <span className="stock-badge out-of-stock">
-            <i className="fas fa-times-circle"></i> Out of Stock
-          </span>
-        )}
-        <div className={`product-overlay ${isHovered ? 'visible' : ''}`}>
-          <button 
-            className="quick-view-btn" 
-            onClick={handleViewDetails}
-            aria-label="Quick view"
-          >
-            <i className="fas fa-eye"></i>
-          </button>
+      <div className="product-image">
+        <img src={image_url} alt={product_name} />
+        
+        {/* Stock Status Badge */}
+        <div 
+          className="stock-badge"
+          style={{ backgroundColor: stockStatusColor[stockStatus] }}
+        >
+          {stockStatus}
         </div>
+
+        {/* Business View Controls */}
+        {isBusinessView && (
+          <div className={`product-actions ${isHovered ? 'visible' : ''}`}>
+            <button
+              className="action-btn edit"
+              onClick={() => onEdit(product)}
+              aria-label="Edit product"
+            >
+              <i className="fas fa-edit"></i>
+            </button>
+            <button
+              className="action-btn delete"
+              onClick={() => onDelete(product.product_id)}
+              aria-label="Delete product"
+            >
+              <i className="fas fa-trash"></i>
+            </button>
+          </div>
+        )}
       </div>
-      
+
       <div className="product-content">
-        <div className="product-header">
-          <h3 className="product-title">{name}</h3>
-          <div className="product-rating">
-            <i className="fas fa-star"></i>
-            <span>{rating}</span>
-            <small>({reviews.length || 0})</small>
+        <h3>{product_name}</h3>
+        
+        <div className="product-meta">
+          <span className="category">
+            <i className="fas fa-tag"></i> {category}
+          </span>
+          <span className="price">₹{price}</span>
+        </div>
+
+        {!isBusinessView && (
+          <div className="seller-info">
+            <i className="fas fa-store"></i>
+            <span>{business_name}</span>
+            <div className="location">
+              <i className="fas fa-map-marker-alt"></i>
+              <span>{area}</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="product-location">
-          <i className="fas fa-map-marker-alt"></i>
-          <span>{area}, {location}</span>
-        </div>
-
-        <div className="product-details">
-          <div className="delivery-info">
-            <i className="fas fa-truck"></i>
-            <span>{deliveryTime}</span>
+        {/* Inventory Management Section - Only for Business View */}
+        {isBusinessView ? (
+          <div className="inventory-management">
+            <div className="stock-control">
+              <label>Current Stock:</label>
+              <div className="stock-actions">
+                <button
+                  onClick={() => handleStockUpdate(quantity_available - 1)}
+                  disabled={quantity_available <= 0}
+                >
+                  <i className="fas fa-minus"></i>
+                </button>
+                <input
+                  type="number"
+                  value={quantity_available}
+                  onChange={(e) => handleStockUpdate(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+                <button
+                  onClick={() => handleStockUpdate(quantity_available + 1)}
+                >
+                  <i className="fas fa-plus"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div className="inventory-details">
+              <div className="moq">
+                <span>Min. Order:</span> {moq} units
+              </div>
+              <div className="reorder-point">
+                <span>Reorder at:</span> {reorder_point} units
+              </div>
+            </div>
           </div>
-          <div className="moq-info">
-            <i className="fas fa-box"></i>
-            <span>MOQ: {moq}</span>
-          </div>
-        </div>
-
-        <div className="product-price">
-          <span className="price-amount">₹{price}</span>
-          {originalPrice && (
-            <span className="original-price">₹{originalPrice}</span>
-          )}
-        </div>
-
-        <div className="product-actions">
-          <button 
+        ) : (
+          /* Add to Cart Button - Only for Customer View */
+          <button
             className={`add-cart-btn ${isAddingToCart ? 'loading' : ''} ${addedToCart ? 'added' : ''}`}
             onClick={handleAddToCart}
-            disabled={!inStock || isAddingToCart}
-            aria-label="Add to cart"
+            disabled={!product.in_stock || isAddingToCart}
           >
             {isAddingToCart ? (
               <>
-                <span className="cart-spinner"></span>
+                <span className="spinner"></span>
                 <span>Adding...</span>
               </>
             ) : addedToCart ? (
               <>
                 <i className="fas fa-check"></i>
-                <span>Added!</span>
+                <span>Added</span>
               </>
             ) : (
               <>
                 <i className="fas fa-shopping-cart"></i>
-                <span>Add to Cart</span>
+                <span>{product.in_stock ? 'Add to Cart' : 'Out of Stock'}</span>
               </>
             )}
           </button>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -160,20 +185,23 @@ const ProductCard = ({ product, onViewDetails }) => {
 
 ProductCard.propTypes = {
   product: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-    image: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    inStock: PropTypes.bool.isRequired,
-    rating: PropTypes.number.isRequired,
-    reviews: PropTypes.array,
-    area: PropTypes.string.isRequired,
-    location: PropTypes.string.isRequired,
-    deliveryTime: PropTypes.string.isRequired,
-    moq: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    product_id: PropTypes.number.isRequired,
+    product_name: PropTypes.string.isRequired,
     price: PropTypes.number.isRequired,
-    originalPrice: PropTypes.number
+    quantity_available: PropTypes.number.isRequired,
+    image_url: PropTypes.string,
+    category: PropTypes.string.isRequired,
+    moq: PropTypes.number,
+    reorder_point: PropTypes.number,
+    business_name: PropTypes.string,
+    area: PropTypes.string,
+    in_stock: PropTypes.bool
   }).isRequired,
-  onViewDetails: PropTypes.func.isRequired
+  onAddToCart: PropTypes.func,
+  isBusinessView: PropTypes.bool,
+  onUpdateStock: PropTypes.func,
+  onEdit: PropTypes.func,
+  onDelete: PropTypes.func
 };
 
 export default ProductCard;

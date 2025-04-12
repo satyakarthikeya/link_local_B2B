@@ -1,95 +1,198 @@
--- Drop tables if they exist to avoid conflicts
-DROP TABLE IF EXISTS Deals;
-DROP TABLE IF EXISTS Rating;
-DROP TABLE IF EXISTS Contacts;
-DROP TABLE IF EXISTS Delivery_Agent;
-DROP TABLE IF EXISTS Requests;
-DROP TABLE IF EXISTS Orders;
-DROP TABLE IF EXISTS Product;
-DROP TABLE IF EXISTS ContactNo;
-DROP TABLE IF EXISTS Businessman;
+-- Database schema for Link Local B2B application
 
--- Create tables according to the schema
-CREATE TABLE Businessman (
+-- Drop tables if they exist (in reverse order of dependencies)
+DROP TABLE IF EXISTS Delivery CASCADE;
+DROP TABLE IF EXISTS OrderProducts CASCADE;
+DROP TABLE IF EXISTS Orders CASCADE;
+DROP TABLE IF EXISTS Product CASCADE;
+DROP TABLE IF EXISTS ContactNo CASCADE;
+DROP TABLE IF EXISTS BusinessProfile CASCADE;
+DROP TABLE IF EXISTS Business_Banking CASCADE;
+DROP TABLE IF EXISTS Businessman CASCADE;
+DROP TABLE IF EXISTS DeliveryProfile CASCADE;
+DROP TABLE IF EXISTS Delivery_Banking CASCADE;
+DROP TABLE IF EXISTS DeliveryAgent CASCADE;
+
+-- Base table for Business Users
+CREATE TABLE IF NOT EXISTS Businessman (
   businessman_id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  business_name VARCHAR(255) NOT NULL,
-  area VARCHAR(255),
-  street VARCHAR(255),
-  category VARCHAR(50) CHECK (category IN ('Restaurant', 'Clothing', 'SuperMarket', 'Electronics', 'Wholesale')),
-  rating FLOAT DEFAULT 0,
-  product_id INT,
-  order_id INT,
-  rating_id INT,
-  deal_id INT,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ContactNo (
-  businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  phone_no VARCHAR(15),
-  PRIMARY KEY (businessman_id, phone_no)
+-- Business Profile Information
+CREATE TABLE IF NOT EXISTS BusinessProfile (
+  profile_id SERIAL PRIMARY KEY,
+  businessman_id INTEGER REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  business_name VARCHAR(100) NOT NULL,
+  owner_name VARCHAR(100) NOT NULL,
+  gst_number VARCHAR(20),
+  category VARCHAR(100) NOT NULL,
+  area VARCHAR(100) NOT NULL,
+  street VARCHAR(100) NOT NULL,
+  city VARCHAR(100) DEFAULT 'Coimbatore',
+  state VARCHAR(100) DEFAULT 'Tamil Nadu',
+  pincode VARCHAR(10),
+  phone_no VARCHAR(20) NOT NULL,
+  website VARCHAR(255),
+  established_year INTEGER,
+  business_description TEXT,
+  UNIQUE(businessman_id)
 );
 
-CREATE TABLE Product (
-  product_id SERIAL PRIMARY KEY,
-  product_name VARCHAR(255) NOT NULL,
-  price DECIMAL(10,2) NOT NULL,
-  quantity_available INT CHECK (quantity_available >= 0),
-  businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  rating_id INT,
-  description TEXT,
-  image_url VARCHAR(255)
+-- Business Banking Details
+CREATE TABLE IF NOT EXISTS Business_Banking (
+  bank_id SERIAL PRIMARY KEY,
+  businessman_id INTEGER REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  account_holder_name VARCHAR(100) NOT NULL,
+  account_number VARCHAR(50) NOT NULL,
+  ifsc_code VARCHAR(20) NOT NULL,
+  bank_name VARCHAR(100) NOT NULL,
+  branch_name VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(businessman_id)
 );
 
-CREATE TABLE Orders (
-  order_id SERIAL PRIMARY KEY,
-  requesting_businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  supplying_businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  product_id INT REFERENCES Product(product_id) ON DELETE CASCADE,
-  quantity_requested INT CHECK (quantity_requested > 0),
-  status VARCHAR(20) CHECK (status IN ('Requested', 'Confirmed', 'Dispatched', 'Delivered')),
-  order_date DATE DEFAULT CURRENT_DATE,
-  agent_id INT,
-  delivery_status VARCHAR(20) CHECK (delivery_status IN ('Accepted', 'In Transit', 'Delivered'))
-);
-
-CREATE TABLE Requests (
-  businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  product_id INT REFERENCES Product(product_id) ON DELETE CASCADE,
-  PRIMARY KEY (businessman_id, product_id)
-);
-
-CREATE TABLE Delivery_Agent (
+-- Base table for Delivery Agents
+CREATE TABLE IF NOT EXISTS DeliveryAgent (
   agent_id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  contact_number VARCHAR(15) UNIQUE NOT NULL,
-  availability_status BOOLEAN DEFAULT TRUE,
-  vehicle_type VARCHAR(20) CHECK (vehicle_type IN ('Bike', 'Van', 'Truck')),
-  license_no VARCHAR(20) UNIQUE NOT NULL,
-  order_id INT REFERENCES Orders(order_id) ON DELETE SET NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE Contacts (
-  businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  agent_id INT REFERENCES Delivery_Agent(agent_id) ON DELETE CASCADE,
-  PRIMARY KEY (businessman_id, agent_id)
+-- Delivery Agent Profile Information
+CREATE TABLE IF NOT EXISTS DeliveryProfile (
+  profile_id SERIAL PRIMARY KEY,
+  agent_id INTEGER REFERENCES DeliveryAgent(agent_id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  contact_number VARCHAR(20) NOT NULL,
+  gender VARCHAR(10),
+  date_of_birth DATE,
+  area VARCHAR(100) NOT NULL,
+  street VARCHAR(100),
+  city VARCHAR(100) DEFAULT 'Coimbatore',
+  state VARCHAR(100) DEFAULT 'Tamil Nadu',
+  pincode VARCHAR(10),
+  vehicle_type VARCHAR(50) NOT NULL,
+  vehicle_number VARCHAR(50),
+  license_no VARCHAR(50) NOT NULL,
+  about TEXT,
+  availability_status VARCHAR(20) DEFAULT 'Available',
+  avg_rating NUMERIC(3,2) DEFAULT 0.0,
+  total_deliveries INTEGER DEFAULT 0,
+  UNIQUE(agent_id)
 );
 
-CREATE TABLE Rating (
-  rating_id SERIAL PRIMARY KEY,
-  product_id INT REFERENCES Product(product_id) ON DELETE CASCADE,
-  businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  rating_value INT CHECK (rating_value BETWEEN 1 AND 5)
+-- Delivery Agent Banking Details
+CREATE TABLE IF NOT EXISTS Delivery_Banking (
+  bank_id SERIAL PRIMARY KEY,
+  agent_id INTEGER REFERENCES DeliveryAgent(agent_id) ON DELETE CASCADE,
+  account_holder_name VARCHAR(100) NOT NULL,
+  account_number VARCHAR(50) NOT NULL,
+  ifsc_code VARCHAR(20) NOT NULL,
+  bank_name VARCHAR(100) NOT NULL,
+  branch_name VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(agent_id)
 );
 
-CREATE TABLE Deals (
-  deal_id SERIAL PRIMARY KEY,
-  product_id INT REFERENCES Product(product_id) ON DELETE CASCADE,
-  businessman_id INT REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
-  discount_percentage DECIMAL(5,2) CHECK (discount_percentage BETWEEN 0 AND 100),
-  valid_till DATE NOT NULL
+-- Create Product table
+CREATE TABLE IF NOT EXISTS Product (
+  product_id SERIAL PRIMARY KEY,
+  businessman_id INTEGER NOT NULL REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  product_name VARCHAR(100) NOT NULL,
+  price NUMERIC(10, 2) NOT NULL,
+  quantity_available INTEGER NOT NULL DEFAULT 0,
+  moq INTEGER NOT NULL DEFAULT 1,
+  reorder_point INTEGER NOT NULL DEFAULT 10,
+  category VARCHAR(50) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create Orders table
+CREATE TABLE IF NOT EXISTS Orders (
+  order_id SERIAL PRIMARY KEY,
+  ordering_businessman_id INTEGER NOT NULL REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  supplying_businessman_id INTEGER NOT NULL REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  agent_id INTEGER REFERENCES DeliveryAgent(agent_id) ON DELETE SET NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'Requested',
+  delivery_status VARCHAR(20) DEFAULT 'Pending',
+  total_amount NUMERIC(10, 2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT different_businessmen CHECK (ordering_businessman_id != supplying_businessman_id)
+);
+
+-- Create Order Products junction table
+CREATE TABLE IF NOT EXISTS OrderProducts (
+  order_product_id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES Orders(order_id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES Product(product_id) ON DELETE CASCADE,
+  quantity_requested INTEGER NOT NULL,
+  unit_price NUMERIC(10, 2) NOT NULL,
+  subtotal NUMERIC(10, 2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Delivery tracking table
+CREATE TABLE IF NOT EXISTS Delivery (
+  delivery_id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES Orders(order_id) ON DELETE CASCADE,
+  agent_id INTEGER NOT NULL REFERENCES DeliveryAgent(agent_id) ON DELETE CASCADE,
+  pickup_time TIMESTAMP,
+  delivery_time TIMESTAMP,
+  status VARCHAR(20) NOT NULL DEFAULT 'Assigned',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_product_businessman ON Product(businessman_id);
+CREATE INDEX idx_orders_ordering_businessman ON Orders(ordering_businessman_id);
+CREATE INDEX idx_orders_supplying_businessman ON Orders(supplying_businessman_id);
+CREATE INDEX idx_orders_agent ON Orders(agent_id);
+CREATE INDEX idx_order_products_order ON OrderProducts(order_id);
+CREATE INDEX idx_order_products_product ON OrderProducts(product_id);
+CREATE INDEX idx_delivery_order ON Delivery(order_id);
+CREATE INDEX idx_delivery_agent ON Delivery(agent_id);
+CREATE INDEX idx_businessman_email ON Businessman(email);
+CREATE INDEX idx_delivery_agent_email ON DeliveryAgent(email);
+CREATE INDEX idx_business_profile_area ON BusinessProfile(area);
+CREATE INDEX idx_delivery_profile_area ON DeliveryProfile(area);
+
+-- Create update timestamp trigger function
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = now();
+   RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply update timestamp triggers to relevant tables
+CREATE TRIGGER update_businessman_modtime
+BEFORE UPDATE ON Businessman
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_product_modtime
+BEFORE UPDATE ON Product
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_orders_modtime
+BEFORE UPDATE ON Orders
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_delivery_modtime
+BEFORE UPDATE ON Delivery
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_delivery_agent_modtime
+BEFORE UPDATE ON DeliveryAgent
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();

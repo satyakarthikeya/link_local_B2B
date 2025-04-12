@@ -4,20 +4,57 @@ import api from '../utils/api';
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
+  // Safely parse userData from localStorage with improved error handling
+  const getUserDataFromStorage = () => {
+    try {
+      const userData = localStorage.getItem('userData');
+      // Only attempt to parse if userData exists and isn't "undefined"
+      if (userData && userData !== "undefined") {
+        return JSON.parse(userData);
+      }
+      // If userData is "undefined" or null, clear it and return null
+      if (userData === "undefined") {
+        localStorage.removeItem('userData');
+      }
+      return null;
+    } catch (error) {
+      console.error("Error parsing user data from localStorage:", error);
+      localStorage.removeItem('userData'); // Remove invalid data
+      return null;
+    }
+  };
+
+  const [currentUser, setCurrentUser] = useState(getUserDataFromStorage());
   const [loading, setLoading] = useState(true);
-  const [userType, setUserType] = useState(null); // 'business' or 'delivery'
+  const [userType, setUserType] = useState(localStorage.getItem('userType') || null); // 'business' or 'delivery'
   const [token, setToken] = useState(localStorage.getItem('authToken') || null);
+
+  // Helper function to store user data in local storage
+  const storeUserData = (userData, type, authToken) => {
+    if (!userData) {
+      console.error("Invalid userData provided to storeUserData:", userData);
+      return; // Prevent further execution if userData is invalid
+    }
+    if (userData && typeof userData === 'object') {
+      localStorage.setItem('userData', JSON.stringify(userData));
+    } else {
+      console.warn("Invalid userData provided to storeUserData", userData);
+      localStorage.removeItem('userData');
+    }
+    
+    localStorage.setItem('userType', type);
+    localStorage.setItem('authToken', authToken);
+    
+    setCurrentUser(userData);
+    setUserType(type);
+    setToken(authToken);
+  };
 
   // Function to register a business
   const registerBusiness = async (userData) => {
     try {
       const response = await api.auth.businessRegister(userData);
-      setToken(response.token);
-      setCurrentUser(response.user);
-      setUserType('business');
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('userType', 'business');
+      storeUserData(response.user, 'business', response.token);
       return response;
     } catch (error) {
       console.error("Business registration error:", error);
@@ -29,11 +66,7 @@ export function AuthProvider({ children }) {
   const registerDelivery = async (userData) => {
     try {
       const response = await api.auth.deliveryRegister(userData);
-      setToken(response.token);
-      setCurrentUser(response.user);
-      setUserType('delivery');
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('userType', 'delivery');
+      storeUserData(response.user, 'delivery', response.token);
       return response;
     } catch (error) {
       console.error("Delivery registration error:", error);
@@ -45,15 +78,19 @@ export function AuthProvider({ children }) {
   const loginBusiness = async (credentials) => {
     try {
       const response = await api.auth.businessLogin(credentials);
-      setToken(response.token);
-      setCurrentUser(response.user);
-      setUserType('business');
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('userType', 'business');
+      if (!response || !response.data || !response.data.user || !response.data.token) {
+        console.error("Invalid API response:", response); // Log the full response for debugging
+        throw new Error("Invalid response: Failed to retrieve user data during login.");
+      }
+      const { user, token } = response.data; // Extract user and token from response
+      storeUserData(user, 'business', token);
       return response;
     } catch (error) {
-      console.error("Business login error:", error);
-      throw error;
+      console.error("Error in loginBusiness:", error.message || error);
+      throw new Error(
+        error.response?.data?.message || // Use API-provided error message if available
+        "Login failed. Please check your credentials and try again."
+      );
     }
   };
 
@@ -61,11 +98,7 @@ export function AuthProvider({ children }) {
   const loginDelivery = async (credentials) => {
     try {
       const response = await api.auth.deliveryLogin(credentials);
-      setToken(response.token);
-      setCurrentUser(response.user);
-      setUserType('delivery');
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('userType', 'delivery');
+      storeUserData(response.user, 'delivery', response.token);
       return response;
     } catch (error) {
       console.error("Delivery login error:", error);
@@ -80,6 +113,7 @@ export function AuthProvider({ children }) {
     setUserType(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('userType');
+    localStorage.removeItem('userData');
   };
 
   // Function to update user profile
@@ -90,7 +124,11 @@ export function AuthProvider({ children }) {
       }
       
       // Call the API to update the profile
-      const updatedUser = await api.auth.updateProfile(userData, token);
+      const response = await api.auth.updateProfile(userData, token);
+      
+      // Update local storage with the updated user data
+      const updatedUser = response.user || response;
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
       
       // Update the local state with the updated user data
       setCurrentUser(updatedUser);
@@ -102,9 +140,47 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Get user profile information
+  const getUserProfile = (field) => {
+    if (!currentUser) return null;
+    
+    if (field) {
+      return currentUser[field] || null;
+    }
+    
+    return currentUser;
+  };
+  
+  // Get formatted profile name (based on user type)
+  const getProfileName = () => {
+    if (!currentUser) return null;
+    
+    if (userType === 'business') {
+      return currentUser.business_name || 'Business User';
+    } else if (userType === 'delivery') {
+      return currentUser.name || 'Delivery Partner';
+    }
+    
+    return 'User';
+  };
+
   // Get the current user from the token when the component mounts
   useEffect(() => {
     const fetchUser = async () => {
+      // If we already have user data in localStorage, use that
+      const savedUserData = localStorage.getItem('userData');
+      if (savedUserData && savedUserData !== "undefined") {
+        try {
+          setCurrentUser(JSON.parse(savedUserData));
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error("Error parsing saved user data:", error);
+          localStorage.removeItem('userData'); // Remove invalid data
+        }
+      }
+      
+      // Otherwise fetch from API if we have a token
       if (!token) {
         setLoading(false);
         return;
@@ -115,7 +191,10 @@ export function AuthProvider({ children }) {
         setUserType(savedUserType);
         
         const user = await api.auth.getCurrentUser(token);
-        setCurrentUser(user);
+        if (user) {
+          setCurrentUser(user);
+          localStorage.setItem('userData', JSON.stringify(user));
+        }
       } catch (error) {
         console.error("Error fetching user:", error);
         // If the token is invalid, clear it
@@ -123,6 +202,7 @@ export function AuthProvider({ children }) {
         setUserType(null);
         localStorage.removeItem('authToken');
         localStorage.removeItem('userType');
+        localStorage.removeItem('userData');
       } finally {
         setLoading(false);
       }
@@ -141,6 +221,8 @@ export function AuthProvider({ children }) {
     loginDelivery,
     logout,
     updateProfile,
+    getUserProfile,
+    getProfileName,
     isAuthenticated: !!token,
     isBusinessUser: userType === 'business',
     isDeliveryUser: userType === 'delivery'

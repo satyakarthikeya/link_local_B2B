@@ -1,7 +1,7 @@
-import React, { useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PropTypes from 'prop-types';
-import { AuthContext } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
 import ReviewForm from './ReviewForm';
 import "../styles/navbar.css";
@@ -48,8 +48,8 @@ NotificationItem.propTypes = {
 
 const B_Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useContext(AuthContext);
-  const { cartCount, toggleCart } = useContext(CartContext);
+  const { currentUser, getProfileName, logout } = useAuth();
+  const { cartCount, toggleCart } = React.useContext(CartContext);
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -66,6 +66,14 @@ const B_Navbar = () => {
   const userDropdownRef = useRef(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Get business owner name
+  const getBusinessOwnerName = () => {
+    if (currentUser && currentUser.owner_name) {
+      return currentUser.owner_name;
+    }
+    return 'Business Owner';
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -150,6 +158,9 @@ const B_Navbar = () => {
     console.log('Review submitted:', reviewData);
     handleCloseReview();
   };
+
+  const businessName = currentUser?.business_name || 'Business User';
+  const businessInitial = businessName.charAt(0).toUpperCase();
 
   return (
     <nav className={`business-navbar ${isScrolled ? 'scrolled' : ''}`}>
@@ -314,9 +325,9 @@ const B_Navbar = () => {
                 aria-label="My Account"
               >
                 <div className="user-avatar">
-                  {user?.name?.[0] || 'U'}
+                  {businessInitial}
                 </div>
-                <span className="user-name">{user?.name || 'User'}</span>
+                <span className="user-name">{getBusinessOwnerName()}</span>
               </button>
               {showUserDropdown && (
                 <div className="dropdown-menu user-dropdown-content" ref={userDropdownRef}>

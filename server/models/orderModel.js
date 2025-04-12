@@ -16,9 +16,9 @@ const OrderModel = {
     try {
       await client.query('BEGIN');
       
-      // Check if product has enough quantity available
+      // Check if product has enough quantity available and get price
       const productResult = await client.query(
-        'SELECT quantity_available FROM Product WHERE product_id = $1',
+        'SELECT quantity_available, price FROM Product WHERE product_id = $1',
         [product_id]
       );
       
@@ -26,19 +26,29 @@ const OrderModel = {
         throw new Error('Product not found');
       }
       
-      const { quantity_available } = productResult.rows[0];
+      const { quantity_available, price } = productResult.rows[0];
       
       if (quantity_available < quantity_requested) {
         throw new Error('Not enough quantity available');
       }
       
+      // Calculate total amount
+      const total_amount = price * quantity_requested;
+      
       // Create the order
       const orderResult = await client.query(
         `INSERT INTO Orders 
-         (requesting_businessman_id, supplying_businessman_id, product_id, quantity_requested, status, delivery_status)
-         VALUES ($1, $2, $3, $4, 'Requested', 'Accepted') 
+         (ordering_businessman_id, supplying_businessman_id, product_id, status, delivery_status, total_amount) 
+         VALUES ($1, $2, $3, 'Requested', 'Pending', $4) 
          RETURNING *`,
-        [requesting_businessman_id, supplying_businessman_id, product_id, quantity_requested]
+        [requesting_businessman_id, supplying_businessman_id, product_id, total_amount]
+      );
+      
+      // Create order product entry
+      await client.query(
+        `INSERT INTO OrderProducts (order_id, product_id, quantity_requested, unit_price, subtotal)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [orderResult.rows[0].order_id, product_id, quantity_requested, price, total_amount]
       );
       
       // Update product quantity
@@ -61,15 +71,17 @@ const OrderModel = {
   async findById(id) {
     const result = await db.query(
       `SELECT o.*,
-        req.business_name as requesting_business_name,
-        sup.business_name as supplying_business_name,
+        bp_ord.business_name as ordering_business_name,
+        bp_sup.business_name as supplying_business_name,
         p.product_name, p.price,
+        op.quantity_requested,
         da.name as agent_name, da.contact_number as agent_contact
       FROM Orders o
-      JOIN Businessman req ON o.requesting_businessman_id = req.businessman_id
-      JOIN Businessman sup ON o.supplying_businessman_id = sup.businessman_id
-      JOIN Product p ON o.product_id = p.product_id
-      LEFT JOIN Delivery_Agent da ON o.agent_id = da.agent_id
+      JOIN BusinessProfile bp_ord ON o.ordering_businessman_id = bp_ord.businessman_id
+      JOIN BusinessProfile bp_sup ON o.supplying_businessman_id = bp_sup.businessman_id
+      JOIN OrderProducts op ON o.order_id = op.order_id
+      JOIN Product p ON op.product_id = p.product_id
+      LEFT JOIN DeliveryProfile da ON o.agent_id = da.agent_id
       WHERE o.order_id = $1`,
       [id]
     );
@@ -78,52 +90,44 @@ const OrderModel = {
 
   // Update order status
   async updateStatus(id, status, delivery_status = null) {
-    let query, params;
-    
-    if (delivery_status) {
-      query = `UPDATE Orders
-               SET status = $1,
-                   delivery_status = $2
-               WHERE order_id = $3
-               RETURNING *`;
-      params = [status, delivery_status, id];
-    } else {
-      query = `UPDATE Orders
-               SET status = $1
-               WHERE order_id = $2
-               RETURNING *`;
-      params = [status, id];
-    }
-    
-    const result = await db.query(query, params);
+    const result = await db.query(
+      `UPDATE Orders 
+       SET status = $1, 
+           delivery_status = COALESCE($2, delivery_status),
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE order_id = $3 
+       RETURNING *`,
+      [status, delivery_status, id]
+    );
     return result.rows[0];
   },
 
-  // Get orders by businessman ID (either requesting or supplying)
+  // Get orders by businessman ID (either ordering or supplying)
   async getByBusinessmanId(businessmanId, role = 'both') {
     let query = `
       SELECT o.*,
-        req.business_name as requesting_business_name,
-        sup.business_name as supplying_business_name,
+        bp_ord.business_name as ordering_business_name,
+        bp_sup.business_name as supplying_business_name,
         p.product_name, p.price,
+        op.quantity_requested,
         da.name as agent_name, da.contact_number as agent_contact
       FROM Orders o
-      JOIN Businessman req ON o.requesting_businessman_id = req.businessman_id
-      JOIN Businessman sup ON o.supplying_businessman_id = sup.businessman_id
-      JOIN Product p ON o.product_id = p.product_id
-      LEFT JOIN Delivery_Agent da ON o.agent_id = da.agent_id
-      WHERE 
-    `;
+      JOIN BusinessProfile bp_ord ON o.ordering_businessman_id = bp_ord.businessman_id
+      JOIN BusinessProfile bp_sup ON o.supplying_businessman_id = bp_sup.businessman_id
+      JOIN OrderProducts op ON o.order_id = op.order_id
+      JOIN Product p ON op.product_id = p.product_id
+      LEFT JOIN DeliveryProfile da ON o.agent_id = da.agent_id
+      WHERE `;
     
-    if (role === 'requesting') {
-      query += 'o.requesting_businessman_id = $1';
+    if (role === 'ordering') {
+      query += 'o.ordering_businessman_id = $1';
     } else if (role === 'supplying') {
       query += 'o.supplying_businessman_id = $1';
     } else {
-      query += 'o.requesting_businessman_id = $1 OR o.supplying_businessman_id = $1';
+      query += 'o.ordering_businessman_id = $1 OR o.supplying_businessman_id = $1';
     }
     
-    query += ' ORDER BY o.order_date DESC';
+    query += ' ORDER BY o.created_at DESC';
     
     const result = await db.query(query, [businessmanId]);
     return result.rows;
@@ -133,15 +137,16 @@ const OrderModel = {
   async getByAgentId(agentId) {
     const result = await db.query(
       `SELECT o.*,
-        req.business_name as requesting_business_name, req.area as requesting_area, req.street as requesting_street,
-        sup.business_name as supplying_business_name, sup.area as supplying_area, sup.street as supplying_street,
+        bp_ord.business_name as ordering_business_name, bp_ord.area as ordering_area, bp_ord.street as ordering_street,
+        bp_sup.business_name as supplying_business_name, bp_sup.area as supplying_area, bp_sup.street as supplying_street,
         p.product_name
       FROM Orders o
-      JOIN Businessman req ON o.requesting_businessman_id = req.businessman_id
-      JOIN Businessman sup ON o.supplying_businessman_id = sup.businessman_id
-      JOIN Product p ON o.product_id = p.product_id
+      JOIN BusinessProfile bp_ord ON o.ordering_businessman_id = bp_ord.businessman_id
+      JOIN BusinessProfile bp_sup ON o.supplying_businessman_id = bp_sup.businessman_id
+      JOIN OrderProducts op ON o.order_id = op.order_id
+      JOIN Product p ON op.product_id = p.product_id
       WHERE o.agent_id = $1
-      ORDER BY o.order_date DESC`,
+      ORDER BY o.created_at DESC`,
       [agentId]
     );
     return result.rows;
@@ -150,8 +155,13 @@ const OrderModel = {
   // Assign delivery agent to order
   async assignAgent(orderId, agentId) {
     const result = await db.query(
-      'UPDATE Orders SET agent_id = $1, delivery_status = $2 WHERE order_id = $3 RETURNING *',
-      [agentId, 'Accepted', orderId]
+      `UPDATE Orders 
+       SET agent_id = $1, 
+           delivery_status = 'Assigned',
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE order_id = $2 
+       RETURNING *`,
+      [agentId, orderId]
     );
     return result.rows[0];
   }
