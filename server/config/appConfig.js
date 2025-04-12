@@ -32,10 +32,12 @@ const config = {
     origin: process.env.CORS_ORIGIN 
       ? process.env.CORS_ORIGIN.split(',') 
       : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
     credentials: true,
-    optionsSuccessStatus: 200
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   },
   
   // Logging configuration

@@ -180,8 +180,27 @@ const ProductController = {
       const { quantity, operation } = req.body;
       const businessman_id = req.user.id;
       
+      // Debug logging
+      console.log(`Updating product ${id} quantity with:`, { 
+        quantity: quantity, 
+        operation: operation,
+        type: typeof quantity
+      });
+      
       if (quantity === undefined) {
         return res.status(400).json({ error: 'Quantity is required' });
+      }
+      
+      // Validate quantity is a number
+      const quantityNum = parseInt(quantity, 10);
+      if (isNaN(quantityNum)) {
+        return res.status(400).json({ error: 'Quantity must be a valid number' });
+      }
+      
+      // Validate operation
+      const validOperations = ['set', 'add', 'subtract'];
+      if (operation && !validOperations.includes(operation)) {
+        return res.status(400).json({ error: `Invalid operation. Must be one of: ${validOperations.join(', ')}` });
       }
       
       // Check if product exists and belongs to the user
@@ -194,7 +213,13 @@ const ProductController = {
         return res.status(403).json({ error: 'Not authorized to update this product' });
       }
       
-      const product = await ProductModel.updateQuantity(id, quantity, operation);
+      // Debug existing product quantity
+      console.log(`Current product quantity: ${existingProduct.quantity_available}`);
+      
+      const product = await ProductModel.updateQuantity(id, quantityNum, operation || 'set');
+      
+      // Debug updated product quantity
+      console.log(`Updated product quantity: ${product.quantity_available}`);
       
       res.json({
         message: 'Product quantity updated successfully',

@@ -478,7 +478,7 @@
   border: 1px solid #E0E0E0;
   background: white;
   cursor: pointer;
-  transition: var(--transition);
+  transition: var(--transition);  
 }
 
 .stock-btn:disabled {
@@ -498,6 +498,68 @@
   border-color: var(--success-color);
 }
 
+/* New product availability indicator styles */
+.availability-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: var(--light-color);
+}
+
+.availability-bar {
+  flex: 1;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.availability-bar-fill {
+  position: absolute;
+  height: 100%;
+  left: 0;
+  top: 0;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.availability-bar-fill.high {
+  background-color: var(--success-color);
+}
+
+.availability-bar-fill.medium {
+  background-color: var(--warning-color);
+}
+
+.availability-bar-fill.low {
+  background-color: var(--secondary-color);
+}
+
+.availability-text {
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.availability-text.high {
+  color: var(--success-color);
+}
+
+.availability-text.medium {
+  color: var(--warning-color);
+}
+
+.availability-text.low {
+  color: var(--secondary-color);
+}
+
+/* Updated stock input styles */
 .stock-input {
   width: 60px;
   text-align: center;
@@ -505,13 +567,10 @@
   border-radius: 8px;
   padding: 8px;
   font-size: 0.95rem;
+  font-weight: 600;
   transition: var(--transition);
-}
-
-.stock-input:focus {
-  border-color: var(--primary-color);
-  outline: none;
-  box-shadow: 0 0 0 3px var(--primary-light);
+  background-color: white;
+  color: var(--dark-color);
 }
 
 .inventory-details {

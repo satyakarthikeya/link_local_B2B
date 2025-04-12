@@ -93,15 +93,23 @@ export const productAPI = {
 
   // Update product
   updateProduct: (id, productData) => {
-    const formData = new FormData();
-    Object.keys(productData).forEach(key => {
-      if (productData[key] !== null && productData[key] !== undefined) {
-        formData.append(key, productData[key]);
-      }
-    });
-    return api.put(`/products/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    console.log('Updating product with ID:', id, 'and data:', productData);
+    
+    // Check if we have an image file to upload
+    if (productData.image instanceof File) {
+      const formData = new FormData();
+      Object.keys(productData).forEach(key => {
+        if (productData[key] !== null && productData[key] !== undefined) {
+          formData.append(key, productData[key]);
+        }
+      });
+      return api.put(`/products/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    } else {
+      // No image file, send as regular JSON
+      return api.put(`/products/${id}`, productData);
+    }
   },
 
   // Delete product

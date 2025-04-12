@@ -109,26 +109,72 @@ const ProductModel = {
 
   // Update product quantity
   async updateQuantity(id, quantity, operation = 'set') {
-    let query;
-    if (operation === 'add') {
-      query = `UPDATE Product 
-              SET quantity_available = quantity_available + $1,
-                  updated_at = CURRENT_TIMESTAMP
-              WHERE product_id = $2 RETURNING *`;
-    } else if (operation === 'subtract') {
-      query = `UPDATE Product 
-              SET quantity_available = GREATEST(0, quantity_available - $1),
-                  updated_at = CURRENT_TIMESTAMP
-              WHERE product_id = $2 RETURNING *`;
-    } else {
-      query = `UPDATE Product 
-              SET quantity_available = GREATEST(0, $1),
-                  updated_at = CURRENT_TIMESTAMP
-              WHERE product_id = $2 RETURNING *`;
+    try {
+      // Validate inputs
+      if (!id) throw new Error('Product ID is required');
+      
+      // Ensure quantity is a valid number
+      const quantityNum = parseInt(quantity, 10);
+      if (isNaN(quantityNum) || quantityNum < 0) {
+        throw new Error(`Invalid quantity value: ${quantity}`);
+      }
+      
+      // Log operation details for debugging
+      console.log(`[ProductModel.updateQuantity] Starting operation:`, {
+        productId: id,
+        quantity: quantityNum,
+        operation: operation
+      });
+      
+      // Query to use based on operation type
+      let query;
+      let params = [quantityNum, id];
+      
+      if (operation === 'add') {
+        console.log(`[ProductModel.updateQuantity] Adding ${quantityNum} to product ${id}`);
+        query = `
+          UPDATE Product 
+          SET quantity_available = quantity_available + $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE product_id = $2 
+          RETURNING *
+        `;
+      } else if (operation === 'subtract') {
+        console.log(`[ProductModel.updateQuantity] Subtracting ${quantityNum} from product ${id}`);
+        query = `
+          UPDATE Product 
+          SET quantity_available = GREATEST(0, quantity_available - $1),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE product_id = $2 
+          RETURNING *
+        `;
+      } else {
+        console.log(`[ProductModel.updateQuantity] Setting product ${id} quantity to ${quantityNum}`);
+        query = `
+          UPDATE Product 
+          SET quantity_available = GREATEST(0, $1),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE product_id = $2 
+          RETURNING *
+        `;
+      }
+      
+      // Execute the query
+      const result = await db.query(query, params);
+      
+      // Handle case where no rows were updated (product not found)
+      if (result.rows.length === 0) {
+        throw new Error(`Product with ID ${id} not found`);
+      }
+      
+      const updatedProduct = result.rows[0];
+      console.log(`[ProductModel.updateQuantity] Product ${id} quantity updated successfully to: ${updatedProduct.quantity_available}`);
+      
+      return updatedProduct;
+    } catch (error) {
+      console.error(`[ProductModel.updateQuantity] Error: ${error.message}`);
+      throw error;
     }
-    
-    const result = await db.query(query, [quantity, id]);
-    return result.rows[0];
   },
 
   // Get all products with optional filters
