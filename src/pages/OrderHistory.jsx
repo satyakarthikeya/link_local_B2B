@@ -1,143 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import B_Navbar from '../components/B_Navbar';
-import ReviewForm from '../components/ReviewForm'; // Import the ReviewForm component
+import ReviewForm from '../components/ReviewForm';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 import '../styles/OrderHistory.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const OrderHistory = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
-  const [reviewOrder, setReviewOrder] = useState(null); // New state for the order being reviewed
-  const [reviewedOrders, setReviewedOrders] = useState({}); // Track orders that have been reviewed
+  const [reviewOrder, setReviewOrder] = useState(null);
+  const [reviewedOrders, setReviewedOrders] = useState({});
 
-  // Mock data based on SQL schema provided
+  // Fetch orders from API
   useEffect(() => {
-    // In a real implementation, this would be an API call to fetch orders
-    setTimeout(() => {
-      const mockOrders = [
-        {
-          id: 'ORD-001',
-          supplierInfo: {
-            id: 2,
-            name: 'Pydi Electronics',
-            location: 'Tech Park',
-            contactNo: '9391999643'
-          },
-          productInfo: {
-            id: 2, 
-            name: 'Laptop',
-            price: 50000.00,
-            quantity: 1
-          },
-          status: 'Requested',
-          orderDate: '2025-03-10',
-          deliveryStatus: 'Accepted',
-          totalAmount: 50000.00,
-          deliveryAddress: 'street 1, market area, coimbatore',
-          deliveryAgent: {
-            name: 'Myla',
-            contactNumber: '9876543210',
-            vehicleType: 'Bike'
-          },
-          expectedDelivery: '2025-03-15',
-          paymentMethod: 'Bank Transfer',
-          paymentStatus: 'Pending'
-        },
-        {
-          id: 'ORD-002',
-          supplierInfo: {
-            id: 1,
-            name: 'Rohith SuperMarket',
-            location: 'Market Area',
-            contactNo: '9507444555'
-          },
-          productInfo: {
-            id: 1, 
-            name: 'Rice',
-            price: 50.00,
-            quantity: 10
-          },
-          status: 'Confirmed',
-          orderDate: '2025-03-10',
-          deliveryStatus: 'In Transit',
-          totalAmount: 500.00,
-          deliveryAddress: 'street 3, industrial hub, coimbatore',
-          deliveryAgent: {
-            name: 'khadar',
-            contactNumber: '8765432109',
-            vehicleType: 'Truck'
-          },
-          expectedDelivery: '2025-03-13',
-          paymentMethod: 'UPI',
-          paymentStatus: 'Completed'
-        },
-        {
-          id: 'ORD-003',
-          supplierInfo: {
-            id: 3,
-            name: 'BK Wholesale',
-            location: 'Industrial Hub',
-            contactNo: '7815923423'
-          },
-          productInfo: {
-            id: 3, 
-            name: 'Wheat',
-            price: 40.00,
-            quantity: 15
-          },
-          status: 'Delivered',
-          orderDate: '2025-03-01',
-          deliveryStatus: 'Delivered',
-          totalAmount: 600.00,
-          deliveryAddress: 'street 4, food street, coimbatore',
-          deliveryAgent: {
-            name: 'Dona',
-            contactNumber: '7395684921',
-            vehicleType: 'Lorry'
-          },
-          expectedDelivery: '2025-03-05',
-          paymentMethod: 'Cash on Delivery',
-          paymentStatus: 'Completed'
-        },
-        {
-          id: 'ORD-004',
-          supplierInfo: {
-            id: 4,
-            name: 'Kenny Restaurant',
-            location: 'Food Street',
-            contactNo: '9703995921'
-          },
-          productInfo: {
-            id: 4, 
-            name: 'Burger',
-            price: 100.00,
-            quantity: 20
-          },
-          status: 'Dispatched',
-          orderDate: '2025-03-08',
-          deliveryStatus: 'In Transit',
-          totalAmount: 2000.00,
-          deliveryAddress: 'street 2, tech park, coimbatore',
-          deliveryAgent: {
-            name: 'Myla',
-            contactNumber: '9876543210',
-            vehicleType: 'Bike'
-          },
-          expectedDelivery: '2025-03-12',
-          paymentMethod: 'Credit Card',
-          paymentStatus: 'Completed'
-        },
-      ];
+    const fetchOrders = async () => {
+      setIsLoading(true);
+      try {
+        // Build query parameters for filtering and sorting
+        let queryParams = new URLSearchParams();
+        if (filter !== 'all') {
+          queryParams.append('status', filter);
+        }
+        queryParams.append('sort', sortBy);
 
-      setOrders(mockOrders);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+        const response = await axios.get(`${API_URL}/api/orders/history?${queryParams}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        setOrders(response.data);
+        setError(null);
+
+        // Initialize reviewedOrders state from API data
+        const reviewedOrdersMap = {};
+        response.data.forEach(order => {
+          if (order.rating) {
+            reviewedOrdersMap[order.order_id] = {
+              rating: order.rating,
+              comment: order.comment,
+              date: order.review_date
+            };
+          }
+        });
+        setReviewedOrders(reviewedOrdersMap);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError('Failed to load orders. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchOrders();
+    }
+  }, [user, filter, sortBy]);
 
   const handleFilterChange = (e) => {
     setFilter(e.target.value);
@@ -160,37 +86,16 @@ const OrderHistory = () => {
   };
 
   const filteredOrders = orders.filter((order) => {
-    // Filter by status
-    if (filter !== 'all' && order.status.toLowerCase() !== filter) {
-      return false;
-    }
-
     // Filter by search query (product name or order ID)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        order.id.toLowerCase().includes(query) ||
-        order.productInfo.name.toLowerCase().includes(query) ||
-        order.supplierInfo.name.toLowerCase().includes(query)
+        order.order_id.toString().includes(query) ||
+        order.product_name.toLowerCase().includes(query) ||
+        order.supplying_business_name.toLowerCase().includes(query)
       );
     }
-
     return true;
-  });
-
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        return new Date(b.orderDate) - new Date(a.orderDate);
-      case 'oldest':
-        return new Date(a.orderDate) - new Date(b.orderDate);
-      case 'highToLow':
-        return b.totalAmount - a.totalAmount;
-      case 'lowToHigh':
-        return a.totalAmount - b.totalAmount;
-      default:
-        return 0;
-    }
   });
 
   const getStatusClass = (status) => {
@@ -203,16 +108,22 @@ const OrderHistory = () => {
         return 'status-dispatched';
       case 'delivered':
         return 'status-delivered';
+      case 'cancelled':
+        return 'status-cancelled';
       default:
         return '';
     }
   };
 
   const getDeliveryStatusClass = (status) => {
-    switch (status.toLowerCase()) {
-      case 'accepted':
-        return 'delivery-accepted';
-      case 'in transit':
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'delivery-pending';
+      case 'assigned':
+        return 'delivery-assigned';
+      case 'pickedup':
+        return 'delivery-pickedup';
+      case 'intransit':
         return 'delivery-transit';
       case 'delivered':
         return 'delivery-completed';
@@ -231,12 +142,15 @@ const OrderHistory = () => {
         return 'fa-truck';
       case 'delivered':
         return 'fa-check-double';
+      case 'cancelled':
+        return 'fa-times-circle';
       default:
         return 'fa-question-circle';
     }
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
@@ -249,48 +163,74 @@ const OrderHistory = () => {
     }).format(amount);
   };
 
-  const handleCancelOrder = (orderId) => {
+  const handleCancelOrder = async (orderId) => {
     if (window.confirm('Are you sure you want to cancel this order?')) {
-      // In a real application, this would make an API call to cancel the order
-      const updatedOrders = orders.map(order => 
-        order.id === orderId ? { ...order, status: 'Cancelled' } : order
-      );
-      setOrders(updatedOrders);
+      try {
+        await axios.patch(`${API_URL}/api/orders/${orderId}/cancel`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        // Update the order status locally
+        const updatedOrders = orders.map(order => 
+          order.order_id === orderId ? { ...order, status: 'Cancelled' } : order
+        );
+        setOrders(updatedOrders);
+      } catch (error) {
+        console.error('Error cancelling order:', error);
+        alert('Failed to cancel order. ' + (error.response?.data?.error || 'Please try again.'));
+      }
     }
   };
 
-  const handleReorder = (orderId) => {
-    // In a real application, this would create a new order with the same details
-    alert(`Reordering from order ${orderId}`);
+  const handleReorder = async (orderId) => {
+    try {
+      const response = await axios.post(`${API_URL}/api/orders/${orderId}/reorder`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Add the new order to the list
+      setOrders(prev => [response.data.order, ...prev]);
+      alert('Reorder placed successfully!');
+    } catch (error) {
+      console.error('Error reordering:', error);
+      alert('Failed to reorder. ' + (error.response?.data?.error || 'Please try again.'));
+    }
   };
 
   const handleReviewOrder = (orderId) => {
-    // Find the order to review
-    const orderToReview = orders.find(order => order.id === orderId);
+    const orderToReview = orders.find(order => order.order_id === orderId);
     if (orderToReview) {
       setReviewOrder(orderToReview);
     }
   };
 
-  const handleReviewSubmit = (reviewData) => {
-    // In a real app, this would send the review data to the server
-    console.log('Review submitted:', reviewData);
-    
-    // Mark the order as reviewed
-    setReviewedOrders(prev => ({
-      ...prev,
-      [reviewData.orderId]: {
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      await axios.post(`${API_URL}/api/orders/${reviewData.orderId}/review`, {
         rating: reviewData.ratingValue,
-        comment: reviewData.comment,
-        date: new Date().toISOString()
-      }
-    }));
-
-    // Close the review form
-    setReviewOrder(null);
-    
-    // Show a success message (you could add a toast notification here)
-    alert('Review submitted successfully! Thank you for your feedback.');
+        comment: reviewData.comment
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Update local state
+      setReviewedOrders(prev => ({
+        ...prev,
+        [reviewData.orderId]: {
+          rating: reviewData.ratingValue,
+          comment: reviewData.comment,
+          date: new Date().toISOString()
+        }
+      }));
+      
+      // Close the review form
+      setReviewOrder(null);
+      
+      alert('Review submitted successfully! Thank you for your feedback.');
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Failed to submit review. Please try again.');
+    }
   };
 
   return (
@@ -313,6 +253,7 @@ const OrderHistory = () => {
                 <option value="confirmed">Confirmed</option>
                 <option value="dispatched">Dispatched</option>
                 <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
 
@@ -344,7 +285,12 @@ const OrderHistory = () => {
               <div className="spinner"></div>
               <p>Loading your orders...</p>
             </div>
-          ) : sortedOrders.length === 0 ? (
+          ) : error ? (
+            <div className="error-message">
+              <i className="fas fa-exclamation-circle"></i>
+              <p>{error}</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="no-orders">
               <i className="fas fa-shopping-bag"></i>
               <h3>No orders found</h3>
@@ -353,14 +299,14 @@ const OrderHistory = () => {
             </div>
           ) : (
             <div className="orders-list">
-              {sortedOrders.map((order) => (
-                <div className="order-card" key={order.id}>
+              {filteredOrders.map((order) => (
+                <div className="order-card" key={order.order_id}>
                   <div className="order-header">
                     <div className="order-id">
-                      <strong>Order ID:</strong> {order.id}
+                      <strong>Order ID:</strong> {order.order_id}
                     </div>
                     <div className="order-date">
-                      <i className="far fa-calendar-alt"></i> {formatDate(order.orderDate)}
+                      <i className="far fa-calendar-alt"></i> {formatDate(order.created_at)}
                     </div>
                     <div className={`order-status ${getStatusClass(order.status)}`}>
                       <i className={`fas ${getStatusIcon(order.status)}`}></i> {order.status}
@@ -371,33 +317,38 @@ const OrderHistory = () => {
                     <div className="order-supplier">
                       <div className="supplier-info">
                         <h3>Supplier</h3>
-                        <p>{order.supplierInfo.name}</p>
+                        <p>{order.supplying_business_name}</p>
                         <p className="supplier-location">
-                          <i className="fas fa-map-marker-alt"></i> {order.supplierInfo.location}
+                          <i className="fas fa-map-marker-alt"></i> {order.supplying_area}, {order.supplying_city}
                         </p>
                       </div>
                       <div className="contact-supplier">
-                        <a href={`tel:${order.supplierInfo.contactNo}`}>
-                          <i className="fas fa-phone"></i> Call Supplier
-                        </a>
+                        {/* Only show if contact info available */}
+                        {order.supplying_phone && (
+                          <a href={`tel:${order.supplying_phone}`}>
+                            <i className="fas fa-phone"></i> Call Supplier
+                          </a>
+                        )}
                       </div>
                     </div>
 
                     <div className="order-details">
                       <div className="product-details">
                         <h3>Product</h3>
-                        <p className="product-name">{order.productInfo.name}</p>
-                        <p className="product-quantity">Quantity: {order.productInfo.quantity}</p>
-                        <p className="product-price">Price per unit: {formatCurrency(order.productInfo.price)}</p>
+                        <p className="product-name">{order.product_name}</p>
+                        <p className="product-quantity">Quantity: {order.quantity_requested}</p>
+                        <p className="product-price">Price per unit: {formatCurrency(order.unit_price || order.price)}</p>
                       </div>
                       <div className="order-amount">
                         <h3>Total Amount</h3>
-                        <div className="amount">{formatCurrency(order.totalAmount)}</div>
-                        <p className="payment-method">
-                          <i className="fas fa-money-check-alt"></i> {order.paymentMethod}
-                        </p>
-                        <p className={`payment-status ${order.paymentStatus === 'Completed' ? 'status-completed' : 'status-pending'}`}>
-                          <i className={`fas ${order.paymentStatus === 'Completed' ? 'fa-check-circle' : 'fa-clock'}`}></i> {order.paymentStatus}
+                        <div className="amount">{formatCurrency(order.total_amount)}</div>
+                        <p className={`delivery-status ${getDeliveryStatusClass(order.delivery_status)}`}>
+                          <i className={`fas ${
+                            order.delivery_status === 'Pending' ? 'fa-clock' : 
+                            order.delivery_status === 'Assigned' ? 'fa-user-check' : 
+                            order.delivery_status === 'PickedUp' ? 'fa-box' : 
+                            order.delivery_status === 'InTransit' ? 'fa-truck' : 'fa-flag-checkered'
+                          }`}></i> {order.delivery_status}
                         </p>
                       </div>
                     </div>
@@ -406,9 +357,9 @@ const OrderHistory = () => {
                   <div className="order-actions">
                     <button 
                       className="toggle-details-btn"
-                      onClick={() => toggleOrderDetails(order.id)}
+                      onClick={() => toggleOrderDetails(order.order_id)}
                     >
-                      {expandedOrderId === order.id ? (
+                      {expandedOrderId === order.order_id ? (
                         <><i className="fas fa-chevron-up"></i> Hide Details</>
                       ) : (
                         <><i className="fas fa-chevron-down"></i> View Details</>
@@ -416,23 +367,23 @@ const OrderHistory = () => {
                     </button>
 
                     <div className="action-buttons">
-                      {order.status === 'Delivered' && !reviewedOrders[order.id] && (
+                      {order.status === 'Delivered' && !reviewedOrders[order.order_id] && (
                         <button 
                           className="review-btn"
-                          onClick={() => handleReviewOrder(order.id)}
+                          onClick={() => handleReviewOrder(order.order_id)}
                         >
                           <i className="fas fa-star"></i> Review
                         </button>
                       )}
 
-                      {order.status === 'Delivered' && reviewedOrders[order.id] && (
+                      {reviewedOrders[order.order_id] && (
                         <div className="review-complete">
                           <i className="fas fa-check-circle"></i> Reviewed
                           <div className="rating-display">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <i 
                                 key={i}
-                                className={`fas fa-star ${i < reviewedOrders[order.id].rating ? 'active' : ''}`}
+                                className={`fas fa-star ${i < reviewedOrders[order.order_id].rating ? 'active' : ''}`}
                               ></i>
                             ))}
                           </div>
@@ -442,7 +393,7 @@ const OrderHistory = () => {
                       {order.status === 'Delivered' && (
                         <button 
                           className="reorder-btn"
-                          onClick={() => handleReorder(order.id)}
+                          onClick={() => handleReorder(order.order_id)}
                         >
                           <i className="fas fa-redo"></i> Reorder
                         </button>
@@ -451,7 +402,7 @@ const OrderHistory = () => {
                       {(order.status === 'Requested' || order.status === 'Confirmed') && (
                         <button 
                           className="cancel-btn"
-                          onClick={() => handleCancelOrder(order.id)}
+                          onClick={() => handleCancelOrder(order.order_id)}
                         >
                           <i className="fas fa-times"></i> Cancel
                         </button>
@@ -459,14 +410,14 @@ const OrderHistory = () => {
 
                       <button 
                         className="track-btn"
-                        disabled={order.status === 'Delivered'}
+                        disabled={order.status === 'Delivered' || order.status === 'Cancelled'}
                       >
                         <i className="fas fa-map-marker-alt"></i> Track
                       </button>
                     </div>
                   </div>
 
-                  {expandedOrderId === order.id && (
+                  {expandedOrderId === order.order_id && (
                     <div className="order-expanded-details">
                       <div className="expanded-section">
                         <h3><i className="fas fa-shipping-fast"></i> Shipping Information</h3>
@@ -474,62 +425,74 @@ const OrderHistory = () => {
                         <div className="detail-group">
                           <div className="detail-item">
                             <div className="detail-label">Delivery Address</div>
-                            <div className="detail-value">{order.deliveryAddress}</div>
+                            <div className="detail-value">
+                              {order.ordering_street}, {order.ordering_area}, {order.ordering_city}
+                            </div>
                           </div>
                           
                           <div className="detail-item">
                             <div className="detail-label">Delivery Status</div>
-                            <div className={`detail-value ${getDeliveryStatusClass(order.deliveryStatus)}`}>
+                            <div className={`detail-value ${getDeliveryStatusClass(order.delivery_status)}`}>
                               <i className={`fas ${
-                                order.deliveryStatus === 'Accepted' ? 'fa-check-circle' : 
-                                order.deliveryStatus === 'In Transit' ? 'fa-truck' : 'fa-flag-checkered'
-                              }`}></i> {order.deliveryStatus}
+                                order.delivery_status === 'Pending' ? 'fa-clock' : 
+                                order.delivery_status === 'Assigned' ? 'fa-user-check' : 
+                                order.delivery_status === 'PickedUp' ? 'fa-box' : 
+                                order.delivery_status === 'InTransit' ? 'fa-truck' : 'fa-flag-checkered'
+                              }`}></i> {order.delivery_status}
                             </div>
                           </div>
                           
                           <div className="detail-item">
                             <div className="detail-label">Expected Delivery</div>
-                            <div className="detail-value">{formatDate(order.expectedDelivery)}</div>
+                            <div className="detail-value">
+                              {order.expected_delivery_date ? 
+                                formatDate(order.expected_delivery_date) : 
+                                'To be determined'}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="expanded-section">
-                        <h3><i className="fas fa-user-friends"></i> Delivery Agent</h3>
-                        
-                        <div className="detail-group">
-                          <div className="detail-item">
-                            <div className="detail-label">Agent Name</div>
-                            <div className="detail-value">{order.deliveryAgent.name}</div>
-                          </div>
+                      {order.agent_name && (
+                        <div className="expanded-section">
+                          <h3><i className="fas fa-user-friends"></i> Delivery Agent</h3>
                           
-                          <div className="detail-item">
-                            <div className="detail-label">Contact</div>
-                            <div className="detail-value">
-                              <a href={`tel:${order.deliveryAgent.contactNumber}`}>
-                                {order.deliveryAgent.contactNumber}
-                              </a>
+                          <div className="detail-group">
+                            <div className="detail-item">
+                              <div className="detail-label">Agent Name</div>
+                              <div className="detail-value">{order.agent_name}</div>
+                            </div>
+                            
+                            <div className="detail-item">
+                              <div className="detail-label">Contact</div>
+                              <div className="detail-value">
+                                {order.agent_contact && 
+                                  <a href={`tel:${order.agent_contact}`}>
+                                    {order.agent_contact}
+                                  </a>
+                                }
+                              </div>
+                            </div>
+                            
+                            <div className="detail-item">
+                              <div className="detail-label">Vehicle Type</div>
+                              <div className="detail-value">{order.vehicle_type || 'Not specified'}</div>
                             </div>
                           </div>
-                          
-                          <div className="detail-item">
-                            <div className="detail-label">Vehicle Type</div>
-                            <div className="detail-value">{order.deliveryAgent.vehicleType}</div>
-                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="timeline">
                         <h3><i className="fas fa-history"></i> Order Timeline</h3>
                         
                         <div className="timeline-items">
-                          <div className={`timeline-item ${order.orderDate ? 'completed' : ''}`}>
+                          <div className={`timeline-item completed`}>
                             <div className="timeline-icon">
                               <i className="fas fa-shopping-cart"></i>
                             </div>
                             <div className="timeline-content">
                               <div className="timeline-title">Order Placed</div>
-                              <div className="timeline-date">{formatDate(order.orderDate)}</div>
+                              <div className="timeline-date">{formatDate(order.created_at)}</div>
                             </div>
                           </div>
                           
@@ -541,7 +504,7 @@ const OrderHistory = () => {
                               <div className="timeline-title">Order Confirmed</div>
                               <div className="timeline-date">
                                 {order.status === 'Confirmed' || order.status === 'Dispatched' || order.status === 'Delivered' 
-                                  ? `${formatDate(order.orderDate)}` 
+                                  ? formatDate(order.updated_at) 
                                   : 'Pending'}
                               </div>
                             </div>
@@ -555,7 +518,7 @@ const OrderHistory = () => {
                               <div className="timeline-title">Order Dispatched</div>
                               <div className="timeline-date">
                                 {order.status === 'Dispatched' || order.status === 'Delivered'
-                                  ? `${formatDate(order.orderDate)}`
+                                  ? formatDate(order.updated_at)
                                   : 'Pending'}
                               </div>
                             </div>
@@ -568,7 +531,7 @@ const OrderHistory = () => {
                             <div className="timeline-content">
                               <div className="timeline-title">Order Delivered</div>
                               <div className="timeline-date">
-                                {order.status === 'Delivered' ? `${formatDate(order.orderDate)}` : 'Pending'}
+                                {order.status === 'Delivered' ? formatDate(order.updated_at) : 'Pending'}
                               </div>
                             </div>
                           </div>

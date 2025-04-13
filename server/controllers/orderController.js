@@ -205,6 +205,36 @@ const OrderController = {
       console.error('Assign delivery agent error:', error.message);
       res.status(500).json({ error: 'Server error assigning delivery agent' });
     }
+  },
+  
+  // Get order history with filtering options
+  async getOrderHistory(req, res) {
+    try {
+      const userId = req.user.id;
+      const userType = req.user.type;
+      const { status, startDate, endDate, sort } = req.query;
+      
+      let orders = [];
+      
+      if (userType === 'business') {
+        // Get business orders with filters
+        orders = await OrderModel.getOrderHistoryByBusiness(
+          userId, 
+          { status, startDate, endDate, sort }
+        );
+      } else if (userType === 'delivery') {
+        // Get delivery agent orders with filters
+        orders = await OrderModel.getDeliveryHistory(
+          userId,
+          { status, startDate, endDate, sort }
+        );
+      }
+      
+      res.json(orders);
+    } catch (error) {
+      console.error('Get order history error:', error.message);
+      res.status(500).json({ error: 'Server error fetching order history' });
+    }
   }
 };
 

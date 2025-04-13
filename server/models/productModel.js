@@ -188,7 +188,9 @@ const ProductModel = {
       search_query,
       page = 1,
       limit = 12,
-      city // ← new filter
+      city, // ← filter by city
+      exclude_businessman_id, // ← new filter to exclude current user's products
+      exclude_deals = false   // ← new flag to exclude products that are part of deals
     } = filters;
     
     let query = `
@@ -204,6 +206,26 @@ const ProductModel = {
       JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
       WHERE 1=1
     `;
+
+    // Add LEFT JOIN with deals table if we need to exclude deals
+    if (exclude_deals) {
+      query = `
+        SELECT p.*, b.business_name, b.area, b.street, b.city,
+          CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
+          CASE 
+            WHEN p.quantity_available = 0 THEN 'Out of Stock'
+            WHEN p.quantity_available <= p.reorder_point THEN 'Low Stock'
+            ELSE 'In Stock'
+          END as stock_status,
+          COUNT(*) OVER() as total_count
+        FROM Product p
+        JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
+        LEFT JOIN Deals d ON p.product_id = d.product_id
+        WHERE 1=1
+        AND d.deal_id IS NULL  -- Only include products that don't have deals
+      `;
+    }
+    
     const params = [];
     
     if (city) {
@@ -219,6 +241,12 @@ const ProductModel = {
     if (businessman_id) {
       params.push(businessman_id);
       query += ` AND p.businessman_id = $${params.length}`;
+    }
+
+    // Exclude products from a specific businessman (for filtering out user's own products)
+    if (exclude_businessman_id) {
+      params.push(exclude_businessman_id);
+      query += ` AND p.businessman_id <> $${params.length}`;
     }
     
     if (min_price !== null && min_price !== undefined) {

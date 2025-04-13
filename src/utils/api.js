@@ -196,12 +196,61 @@ export const deliveryAPI = {
   // Get performance stats - Added for profile page
   getPerformanceStats: () => api.get('/delivery/stats/performance'),
   
+  // Get dashboard stats - Added for home page
+  getDashboardStats: () => api.get('/delivery/dashboard'),
+  
   // Update current location
   updateLocation: (locationData) => 
     api.post('/delivery/location', locationData),
   
   // Get stats and analytics
   getStats: () => api.get('/delivery/stats')
+};
+
+// API for delivery agent operations
+export const delivery = {
+  // Get delivery agent profile
+  getProfile: () => api.get('/api/delivery/profile'),
+
+  // Update delivery agent profile
+  updateProfile: (profileData) => api.put('/api/delivery/profile', profileData),
+
+  // Update availability status
+  updateStatus: (status) => api.patch('/api/delivery/status', { status }),
+
+  // Set status to offline
+  setOffline: () => api.post('/api/delivery/offline'),
+
+  // Get current orders assigned to the delivery agent
+  getCurrentOrders: () => api.get('/api/delivery/orders/current'),
+
+  // Get order history with optional filters
+  getOrderHistory: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.start_date) params.append('start_date', filters.start_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
+    
+    return api.get(`/api/delivery/orders/history?${params}`);
+  },
+
+  // Get dashboard statistics
+  getDashboardStats: () => api.get('/api/delivery/dashboard'),
+
+  // Get available orders nearby
+  getNearbyOrders: () => api.get('/api/delivery/orders/nearby'),
+
+  // Accept an order
+  acceptOrder: (orderId) => api.post(`/api/delivery/orders/${orderId}/accept`),
+
+  // Update order status
+  updateOrderStatus: (orderId, data) => api.patch(`/api/delivery/orders/${orderId}/status`, data),
+
+  // Update delivery location
+  updateLocation: (locationData) => api.patch('/api/delivery/location', locationData),
+
+  // Get earnings information
+  getEarnings: () => api.get('/api/delivery/earnings')
 };
 
 // Auth API
@@ -214,6 +263,18 @@ export const authAPI = {
   // Delivery agent authentication
   deliveryLogin: (credentials) => api.post('/auth/delivery/login', credentials),
 
+  deliveryRegister: (userData) => api.post('/auth/delivery/register', userData),
+
+  // Get current user info
+  getCurrentUser: () => api.get('/auth/me'),
+
+  // Update user profile
+  updateProfile: (userData) => api.put('/auth/update-profile', userData)
+};
+
+export const auth = {
+  // Delivery agent authentication
+  deliveryLogin: (credentials) => api.post('/auth/delivery/login', credentials),
   deliveryRegister: (userData) => api.post('/auth/delivery/register', userData),
 
   // Get current user info

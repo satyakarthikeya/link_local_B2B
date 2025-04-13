@@ -128,12 +128,14 @@ export async function getActiveDeals(req, res) {
   try {
     const filters = {
       businessman_id: req.query.businessman_id,
+      exclude_businessman_id: req.query.exclude_businessman_id,
       category: req.query.category,
       deal_type: req.query.deal_type,
       is_featured: req.query.is_featured === 'true' ? true : 
                   req.query.is_featured === 'false' ? false : undefined,
       limit: parseInt(req.query.limit) || 10,
-      page: parseInt(req.query.page) || 1
+      page: parseInt(req.query.page) || 1,
+      city: req.query.city
     };
 
     const deals = await DealModel.getActiveDeals(filters);
@@ -239,7 +241,8 @@ export async function getAllDeals(req, res) {
       limit = 10, 
       sort_by = 'created_at', 
       sort_order = 'desc',
-      deal_type
+      deal_type,
+      exclude_businessman_id // Add this parameter
     } = req.query;
     
     const filters = {
@@ -247,7 +250,8 @@ export async function getAllDeals(req, res) {
       limit: parseInt(limit),
       sort_by,
       sort_order,
-      deal_type
+      deal_type,
+      exclude_businessman_id // Pass the exclusion parameter to the model
     };
     
     const result = await DealModel.getAllDeals(filters);

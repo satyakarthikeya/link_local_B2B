@@ -1,6 +1,9 @@
 -- Database schema for Link Local B2B application
 
 -- Drop tables if they exist (in reverse order of dependencies)
+DROP TABLE IF EXISTS Cart CASCADE;
+DROP TABLE IF EXISTS CartItems CASCADE;
+DROP TABLE IF EXISTS Reviews CASCADE;
 DROP TABLE IF EXISTS Delivery CASCADE;
 DROP TABLE IF EXISTS OrderProducts CASCADE;
 DROP TABLE IF EXISTS Orders CASCADE;
@@ -186,6 +189,39 @@ CREATE TABLE IF NOT EXISTS Deals (
     )
 );
 
+-- Create Reviews table
+CREATE TABLE IF NOT EXISTS Reviews (
+  review_id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES Orders(order_id) ON DELETE CASCADE,
+  reviewer_id INTEGER NOT NULL REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  business_id INTEGER NOT NULL REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_order_review UNIQUE (order_id, reviewer_id)
+);
+
+-- Create Cart table (stores active shopping carts)
+CREATE TABLE IF NOT EXISTS Cart (
+  cart_id SERIAL PRIMARY KEY,
+  businessman_id INTEGER NOT NULL REFERENCES Businessman(businessman_id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_businessman_cart UNIQUE (businessman_id)
+);
+
+-- Create CartItems table (stores items in a cart)
+CREATE TABLE IF NOT EXISTS CartItems (
+  cart_item_id SERIAL PRIMARY KEY,
+  cart_id INTEGER NOT NULL REFERENCES Cart(cart_id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES Product(product_id) ON DELETE CASCADE,
+  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_cart_product UNIQUE (cart_id, product_id)
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_product_businessman ON Product(businessman_id);
 CREATE INDEX idx_orders_ordering_businessman ON Orders(ordering_businessman_id);
@@ -203,6 +239,11 @@ CREATE INDEX idx_deals_product_id ON Deals(product_id);
 CREATE INDEX idx_deals_businessman_id ON Deals(businessman_id);
 CREATE INDEX idx_deals_is_active ON Deals(is_active);
 CREATE INDEX idx_deals_is_featured ON Deals(is_featured);
+CREATE INDEX idx_reviews_business_id ON Reviews(business_id);
+CREATE INDEX idx_reviews_order_id ON Reviews(order_id);
+CREATE INDEX idx_cart_businessman_id ON Cart(businessman_id);
+CREATE INDEX idx_cart_items_cart_id ON CartItems(cart_id);
+CREATE INDEX idx_cart_items_product_id ON CartItems(product_id);
 
 -- Create update timestamp trigger function
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -238,3 +279,16 @@ CREATE TRIGGER update_deals_updated_at
 BEFORE UPDATE ON Deals
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
+
+-- Apply update timestamp triggers to new tables
+CREATE TRIGGER update_reviews_modtime
+BEFORE UPDATE ON Reviews
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_cart_modtime
+BEFORE UPDATE ON Cart
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_cart_items_modtime
+BEFORE UPDATE ON CartItems
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();

@@ -143,8 +143,15 @@ const ProductController = {
         stock_status,
         search_query,
         page = 1,
-        limit = 12
+        limit = 12,
+        city
       } = req.query;
+      
+      // Add current user ID to exclude their products
+      let currentUserBusinessId = null;
+      if (req.user && (req.user.id || req.user.businessman_id)) {
+        currentUserBusinessId = req.user.businessman_id || req.user.id;
+      }
       
       // Add pagination and enhanced filtering
       const filters = {
@@ -155,8 +162,15 @@ const ProductController = {
         stock_status,
         search_query,
         page: parseInt(page),
-        limit: parseInt(limit)
+        limit: parseInt(limit),
+        city: city || null,
+        // New filter parameters
+        exclude_businessman_id: currentUserBusinessId, // Filter out current user's products
+        exclude_deals: true  // Filter out products that are already part of deals
       };
+
+      // Log the filters being applied for debugging
+      console.log('Applying product filters:', filters);
 
       const products = await ProductModel.getAll(filters);
       
@@ -179,6 +193,8 @@ const ProductController = {
         price: product.price,
         category: product.category,
         seller: product.business_name,
+        seller_id: product.businessman_id, // Add this to identify the seller
+        business_id: product.businessman_id, // Add for consistent naming with frontend
         moq: product.moq || 1,
         location: product.area,
         area: product.street,

@@ -114,7 +114,10 @@ const B_Homepage = () => {
         console.log('Transformed products:', transformedProducts);
         
         try {
-          const dealsResponse = await api.deals.getActiveDeals({ city: currentUser?.city });
+          const dealsResponse = await api.deals.getActiveDeals({ 
+            city: currentUser?.city,
+            exclude_businessman_id: currentUser?.businessman_id || currentUser?.business_id
+          });
           let dealsData = [];
           
           if (dealsResponse.data && dealsResponse.data.data) {
@@ -183,13 +186,51 @@ const B_Homepage = () => {
     console.log('Selected category:', selectedCategory);
     console.log('Search query:', searchQuery);
     
-    // Temporary: less strict filtering to debug issues
-    let filtered = products;
+    // Get IDs of products that are already in deals to filter them out
+    const dealProductIds = deals.map(deal => deal.id);
+    console.log('Deal product IDs to exclude:', dealProductIds);
     
+    // Filter products: exclude own products and products already in deals (unless they're the user's own deals)
+    let filtered = products.filter(product => {
+      // Skip products owned by the current user
+      if (currentUser && product.business_id && 
+          (currentUser.businessman_id === product.business_id || 
+           currentUser.business_id === product.business_id)) {
+        console.log(`Filtering out own product: ${product.name} (ID: ${product.id})`);
+        return false;
+      }
+      
+      // Find if this product has a deal
+      const productDeal = deals.find(deal => deal.id === product.id);
+      
+      // If there's a deal for this product, check ownership
+      if (productDeal) {
+        // Extract business ID from the deal if available
+        const dealBusinessId = productDeal.business_id || 
+                              (productDeal.seller_id ? parseInt(productDeal.seller_id) : null);
+                              
+        // If the deal belongs to the current user, keep the product
+        if (currentUser && 
+            (currentUser.businessman_id === dealBusinessId || 
+             currentUser.business_id === dealBusinessId)) {
+          console.log(`Keeping product with user's own deal: ${product.name} (ID: ${product.id})`);
+          return true;
+        }
+        
+        // Otherwise, filter out products with deals from other users
+        console.log(`Filtering out product with other user's deal: ${product.name} (ID: ${product.id})`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Apply category filter if selected
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product => product.category === selectedCategory);
     }
     
+    // Apply search filter if query exists
     if (searchQuery !== '') {
       filtered = filtered.filter(product => 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -212,7 +253,7 @@ const B_Homepage = () => {
           return b.popularity - a.popularity;
       }
     });
-  }, [products, deals, selectedCategory, searchQuery, sortBy]);
+  }, [products, deals, selectedCategory, searchQuery, sortBy, currentUser]);
 
   const filteredDeals = useMemo(() => {
     if (!deals.length) return [];

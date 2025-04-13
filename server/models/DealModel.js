@@ -150,11 +150,13 @@ export const DealModel = {
   async getActiveDeals(filters = {}) {
     const {
       businessman_id,
+      exclude_businessman_id, // New parameter to exclude current user's deals
       category,
       deal_type,
       is_featured,
       limit = 10,
-      page = 1
+      page = 1,
+      city // Location filter
     } = filters;
 
     let query = `
@@ -174,6 +176,20 @@ export const DealModel = {
     if (businessman_id) {
       query += ` AND d.businessman_id = $${paramCount}`;
       queryParams.push(businessman_id);
+      paramCount++;
+    }
+
+    // Exclude deals from a specific businessman (current user)
+    if (exclude_businessman_id) {
+      query += ` AND d.businessman_id <> $${paramCount}`;
+      queryParams.push(exclude_businessman_id);
+      paramCount++;
+    }
+
+    // Filter by city if provided
+    if (city) {
+      query += ` AND b.city = $${paramCount}`;
+      queryParams.push(city);
       paramCount++;
     }
 
@@ -272,7 +288,8 @@ export const DealModel = {
       limit = 10,
       sort_by = 'created_at',
       sort_order = 'desc',
-      deal_type
+      deal_type,
+      exclude_businessman_id // Add this parameter to filter out current user's deals
     } = filters;
 
     let query = `
@@ -291,6 +308,13 @@ export const DealModel = {
     if (deal_type) {
       query += ` AND d.deal_type = $${paramCount}`;
       queryParams.push(deal_type);
+      paramCount++;
+    }
+
+    // Add condition to exclude deals from current user
+    if (exclude_businessman_id) {
+      query += ` AND d.businessman_id <> $${paramCount}`;
+      queryParams.push(exclude_businessman_id);
       paramCount++;
     }
 

@@ -6,98 +6,56 @@ const DeliveryController = {
   // Get delivery agent profile
   async getProfile(req, res) {
     try {
-      const agent_id = req.user.id;
+      const id = req.user.id;
+      const profile = await DeliveryModel.findById(id);
       
-      const agent = await DeliveryModel.findById(agent_id);
-      if (!agent) {
-        return res.status(404).json({ error: 'Delivery agent not found' });
+      if (!profile) {
+        return res.status(404).json({ error: 'Profile not found' });
       }
       
-      // Format the profile response
-      const profileData = {
-        agent_id: agent.agent_id,
-        name: agent.name,
-        email: agent.email,
-        contact_number: agent.contact_number,
-        area: agent.area,
-        street: agent.street,
-        vehicle_type: agent.vehicle_type,
-        vehicle_number: agent.vehicle_number,
-        license_no: agent.license_no,
-        gender: agent.gender || null,
-        date_of_birth: agent.date_of_birth || null,
-        about: agent.about || null,
-        availability_status: agent.availability_status || "Unavailable",
-        avg_rating: agent.avg_rating || 0,
-        total_deliveries: agent.total_deliveries || 0,
-        bank_details: agent.account_holder_name ? {
-          account_holder_name: agent.account_holder_name,
-          account_number: agent.account_number,
-          ifsc_code: agent.ifsc_code,
-          bank_name: agent.bank_name,
-          branch_name: agent.branch_name
-        } : null
-      };
-      
-      res.json(profileData);
+      res.json(profile);
     } catch (error) {
-      console.error('Get delivery profile error:', error.message);
-      res.status(500).json({ error: 'Server error fetching delivery profile' });
+      console.error('Get profile error:', error.message);
+      res.status(500).json({ error: 'Server error fetching profile' });
     }
   },
   
   // Update delivery agent profile
   async updateProfile(req, res) {
     try {
-      const agent_id = req.params.id || req.user.id;
+      const id = req.user.id;
       const updateData = req.body;
       
-      // Verify that the user is updating their own profile or is an admin
-      if (req.params.id && parseInt(req.params.id) !== parseInt(req.user.id)) {
-        return res.status(403).json({ error: 'Not authorized to update another agent\'s profile' });
-      }
-      
-      const agent = await DeliveryModel.update(agent_id, updateData);
-      if (!agent) {
-        return res.status(404).json({ error: 'Delivery agent not found' });
-      }
-      
-      // Return updated profile without sensitive information
-      const { password, ...profileData } = agent;
+      const updatedProfile = await DeliveryModel.update(id, updateData);
       
       res.json({
         message: 'Profile updated successfully',
-        profile: profileData
+        profile: updatedProfile
       });
     } catch (error) {
-      console.error('Update delivery profile error:', error.message);
-      res.status(500).json({ error: 'Server error updating delivery profile' });
+      console.error('Update profile error:', error.message);
+      res.status(500).json({ error: 'Server error updating profile' });
     }
   },
   
   // Update delivery agent's availability status
   async updateAvailabilityStatus(req, res) {
     try {
-      const { id } = req.params;
+      const id = req.user.id;
       const { status } = req.body;
-      const agent_id = req.user.id;
       
-      // Check if the user is updating their own status
-      if (parseInt(id) !== agent_id) {
-        return res.status(403).json({ error: 'Not authorized to update another agent\'s status' });
+      if (status === undefined) {
+        return res.status(400).json({ error: 'Status is required' });
       }
       
-      const agent = await DeliveryModel.updateAvailability(id, status);
-      if (!agent) {
-        return res.status(404).json({ error: 'Delivery agent not found' });
-      }
+      const updatedProfile = await DeliveryModel.updateAvailability(id, status);
       
       res.json({
-        message: 'Availability status updated successfully',
-        status: agent.availability_status
+        message: `Status updated to ${status ? 'Available' : 'Unavailable'}`,
+        profile: updatedProfile
       });
     } catch (error) {
-      console.error('Update availability status error:', error.message);
+      console.error('Update status error:', error.message);
       res.status(500).json({ error: 'Server error updating availability status' });
     }
   },
@@ -105,27 +63,16 @@ const DeliveryController = {
   // Set delivery agent status to offline (special handler for beacon requests)
   async setOfflineStatus(req, res) {
     try {
-      const { id } = req.params;
+      const id = req.user.id;
       
-      // This endpoint doesn't validate the user token since it's called by navigator.sendBeacon
-      // But we should log the attempt for security purposes
-      console.log(`Setting delivery agent ${id} status to offline via beacon request`);
+      await DeliveryModel.updateAvailability(id, false);
       
-      // Set status to false (offline)
-      const agent = await DeliveryModel.updateAvailability(id, false);
-      if (!agent) {
-        // Even for beacon requests, try to return proper status codes
-        return res.status(404).json({ error: 'Delivery agent not found' });
-      }
-      
-      // Return success response (though beacon doesn't process the response)
-      res.status(200).json({
-        message: 'Availability status set to offline successfully',
-        status: 'Unavailable'
+      res.json({
+        message: 'Status updated to Unavailable'
       });
     } catch (error) {
       console.error('Set offline status error:', error.message);
-      res.status(500).json({ error: 'Server error setting offline status' });
+      res.status(500).json({ error: 'Server error updating status' });
     }
   },
   
@@ -143,7 +90,7 @@ const DeliveryController = {
     }
   },
   
-  // Get delivery order history
+  // Get delivery order history with filters
   async getOrderHistory(req, res) {
     try {
       const agent_id = req.user.id;
@@ -162,69 +109,264 @@ const DeliveryController = {
   async getEarnings(req, res) {
     try {
       const agent_id = req.user.id;
-      const { period } = req.query; // daily, weekly, monthly
+      const stats = await OrderModel.getOrderStatistics(agent_id);
       
-      // For a real implementation, this would fetch from a transactions table
-      // For now, we'll generate some placeholder data
+      // Format the response
       const earnings = {
-        today: Math.floor(Math.random() * 1000) + 500,
-        weekly: Math.floor(Math.random() * 5000) + 2500,
-        monthly: Math.floor(Math.random() * 20000) + 10000,
+        today: `₹${Math.floor(Math.random() * 500) + 500}`, // Demo value - replace with actual calculation
+        weekly: `₹${Math.floor(Math.random() * 2000) + 3000}`, // Demo value
+        monthly: `₹${stats.total_earnings ? Math.floor(stats.total_earnings) : 0}`,
+        completed_orders: stats.completed_orders || 0,
+        active_orders: stats.active_orders || 0
       };
       
       res.json(earnings);
     } catch (error) {
       console.error('Get earnings error:', error.message);
-      res.status(500).json({ error: 'Server error fetching earnings data' });
+      res.status(500).json({ error: 'Server error fetching earnings' });
     }
   },
   
   // Update delivery agent location
   async updateLocation(req, res) {
     try {
-      const agent_id = req.user.id;
-      const { address, latitude, longitude } = req.body;
+      const id = req.user.id;
+      const { latitude, longitude, address } = req.body;
       
-      // In a real implementation, we'd update the location in a database
-      // For now, just acknowledge the update
+      // This is a placeholder - you'd need to add location fields to the profile table
+      // or create a separate locations table
       
       res.json({
-        message: 'Location updated successfully',
-        location: {
-          address,
-          coordinates: {
-            latitude: latitude || 0,
-            longitude: longitude || 0
-          }
-        }
+        message: 'Location updated successfully'
       });
     } catch (error) {
       console.error('Update location error:', error.message);
       res.status(500).json({ error: 'Server error updating location' });
     }
   },
+
+  // Get nearby available orders
+  async getNearbyOrders(req, res) {
+    try {
+      const agent_id = req.user.id;
+      // Get agent profile to find their city
+      const profile = await DeliveryModel.findById(agent_id);
+      
+      if (!profile || !profile.city) {
+        return res.status(400).json({ error: 'Agent profile missing city information' });
+      }
+      
+      // Find orders in the same city
+      const orders = await OrderModel.getNearbyOrders(profile.city);
+      
+      res.json(orders);
+    } catch (error) {
+      console.error('Get nearby orders error:', error.message);
+      res.status(500).json({ error: 'Server error fetching nearby orders' });
+    }
+  },
   
-  // Get delivery agent stats
-  async getStats(req, res) {
+  // Accept an order
+  async acceptOrder(req, res) {
+    try {
+      const agent_id = req.user.id;
+      const { order_id } = req.params;
+      
+      if (!order_id) {
+        return res.status(400).json({ error: 'Order ID is required' });
+      }
+      
+      // Check if the agent is available
+      const agent = await DeliveryModel.findById(agent_id);
+      if (agent.availability_status !== 'Available') {
+        return res.status(400).json({ error: 'You must be online to accept orders' });
+      }
+      
+      // Assign the agent to the order
+      const updatedOrder = await OrderModel.assignAgent(order_id, agent_id);
+      
+      // Create delivery tracking entry
+      await OrderModel.createDeliveryTracking(order_id, agent_id);
+      
+      res.json({
+        message: 'Order accepted successfully',
+        order: updatedOrder
+      });
+    } catch (error) {
+      console.error('Accept order error:', error.message);
+      res.status(500).json({ error: 'Server error accepting order' });
+    }
+  },
+  
+  // Update order delivery status
+  async updateOrderStatus(req, res) {
+    try {
+      const agent_id = req.user.id;
+      const { order_id } = req.params;
+      const { status, notes } = req.body;
+      
+      if (!order_id || !status) {
+        return res.status(400).json({ error: 'Order ID and status are required' });
+      }
+      
+      // Verify the agent is assigned to this order
+      const order = await OrderModel.findById(order_id);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      
+      if (order.agent_id !== agent_id) {
+        return res.status(403).json({ error: 'You are not assigned to this order' });
+      }
+      
+      // Update the delivery status
+      const updatedTracking = await OrderModel.updateDeliveryStatus(order_id, status, notes);
+      
+      // If order is delivered, update agent stats
+      if (status === 'Delivered') {
+        await DeliveryModel.updateStats(agent_id, { 
+          rating: req.body.rating || 5, // Default rating if not provided
+          completed: true 
+        });
+      }
+      
+      res.json({
+        message: `Order status updated to ${status}`,
+        tracking: updatedTracking
+      });
+    } catch (error) {
+      console.error('Update order status error:', error.message);
+      res.status(500).json({ error: 'Server error updating order status' });
+    }
+  },
+  
+  // Get dashboard statistics
+  async getDashboardStats(req, res) {
     try {
       const agent_id = req.user.id;
       
-      const agent = await DeliveryModel.findById(agent_id);
-      if (!agent) {
-        return res.status(404).json({ error: 'Delivery agent not found' });
-      }
+      // Get order statistics
+      const stats = await OrderModel.getOrderStatistics(agent_id);
       
-      const stats = {
-        total_deliveries: agent.total_deliveries || 0,
-        avg_rating: agent.avg_rating || 0,
-        completed_this_month: Math.floor(Math.random() * 30) + 10, // Placeholder
-        on_time_delivery_rate: Math.floor(Math.random() * 20) + 80 // Placeholder percentage
+      // Get agent profile
+      const profile = await DeliveryModel.findById(agent_id);
+      
+      // Format earnings for display
+      const earnings = {
+        today: `₹${Math.floor(Math.random() * 500) + 500}`, // Demo values
+        weekly: `₹${Math.floor(Math.random() * 2000) + 3000}`, // Demo values
+        monthly: `₹${stats.total_earnings ? Math.floor(stats.total_earnings) : 0}`
       };
       
-      res.json(stats);
+      // Calculate ratings and other statistics
+      const dashboardStats = {
+        earnings,
+        orders: {
+          active: stats.active_orders || 0,
+          completed: stats.completed_orders || 0,
+          total: (stats.active_orders || 0) + (stats.completed_orders || 0)
+        },
+        rating: profile.avg_rating || 5.0,
+        total_deliveries: profile.total_deliveries || 0
+      };
+      
+      res.json(dashboardStats);
     } catch (error) {
-      console.error('Get stats error:', error.message);
-      res.status(500).json({ error: 'Server error fetching stats' });
+      console.error('Get dashboard stats error:', error.message);
+      res.status(500).json({ error: 'Server error fetching dashboard statistics' });
+    }
+  },
+
+  // Get performance statistics
+  async getPerformanceStats(req, res) {
+    try {
+      const agent_id = req.user.id;
+      
+      // Get order statistics
+      const stats = await OrderModel.getOrderStatistics(agent_id);
+      
+      // Get agent profile
+      const profile = await DeliveryModel.findById(agent_id);
+      
+      // Calculate performance metrics
+      const totalOrders = (stats.completed_orders || 0) + (stats.active_orders || 0);
+      const onTimeDeliveryRate = totalOrders > 0 ? 
+        Math.round((stats.completed_orders || 0) * 0.9 * 100) / totalOrders : 100; // 90% on-time delivery rate assumption
+      
+      const performanceStats = {
+        rating: profile.avg_rating || 5.0,
+        deliveryCompletionRate: totalOrders > 0 ? 
+          Math.round((stats.completed_orders || 0) * 100 / totalOrders) : 100,
+        onTimeDeliveryRate,
+        cancellationRate: totalOrders > 0 ? 
+          Math.round(Math.random() * 5) : 0, // Random cancellation rate between 0-5%
+        customerFeedback: [
+          { rating: 5, comment: "Very professional delivery" },
+          { rating: 4, comment: "Good service, slightly delayed" }
+        ]
+      };
+      
+      res.json(performanceStats);
+    } catch (error) {
+      console.error('Get performance stats error:', error.message);
+      res.status(500).json({ error: 'Server error fetching performance statistics' });
+    }
+  },
+  
+  // Get earnings history
+  async getEarningsHistory(req, res) {
+    try {
+      const agent_id = req.user.id;
+      const { period = 'month', start_date, end_date } = req.query;
+      
+      // Get completed orders with earnings calculation
+      const stats = await OrderModel.getOrderStatistics(agent_id);
+      
+      // Generate some mock earnings history data
+      const today = new Date();
+      const earningsHistory = [];
+      
+      // Generate data for the last 30 days
+      for (let i = 0; i < 30; i++) {
+        const date = new Date();
+        date.setDate(today.getDate() - i);
+        
+        earningsHistory.push({
+          date: date.toISOString().split('T')[0],
+          amount: Math.floor(Math.random() * 500) + 200,
+          deliveries: Math.floor(Math.random() * 5) + 1,
+          tip: Math.floor(Math.random() * 100)
+        });
+      }
+      
+      res.json({
+        total: stats.total_earnings || 0,
+        history: earningsHistory
+      });
+    } catch (error) {
+      console.error('Get earnings history error:', error.message);
+      res.status(500).json({ error: 'Server error fetching earnings history' });
+    }
+  },
+  
+  // Get delivery agent documents
+  async getDocuments(req, res) {
+    try {
+      const agent_id = req.user.id;
+      
+      // In a real implementation, you would fetch documents from storage
+      // Here we're returning mock data
+      const documents = [
+        { id: 1, type: 'ID Proof', name: 'Aadhar Card', status: 'Verified', uploadDate: '2025-01-15' },
+        { id: 2, type: 'Address Proof', name: 'Utility Bill', status: 'Pending', uploadDate: '2025-03-20' },
+        { id: 3, type: 'Vehicle Registration', name: 'RC Book', status: 'Verified', uploadDate: '2025-02-10' },
+        { id: 4, type: 'Driving License', name: 'License', status: 'Verified', uploadDate: '2025-01-05' }
+      ];
+      
+      res.json(documents);
+    } catch (error) {
+      console.error('Get documents error:', error.message);
+      res.status(500).json({ error: 'Server error fetching documents' });
     }
   }
 };

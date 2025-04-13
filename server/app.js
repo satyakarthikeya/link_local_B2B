@@ -1,47 +1,51 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import helmet from 'helmet';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import authRoutes from './routes/authRoutes.js';
+import productRoutes from './routes/productRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import deliveryRoutes from './routes/deliveryRoutes.js';
+import dealRoutes from './routes/dealRoutes.js';
+import cartRoutes from './routes/cartRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
+import { errorHandler } from './utils/errorHandler.js';
+import logger from './utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 
-// Import routes
-const authRoutes = require('./routes/authRoutes.js');
-const productRoutes = require('./routes/productRoutes.js');
-const orderRoutes = require('./routes/orderRoutes.js');
-const deliveryRoutes = require('./routes/deliveryRoutes.js');
-const dealRoutes = require('./routes/dealRoutes.js'); // Add the new deal routes
-
-// CORS Configuration
-app.use(cors({
-  origin: 'http://localhost:5173', // Your React app's URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-
-// Parse JSON request bodies
+// Middleware
+app.use(cors());
+app.use(helmet());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware for debugging
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
+// Logging
+app.use(morgan('dev'));
+
+// Static files
+app.use(express.static(join(__dirname, 'public')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes);
-app.use('/api/deals', dealRoutes); // Mount the deal routes
+app.use('/api/deals', dealRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/reviews', reviewRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'API is running' });
 });
 
-// Route not found handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
+// Error handling
+app.use(errorHandler);
 
-module.exports = app;
+export default app;

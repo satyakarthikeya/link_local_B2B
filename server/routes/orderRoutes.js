@@ -43,6 +43,37 @@ router.get(
   catchAsync(OrderController.getBusinessOrders)
 );
 
+// New route for order history with filtering
+router.get(
+  '/history',
+  catchAsync(OrderController.getOrderHistory)
+);
+
+// Cancel an order
+router.patch(
+  '/:id/cancel',
+  authorizeBusiness[1],
+  catchAsync(OrderController.cancelOrder)
+);
+
+// Reorder - create a new order based on an existing one
+router.post(
+  '/:id/reorder',
+  authorizeBusiness[1],
+  catchAsync(OrderController.reorder)
+);
+
+// Submit a review for a delivered order
+router.post(
+  '/:id/review',
+  authorizeBusiness[1],
+  validateRequest(Joi.object({
+    rating: Joi.number().min(1).max(5).required(),
+    comment: Joi.string().allow('', null)
+  })),
+  catchAsync(OrderController.submitReview)
+);
+
 router.post(
   '/assign-delivery',
   authorizeBusiness[1],

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 import "../styles/Cart.css";
 
 const CartItem = ({ item, updateQuantity, removeFromCart }) => {
@@ -17,6 +18,12 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
     setIsRemoving(true);
     setTimeout(() => removeFromCart(id), 300);
   }, [id, removeFromCart]);
+
+  // Format price to handle NaN
+  const formatPrice = (price) => {
+    const numPrice = Number(price) || 0;  // Convert to number, default to 0 if NaN
+    return numPrice;
+  };
 
   return (
     <div className={`cart-item ${isRemoving ? 'removing' : ''} ${isUpdating ? 'updating' : ''}`}>
@@ -43,7 +50,7 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
           </button>
         </div>
       </div>
-      <span className="cart-item-price">₹{price * quantity}</span>
+      <span className="cart-item-price">₹{(formatPrice(price) * quantity).toFixed(2)}</span>
       <button
         onClick={handleRemove}
         className="cart-item-remove"
@@ -56,13 +63,15 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
 };
 
 const CartSummary = ({ total, deliveryFee = 50, onCheckout }) => {
-  const finalTotal = total + deliveryFee;
+  // Ensure total is a valid number
+  const validTotal = isNaN(total) ? 0 : total;
+  const finalTotal = validTotal + deliveryFee;
   
   return (
     <div className="cart-panel-footer">
       <div className="cart-subtotal">
         <span>Subtotal</span>
-        <span>₹{total.toFixed(2)}</span>
+        <span>₹{validTotal.toFixed(2)}</span>
       </div>
       <div className="cart-subtotal">
         <span>Delivery Fee</span>
@@ -75,7 +84,7 @@ const CartSummary = ({ total, deliveryFee = 50, onCheckout }) => {
       <button 
         className="checkout-btn" 
         onClick={onCheckout}
-        disabled={total === 0}
+        disabled={validTotal === 0}
       >
         Proceed to Checkout <i className="fas fa-arrow-right"></i>
       </button>
@@ -103,6 +112,7 @@ const EmptyCart = ({ onContinueShopping }) => (
 );
 
 const Cart = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState({ show: false, item: null });
@@ -202,17 +212,24 @@ const Cart = ({ isOpen, onClose }) => {
 
   const handleCheckout = useCallback(() => {
     console.log("Proceeding to checkout...");
-    window.location.href = '/business-home/checkout';
-  }, []);
+    handleClose();
+    setTimeout(() => {
+      navigate('/checkout');
+    }, 300);
+  }, [navigate, handleClose]);
 
   const handleContinueShopping = useCallback(() => {
     handleClose();
     setTimeout(() => {
-      window.location.href = '/business-home';
+      navigate('/business-home');
     }, 300);
-  }, [handleClose]);
+  }, [handleClose, navigate]);
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = items.reduce((sum, item) => {
+    // Convert price to number or default to 0 if NaN
+    const price = Number(item.price) || 0;
+    return sum + price * item.quantity;
+  }, 0);
 
   if (!isOpen) return null;
 
