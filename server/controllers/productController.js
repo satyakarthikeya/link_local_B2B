@@ -136,27 +136,72 @@ const ProductController = {
   async getAllProducts(req, res) {
     try {
       const { 
-        category, 
+        category = 'all', 
         businessman_id, 
         min_price, 
         max_price,
         stock_status,
-        search_query 
+        search_query,
+        page = 1,
+        limit = 12
       } = req.query;
       
-      const products = await ProductModel.getAll({
-        category,
+      // Add pagination and enhanced filtering
+      const filters = {
+        category: category !== 'all' ? category : null,
         businessman_id,
         min_price: min_price ? parseFloat(min_price) : null,
         max_price: max_price ? parseFloat(max_price) : null,
         stock_status,
-        search_query
-      });
+        search_query,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      };
+
+      const products = await ProductModel.getAll(filters);
       
-      res.json(products);
+      if (!products || !products.length) {
+        return res.json({
+          products: [],
+          message: 'No products found',
+          pagination: {
+            currentPage: filters.page,
+            totalPages: 0,
+            totalProducts: 0
+          }
+        });
+      }
+
+      // Transform product data for frontend
+      const transformedProducts = products.map(product => ({
+        id: product.product_id,
+        name: product.product_name,
+        price: product.price,
+        category: product.category,
+        seller: product.business_name,
+        moq: product.moq || 1,
+        location: product.area,
+        area: product.street,
+        inStock: product.quantity_available > 0,
+        quantity_available: product.quantity_available,
+        image_url: product.image_url,
+        description: product.description
+      }));
+
+      res.json({
+        products: transformedProducts,
+        pagination: {
+          currentPage: filters.page,
+          totalPages: Math.ceil(products.length / filters.limit),
+          totalProducts: products.length
+        }
+      });
     } catch (error) {
       console.error('Get products error:', error.message);
-      res.status(500).json({ error: 'Server error fetching products' });
+      res.status(500).json({ 
+        error: 'Server error fetching products',
+        message: error.message 
+      });
     }
   },
 

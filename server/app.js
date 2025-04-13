@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes.js');
 const productRoutes = require('./routes/productRoutes.js');
 const orderRoutes = require('./routes/orderRoutes.js');
 const deliveryRoutes = require('./routes/deliveryRoutes.js');
+const dealRoutes = require('./routes/dealRoutes.js'); // Add the new deal routes
 
 // CORS Configuration
 app.use(cors({
@@ -19,11 +20,18 @@ app.use(cors({
 // Parse JSON request bodies
 app.use(express.json());
 
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/deals', dealRoutes); // Mount the deal routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {

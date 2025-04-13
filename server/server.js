@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js'; // Add import for delivery routes
+import dealRoutes from './routes/dealRoutes.js'; // Add import for deal routes
 import validateEnv from './config/validateEnv.js';
 import config from './config/appConfig.js';
 import { logger, requestLogger } from './utils/logger.js';
@@ -80,6 +81,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes); // Add delivery routes
+app.use('/api/deals', dealRoutes); // Add deal routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -99,7 +101,8 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       products: '/api/products',
       orders: '/api/orders',
-      delivery: '/api/delivery' // Add delivery endpoint to documentation
+      delivery: '/api/delivery',
+      deals: '/api/deals' // Add deals endpoint to documentation
     }
   });
 });

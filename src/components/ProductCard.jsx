@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import '../styles/Cart.css';
 
-const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateStock, onEdit, onDelete }) => {
+const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateStock, onEdit, onDelete, onCreateDeal }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -34,6 +34,13 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
       await onUpdateStock(product.product_id, newQuantity);
     } catch (error) {
       console.error("Failed to update stock:", error);
+    }
+  };
+
+  const handleCreateDeal = (e) => {
+    e.stopPropagation();
+    if (onCreateDeal) {
+      onCreateDeal(product);
     }
   };
 
@@ -81,14 +88,31 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
           <div className={`product-actions ${isHovered ? 'visible' : ''}`}>
             <button
               className="action-btn edit"
-              onClick={() => onEdit(product)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(product);
+              }}
               aria-label="Edit product"
             >
               <i className="fas fa-edit"></i>
             </button>
             <button
+              className="action-btn deal"
+              onClick={handleCreateDeal}
+              aria-label="Create deal for product"
+              style={{
+                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                color: '#ff6b6b'
+              }}
+            >
+              <i className="fas fa-percentage"></i>
+            </button>
+            <button
               className="action-btn delete"
-              onClick={() => onDelete(product.product_id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(product.product_id);
+              }}
               aria-label="Delete product"
             >
               <i className="fas fa-trash"></i>
@@ -201,7 +225,8 @@ ProductCard.propTypes = {
   isBusinessView: PropTypes.bool,
   onUpdateStock: PropTypes.func,
   onEdit: PropTypes.func,
-  onDelete: PropTypes.func
+  onDelete: PropTypes.func,
+  onCreateDeal: PropTypes.func
 };
 
 export default ProductCard;

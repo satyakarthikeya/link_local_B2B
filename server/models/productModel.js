@@ -177,7 +177,7 @@ const ProductModel = {
     }
   },
 
-  // Get all products with optional filters
+  // Get all products with optional filters and pagination
   async getAll(filters = {}) {
     const { 
       category, 
@@ -185,22 +185,31 @@ const ProductModel = {
       min_price, 
       max_price,
       stock_status,
-      search_query 
+      search_query,
+      page = 1,
+      limit = 12,
+      city // ← new filter
     } = filters;
     
     let query = `
-      SELECT p.*, b.business_name, b.area, b.category,
+      SELECT p.*, b.business_name, b.area, b.street, b.city,
         CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
         CASE 
           WHEN p.quantity_available = 0 THEN 'Out of Stock'
           WHEN p.quantity_available <= p.reorder_point THEN 'Low Stock'
           ELSE 'In Stock'
-        END as stock_status
+        END as stock_status,
+        COUNT(*) OVER() as total_count
       FROM Product p
       JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
       WHERE 1=1
     `;
     const params = [];
+    
+    if (city) {
+      params.push(city);
+      query += ` AND b.city = $${params.length}`;
+    }
     
     if (category) {
       params.push(category);

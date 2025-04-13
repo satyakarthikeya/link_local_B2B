@@ -223,6 +223,37 @@ export const authAPI = {
   updateProfile: (userData) => api.put('/auth/update-profile', userData)
 };
 
+// Deals API
+export const dealAPI = {
+  // Create a new deal for a product
+  createDeal: (productId, dealData) => api.post(`/deals/product/${productId}`, dealData),
+
+  // Update a deal for a product
+  updateDeal: (productId, dealData) => api.put(`/deals/product/${productId}`, dealData),
+
+  // Remove a deal from a product
+  removeDeal: (productId) => api.delete(`/deals/product/${productId}`),
+
+  // Get deal information for a product
+  getDealByProductId: (productId) => api.get(`/deals/product/${productId}`),
+
+  // Get all active deals with optional filters
+  getActiveDeals: (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return api.get(`/deals/active?${params}`);
+  },
+
+  // Get deals by business ID
+  getDealsByBusinessId: (businessId) => api.get(`/deals/business/${businessId}`),
+
+  // Get featured deals
+  getFeaturedDeals: (limit = 4) => api.get(`/deals/featured?limit=${limit}`),
+
+  // Toggle featured status of a deal
+  toggleFeaturedStatus: (productId, isFeatured) => 
+    api.put(`/deals/product/${productId}`, { is_featured: isFeatured })
+};
+
 // Image Upload API
 export const uploadImage = async (formData) => {
   try {
@@ -245,6 +276,7 @@ api.auth = authAPI;
 api.products = productAPI;
 api.orders = orderAPI;
 api.uploadImage = uploadImage;
-api.delivery = deliveryAPI; // Add delivery API to the main api object
+api.delivery = deliveryAPI;
+api.deals = dealAPI; // Add deals API to the main api object
 
 export default api;

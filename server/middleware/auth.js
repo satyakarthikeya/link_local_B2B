@@ -10,7 +10,7 @@ dotenv.config();
  */
 function authenticateToken(req, res, next) {
   try {
-    const authHeader = req.headers['authorization'];
+    const authHeader = req.headers?.['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
@@ -57,10 +57,15 @@ function authenticateToken(req, res, next) {
     });
   } catch (error) {
     logger.error('Authentication middleware error:', error);
-    res.status(500).json({ 
-      error: 'Authentication failed',
-      message: 'An unexpected error occurred. Please try again.'
-    });
+    if (res && typeof res.status === 'function') {
+      res.status(500).json({ 
+        error: 'Authentication failed',
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    } else {
+      logger.error('Response object is invalid in authenticateToken middleware');
+      if (typeof next === 'function') next(error);
+    }
   }
 }
 
@@ -68,14 +73,17 @@ function authenticateToken(req, res, next) {
  * Middleware to check if user has a specific role
  * Uses the authenticateToken middleware first, then checks the user type
  */
-function authorizeRole(role) {
+function authorizeRole(roles) {
+  // Handle both string and array formats for roles
+  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+  
   return [
     authenticateToken,
     (req, res, next) => {
-      if (req.user.type !== role) {
+      if (!req.user || !allowedRoles.includes(req.user.type)) {
         return res.status(403).json({ 
           error: 'Access denied',
-          message: `Access requires ${role} role`
+          message: `Access requires ${allowedRoles.join(' or ')} role`
         });
       }
       next();
@@ -89,13 +97,16 @@ const authorizeDelivery = authorizeRole('delivery');
 
 // Middleware to allow either business or delivery user
 function authorizeBusinessOrDelivery(req, res, next) {
-  if (req.user.type !== 'business' && req.user.type !== 'delivery') {
-    return res.status(403).json({ 
-      error: 'Access denied',
-      message: 'Access requires business or delivery role' 
-    });
-  }
-  next();
+  authenticateToken(req, res, (err) => {
+    if (err) return next(err);
+    if (req.user.type !== 'business' && req.user.type !== 'delivery') {
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'Access requires business or delivery role' 
+      });
+    }
+    next();
+  });
 }
 
 export { 

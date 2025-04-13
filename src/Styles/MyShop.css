@@ -181,7 +181,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 60px; /* Adjust based on your navbar height */
-  z-index: 10;
+  z-index: 100; /* Increased z-index to ensure it's above other elements */
+  overflow: hidden;
+  margin-bottom: 1.5rem;
 }
 
 .tab-btn {
@@ -197,6 +199,7 @@
   align-items: center;
   gap: 10px;
   transition: var(--transition);
+  transition: all 0.3s ease;
 }
 
 .tab-btn i {
@@ -208,17 +211,23 @@
 }
 
 .tab-btn.active {
-  color: #E6F7FF;
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(74, 111, 255, 0.25);
 }
 
 .tab-btn.active::after {
   content: '';
   position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background-color: var(--primary-color);
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--primary-color);
 }
 
 /* Empty State */
@@ -290,6 +299,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  position: relative; /* Added position relative */
+  z-index: 90; /* Lower z-index than tabs */
 }
 
 .add-product-btn {
@@ -306,6 +317,7 @@
   transition: var(--transition);
   position: relative;
   overflow: hidden;
+  z-index: 95; /* Higher than products-header but lower than tabs */
 }
 
 .add-product-btn::after {
@@ -633,6 +645,20 @@
   box-shadow: 0 4px 10px rgba(255, 90, 96, 0.3);
 }
 
+.action-btn.deal {
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+  transition: all 0.2s ease;
+}
+
+.action-btn.deal:hover {
+  background-color: #ff6b6b;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(255, 107, 107, 0.3);
+}
+
 /* Orders Section */
 .orders-header {
   display: flex;
@@ -932,6 +958,174 @@
 
 .order-btn.details:hover {
   background-color: #e9ecef;
+}
+
+/* Deals Section */
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.deal-card {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.deal-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
+
+.deal-status-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.deal-card.active .deal-status-badge {
+  background-color: rgba(40, 199, 111, 0.9);
+  color: white;
+}
+
+.deal-card.expired .deal-status-badge {
+  background-color: rgba(255, 90, 96, 0.9);
+  color: white;
+}
+
+.deal-card.inactive .deal-status-badge {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+}
+
+.featured-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: #ff9f43;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.deal-image-area {
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+}
+
+.deal-image-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.deal-card:hover .deal-image-area img {
+  transform: scale(1.05);
+}
+
+.deal-type-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+  color: white;
+  padding: 30px 15px 15px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.deal-content {
+  padding: 1.2rem;
+}
+
+.deal-title {
+  font-size: 1.2rem;
+  margin: 0 0 10px;
+  color: #2A2E43;
+}
+
+.deal-description {
+  color: #7A7C85;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.deal-details {
+  padding: 15px;
+  background-color: rgba(248, 249, 250, 0.5);
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.deal-product, .deal-dates, .deal-type-details {
+  margin-bottom: 10px;
+}
+
+.deal-product strong, .deal-dates strong, .deal-type-details strong {
+  color: #2A2E43;
+  font-size: 0.95rem;
+}
+
+.deal-dates {
+  display: flex;
+  justify-content: space-between;
+}
+
+.deal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.deal-actions button {
+  flex: 1;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deal-actions button:first-child {
+  background-color: #4A6FFF;
+  color: white;
+}
+
+.deal-actions button:nth-child(2) {
+  background-color: #FF9F43;
+  color: white;
+}
+
+.deal-actions button:nth-child(3) {
+  background-color: #FF5A60;
+  color: white;
+}
+
+.deal-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Analytics Section */
@@ -1266,6 +1460,11 @@ input:focus, select:focus, textarea:focus {
   border-left: 4px solid var(--secondary-color);
 }
 
+.notification.info {
+  background-color: #4A6FFF;
+  border-left: 4px solid #2542c8;
+}
+
 .notification i {
   font-size: 1.4rem;
 }
@@ -1276,6 +1475,10 @@ input:focus, select:focus, textarea:focus {
 
 .notification.error i {
   color: var(--secondary-color);
+}
+
+.notification.info i {
+  color: white;
 }
 
 .notification p {
@@ -1305,6 +1508,30 @@ input:focus, select:focus, textarea:focus {
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* Tab content animations */
+.products-section, 
+.deals-section, 
+.orders-section, 
+.analytics-section {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab indicator pulse animation for guiding new users */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(74, 111, 255, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(74, 111, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 111, 255, 0); }
+}
+
+.pulse-indicator {
+  animation: pulse 1.5s infinite;
 }
 
 /* Responsive Design */

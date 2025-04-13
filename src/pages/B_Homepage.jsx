@@ -72,6 +72,7 @@ const B_Homepage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hotSellers, setHotSellers] = useState([]);
 
   // Get business owner name
   const getBusinessOwnerName = () => {
@@ -81,12 +82,16 @@ const B_Homepage = () => {
     return 'Business Owner';
   };
 
-  // Fetch products from backend API
+  // Fetch products from backend API with city filter
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const productsData = await api.products.getAll();
+        // Pass currentUser.city to filter products by city
+        let productsData = await api.products.getAll({ city: currentUser?.city });
+        if (!Array.isArray(productsData)) {
+          productsData = productsData?.data || [];
+        }
         
         // Transform the products to match the expected format
         const transformedProducts = productsData.map(product => ({
@@ -103,12 +108,16 @@ const B_Homepage = () => {
           deliveryTime: "1-3 days",
           image: product.image_url || "./src/assests/guddu.jpeg", // Default image if none provided
           inStock: product.quantity_available > 0,
-          popularity: 80, // Example default popularity
+          popularity: Math.floor(Math.random() * (100 - 70) + 70), // Generate random popularity
           description: product.description || 'No description available',
           quantity_available: product.quantity_available
         }));
         
         setProducts(transformedProducts);
+        
+        // Sort by popularity and set hot sellers
+        const popularProducts = [...transformedProducts].sort((a, b) => b.popularity - a.popularity);
+        setHotSellers(popularProducts.slice(0, 4));
       } catch (err) {
         console.error('Failed to fetch products:', err);
         setError('Failed to load products. Please try again later.');
@@ -118,7 +127,7 @@ const B_Homepage = () => {
     };
     
     fetchProducts();
-  }, []);
+  }, [currentUser?.city]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 80);
@@ -207,6 +216,93 @@ const B_Homepage = () => {
           </div>
         </section>
 
+        {/* HOT SELLERS - New Premium Showcase Section */}
+        <section className="hot-sellers-section">
+          <div className="container">
+            <div className="section-header">
+              <h2><i className="fas fa-fire"></i> Hot Sellers</h2>
+              <p>Today's most popular products from top suppliers</p>
+            </div>
+            
+            <div className="hot-deals-grid">
+              {!loading ? hotSellers.map((product) => (
+                <div key={product.id} className="deal-card">
+                  <div className="deal-img">
+                    <img src={product.image} alt={product.name} />
+                    <div className="deal-tag">HOT</div>
+                  </div>
+                  <div className="deal-content">
+                    <h3 className="deal-title">{product.name}</h3>
+                    <div className="deal-meta">
+                      <span className="deal-seller">
+                        <i className="fas fa-store"></i> {product.seller}
+                      </span>
+                      <span className="deal-rating">
+                        <i className="fas fa-star"></i> {product.rating}
+                      </span>
+                    </div>
+                    <div className="deal-price">
+                      {product.price}
+                    </div>
+                    <div className="deal-actions">
+                      <button className="add-cart-btn" onClick={() => handleAddToCart(product)}>
+                        <i className="fas fa-shopping-cart"></i> Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <>
+                  <div className="deal-card skeleton"></div>
+                  <div className="deal-card skeleton"></div>
+                  <div className="deal-card skeleton"></div>
+                  <div className="deal-card skeleton"></div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Products Showcase */}
+        <section className="featured-products-showcase">
+          <div className="container">
+            <div className="section-header">
+              <h2>Today's Top Deals</h2>
+              <p>Best offers from local suppliers</p>
+            </div>
+            
+            <div className="featured-products-grid">
+              {!loading && filteredProducts.slice(0, 3).map((product) => (
+                <div key={product.id} className="featured-product-card">
+                  <div className="featured-product-image">
+                    <img src={product.image} alt={product.name} />
+                    <div className="featured-badge">Featured</div>
+                  </div>
+                  <div className="featured-product-info">
+                    <h3>{product.name}</h3>
+                    <div className="featured-product-price">{product.price}</div>
+                    <div className="featured-product-seller">by {product.seller}</div>
+                    <button 
+                      className="featured-add-to-cart"
+                      onClick={() => handleAddToCart(product)}
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {loading && (
+                <>
+                  <div className="featured-product-skeleton"></div>
+                  <div className="featured-product-skeleton"></div>
+                  <div className="featured-product-skeleton"></div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Categories Section */}
         <section className="categories-section">
           <div className="container">
@@ -231,16 +327,54 @@ const B_Homepage = () => {
         </section>
 
         {/* Products Section */}
-        <ProductsSection
-          filteredProducts={filteredProducts}
-          loading={loading}
-          error={error}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          addToCart={handleAddToCart}
-          setSelectedCategory={setSelectedCategory}
-          setSearchQuery={setSearchQuery}
-        />
+        <section className="products-section">
+          <div className="container">
+            <div className="products-header">
+              <h2>Featured Products</h2>
+              <div className="sort-options">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="popular">Most Popular</option>
+                  <option value="priceLow">Price: Low to High</option>
+                  <option value="priceHigh">Price: High to Low</option>
+                  <option value="rating">Highest Rated</option>
+                </select>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="loading-container">
+                <i className="fas fa-spinner fa-spin"></i>
+                <p>Loading products...</p>
+              </div>
+            ) : error ? (
+              <div className="error-container">
+                <i className="fas fa-exclamation-circle"></i>
+                <p>{error}</p>
+                <button onClick={() => window.location.reload()}>Try Again</button>
+              </div>
+            ) : (
+              <div className="products-grid">
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => (
+                    <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
+                      <ProductCard product={product} onAddToCart={handleAddToCart} />
+                    </Suspense>
+                  ))
+                ) : (
+                  <div className="no-products">
+                    <i className="fas fa-search"></i>
+                    <h3>No products found</h3>
+                    <p>Try adjusting your search criteria</p>
+                    <button onClick={() => {
+                      setSelectedCategory('all');
+                      setSearchQuery('');
+                    }}>Clear Filters</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
 
         {showCartNotification && (
           <div className="cart-notification">
@@ -286,65 +420,5 @@ const B_Homepage = () => {
     </div>
   );
 };
-
-const ProductsSection = ({ 
-  filteredProducts,
-  loading,
-  error, 
-  sortBy, 
-  setSortBy, 
-  addToCart, 
-  setSelectedCategory, 
-  setSearchQuery 
-}) => (
-  <section className="products-section">
-    <div className="container">
-      <div className="products-header">
-        <h2>Featured Products</h2>
-        <div className="sort-options">
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="popular">Most Popular</option>
-            <option value="priceLow">Price: Low to High</option>
-            <option value="priceHigh">Price: High to Low</option>
-            <option value="rating">Highest Rated</option>
-          </select>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading-container">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading products...</p>
-        </div>
-      ) : error ? (
-        <div className="error-container">
-          <i className="fas fa-exclamation-circle"></i>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
-        </div>
-      ) : (
-        <div className="products-grid">
-          {filteredProducts.map(product => (
-            <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
-              <ProductCard product={product} onAddToCart={addToCart} />
-            </Suspense>
-          ))}
-        </div>
-      )}
-
-      {!loading && !error && filteredProducts.length === 0 && (
-        <div className="no-products">
-          <i className="fas fa-search"></i>
-          <h3>No products found</h3>
-          <p>Try adjusting your search criteria</p>
-          <button onClick={() => {
-            setSelectedCategory('all');
-            setSearchQuery('');
-          }}>Clear Filters</button>
-        </div>
-      )}
-    </div>
-  </section>
-);
 
 export default B_Homepage;

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
 import '../styles/MyShop.css';
 import api from '../utils/api';
+import axios from 'axios';
 
 const MyShop = () => {
   const navigate = useNavigate();
@@ -60,6 +61,25 @@ const MyShop = () => {
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [showOrderDetailModal, setShowOrderDetailModal] = useState({ show: false, order: null });
 
+  // New state for deals tab
+  const [deals, setDeals] = useState([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
+  const [dealFilter, setDealFilter] = useState('all');
+  const [showDealForm, setShowDealForm] = useState(false);
+  const [editingDealId, setEditingDealId] = useState(null);
+  const [dealFormData, setDealFormData] = useState({
+    deal_type: '',
+    discount_percentage: '',
+    discount_amount: '',
+    start_date: '',
+    end_date: '',
+    deal_title: '',
+    deal_description: '',
+    is_featured: false,
+    product_id: ''
+  });
+  const [dealFormErrors, setDealFormErrors] = useState({});
+
   // Add this effect to fetch delivery agents when needed
   useEffect(() => {
     if (showDeliveryAssignModal.show) {
@@ -93,12 +113,66 @@ const MyShop = () => {
     const loadData = async () => {
       await fetchProducts();
       await fetchOrders();
+      await fetchDeals(); // Added to fetch deals
       calculateStats();
     };
     loadData();
   }, []);
 
-  // Updated: calculate stats based on current products and orders
+  // Fetch deals from the API
+  const fetchDeals = async () => {
+    try {
+      setDealsLoading(true);
+      console.log('Starting to fetch deals...');
+      
+      if (!currentUser || !currentUser.businessman_id) {
+        throw new Error('User or business ID not available');
+      }
+      
+      console.log('Fetching deals for businessman ID:', currentUser.businessman_id);
+      
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Direct API call with proper error handling
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/deals/business/${currentUser.businessman_id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('Deals API response:', response);
+      
+      if (response && response.data) {
+        // Handle consistent response format from updated controller
+        if (response.data.success && response.data.deals) {
+          console.log('Processed deals data:', response.data.deals);
+          setDeals(response.data.deals);
+        } else if (Array.isArray(response.data)) {
+          // Fallback for backward compatibility
+          console.log('Processed deals data (array format):', response.data);
+          setDeals(response.data);
+        } else {
+          console.log('No valid deals data found in response');
+          setDeals([]);
+        }
+      } else {
+        console.log('No deals data found in response');
+        setDeals([]);
+      }
+      
+      setDealsLoading(false);
+    } catch (error) {
+      console.error('Error fetching deals:', error);
+      showNotification('Failed to load deals. Please try again.', 'error');
+      setDeals([]);
+      setDealsLoading(false);
+    }
+  };
+
+  // Updated: calculate stats based on current products, orders, and deals
   const calculateStats = () => {
     try {
       const statsData = {
@@ -109,17 +183,18 @@ const MyShop = () => {
         pendingOrders: orders.filter(o => o.status === 'Pending').length,
         revenue: orders
           .filter(o => o.status === 'Delivered' || o.status === 'Completed')
-          .reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0)
+          .reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0),
+        activeDeals: deals.filter(d => 
+          d.deal_info && 
+          d.deal_info.is_active && 
+          (!d.deal_info.end_date || new Date(d.deal_info.end_date) > new Date())
+        ).length,
+        featuredDeals: deals.filter(d => d.deal_info && d.deal_info.is_featured).length
       };
       setStats(statsData);
     } catch (error) {
       console.error('Failed to calculate stats:', error);
     }
-  };
-
-  // Replaced the old fetchStats with better implementation
-  const fetchStats = () => {
-    calculateStats();
   };
 
   const fetchProducts = async () => {
@@ -401,6 +476,211 @@ const MyShop = () => {
     return errors;
   };
 
+  const handleDealSubmit = async (e) => {
+    e.preventDefault();
+
+    const errors = validateDealForm();
+    if (Object.keys(errors).length > 0) {
+      setDealFormErrors(errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Prepare deal data
+      const dealData = {
+        deal_type: dealFormData.deal_type,
+        is_active: true,
+        deal_title: dealFormData.deal_title,
+        deal_description: dealFormData.deal_description,
+        is_featured: dealFormData.is_featured
+      };
+
+      // Add the appropriate discount fields based on deal type
+      if (dealFormData.deal_type === 'DISCOUNT') {
+        if (dealFormData.discount_percentage) {
+          dealData.discount_percentage = parseFloat(dealFormData.discount_percentage);
+        } else if (dealFormData.discount_amount) {
+          dealData.discount_amount = parseFloat(dealFormData.discount_amount);
+        }
+      }
+
+      // Add date fields if they exist
+      if (dealFormData.start_date) {
+        dealData.start_date = dealFormData.start_date;
+      }
+
+      if (dealFormData.end_date) {
+        dealData.end_date = dealFormData.end_date;
+      }
+
+      console.log(`${editingDealId ? 'Updating' : 'Creating'} deal with data:`, JSON.stringify(dealData, null, 2));
+
+      let response;
+      if (editingDealId !== null) {
+        response = await api.deals.updateDeal(editingDealId, dealData);
+        console.log('Deal updated successfully:', response);
+        showNotification('Deal updated successfully!');
+      } else {
+        if (!dealFormData.product_id) {
+          throw new Error('Product ID is required');
+        }
+        response = await api.deals.createDeal(dealFormData.product_id, dealData);
+        console.log('Deal created successfully:', response);
+        showNotification('New deal added successfully!');
+      }
+
+      await fetchDeals();
+      closeDealForm();
+    } catch (error) {
+      console.error('Error submitting deal form:', error);
+      if (error.response) {
+        console.error('Server error details:', error.response.data || 'No detailed error information');
+        console.error('Server error status:', error.response.status);
+        
+        const errorMessage =
+          error.response.data?.error ||
+          error.response.data?.message ||
+          `Failed to ${editingDealId ? 'update' : 'save'} deal. ${error.response.status === 500 ? 'Server error occurred.' : 'Please try again.'}`;
+        
+        setDealFormErrors({ submit: errorMessage });
+        showNotification(errorMessage, 'error');
+      } else {
+        console.error('Unexpected error:', error.message);
+        setDealFormErrors({ submit: `An unexpected error occurred: ${error.message}. Please try again.` });
+        showNotification('An unexpected error occurred. Please try again.', 'error');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const closeDealForm = () => {
+    setShowDealForm(false);
+    setEditingDealId(null);
+    setDealFormData({
+      deal_type: '',
+      discount_percentage: '',
+      discount_amount: '',
+      start_date: '',
+      end_date: '',
+      deal_title: '',
+      deal_description: '',
+      is_featured: false,
+      product_id: ''
+    });
+    setDealFormErrors({});
+  };
+
+  const validateDealForm = () => {
+    const errors = {};
+    if (!dealFormData.deal_title || dealFormData.deal_title.trim().length < 3) {
+      errors.deal_title = 'Deal title is required (min 3 characters)';
+    }
+    
+    if (!dealFormData.deal_type) {
+      errors.deal_type = 'Deal type is required';
+    }
+    
+    if (dealFormData.deal_type === 'DISCOUNT') {
+      if (!dealFormData.discount_percentage && !dealFormData.discount_amount) {
+        errors.discount = 'Either discount percentage or amount is required';
+      }
+      if (dealFormData.discount_percentage && (parseFloat(dealFormData.discount_percentage) <= 0 || parseFloat(dealFormData.discount_percentage) > 100)) {
+        errors.discount_percentage = 'Discount percentage must be between 0 and 100';
+      }
+      if (dealFormData.discount_amount && parseFloat(dealFormData.discount_amount) <= 0) {
+        errors.discount_amount = 'Discount amount must be greater than 0';
+      }
+    }
+    
+    // Start date must be today or in the future
+    if (dealFormData.start_date) {
+      const startDate = new Date(dealFormData.start_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (startDate < today) {
+        errors.start_date = 'Start date cannot be in the past';
+      }
+    }
+    
+    // End date must be after start date
+    if (dealFormData.start_date && dealFormData.end_date) {
+      const startDate = new Date(dealFormData.start_date);
+      const endDate = new Date(dealFormData.end_date);
+      
+      if (endDate <= startDate) {
+        errors.end_date = 'End date must be after start date';
+      }
+    }
+    
+    return errors;
+  };
+
+  const handleRemoveDeal = async (productId) => {
+    if (!window.confirm('Are you sure you want to remove this deal? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await api.deals.removeDeal(productId);
+      await fetchDeals();
+      showNotification('Deal removed successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to remove deal:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to remove deal.';
+      showNotification(errorMessage, 'error');
+    }
+  };
+
+  const handleToggleFeatureDeal = async (productId, currentFeaturedStatus) => {
+    try {
+      await api.deals.toggleFeaturedStatus(productId, !currentFeaturedStatus);
+      await fetchDeals();
+      showNotification(`Deal ${!currentFeaturedStatus ? 'featured' : 'unfeatured'} successfully!`, 'success');
+    } catch (error) {
+      console.error('Failed to update deal featured status:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to update deal status.';
+      showNotification(errorMessage, 'error');
+    }
+  };
+
+  // Enhance the handleAddDealFromProduct function to switch tabs
+  const handleAddDealFromProduct = (product) => {
+    // Pre-populate the deal form with product data
+    setDealFormData({
+      product_id: product.product_id,
+      deal_type: '',
+      discount_percentage: '',
+      discount_amount: '',
+      start_date: '',
+      end_date: '',
+      deal_title: `Deal on ${product.product_name}`,
+      deal_description: `Special offer for ${product.product_name}`,
+      is_featured: false
+    });
+    
+    // Switch to deals tab
+    setActiveTab('deals');
+    
+    // Show notification about tab change
+    showNotification('Switched to Deals tab. Please complete your deal details.', 'info');
+    
+    // Short delay before showing the form to ensure tab transition is visible
+    setTimeout(() => {
+      setEditingDealId(null);
+      setShowDealForm(true);
+    }, 300);
+  };
+
+  // Function to switch to products tab with a specific product filter
+  const handleSwitchToProducts = (filter = 'all') => {
+    setStockFilter(filter);
+    setActiveTab('products');
+  };
+
   // Filter products based on stock status
   const filteredProducts = products.filter(product => {
     if (stockFilter === 'low') {
@@ -421,6 +701,34 @@ const MyShop = () => {
       return order.status === 'Delivered' || order.status === 'Completed';
     } else if (orderFilter === 'cancelled') {
       return order.status === 'Cancelled';
+    }
+    return true; // 'all'
+  });
+
+  // Filter deals based on status or type
+  const filteredDeals = deals.filter(deal => {
+    // Deal object might be structured differently based on API response
+    // Handle both direct deal objects and those with nested deal_info
+    const dealData = deal.deal_info || deal;
+    
+    if (!dealData) return false;
+    
+    if (dealFilter === 'active') {
+      const currentDate = new Date();
+      const endDate = dealData.end_date ? new Date(dealData.end_date) : null;
+      return dealData.is_active && (!endDate || endDate > currentDate);
+    } else if (dealFilter === 'expired') {
+      const currentDate = new Date();
+      const endDate = dealData.end_date ? new Date(dealData.end_date) : null;
+      return endDate && endDate < currentDate;
+    } else if (dealFilter === 'featured') {
+      return dealData.is_featured;
+    } else if (dealFilter === 'discount') {
+      return dealData.deal_type === 'DISCOUNT';
+    } else if (dealFilter === 'bundle') {
+      return dealData.deal_type === 'BUNDLE';
+    } else if (dealFilter === 'bogo') {
+      return dealData.deal_type === 'BUY_ONE_GET_ONE';
     }
     return true; // 'all'
   });
@@ -562,6 +870,24 @@ const MyShop = () => {
                 <p>{formatCurrency(stats.revenue)}</p>
               </div>
             </div>
+            <div className="stat-card" 
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)', 
+                borderRadius: '8px', 
+                transition: 'transform 0.2s', 
+                backgroundColor: '#fff' 
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <div className="stat-icon deals-icon">
+                <i className="fas fa-percentage"></i>
+              </div>
+              <div className="stat-details">
+                <h3>Active Deals</h3>
+                <p>{stats.activeDeals || 0}</p>
+              </div>
+            </div>
           </div>
 
           {/* Tab Navigation */}
@@ -571,6 +897,12 @@ const MyShop = () => {
               onClick={() => setActiveTab('products')}
             >
               <i className="fas fa-box"></i> Products & Inventory
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'deals' ? 'active' : ''}`}
+              onClick={() => setActiveTab('deals')}
+            >
+              <i className="fas fa-percentage"></i> Deals & Offers
             </button>
             <button 
               className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
@@ -840,12 +1172,238 @@ const MyShop = () => {
                             >
                               <i className="fas fa-edit"></i> Edit
                             </button>
+                            
+                            {/* Add Create Deal button */}
+                            <button
+                              onClick={() => handleAddDealFromProduct(product)}
+                              className="action-btn deal"
+                              title="Create deal"
+                              style={{
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                color: '#ff6b6b',
+                                border: '1px solid #ff6b6b'
+                              }}
+                            >
+                              <i className="fas fa-percentage"></i> Create Deal
+                            </button>
+                            
                             <button
                               onClick={() => handleDeleteProduct(product.product_id)}
                               className="action-btn delete"
                               title="Delete product"
                             >
                               <i className="fas fa-trash"></i> Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Deals Tab */}
+          {activeTab === 'deals' && (
+            <div className="deals-section">
+              <div className="deals-header">
+                <div className="filters">
+                  <select 
+                    value={dealFilter} 
+                    onChange={(e) => setDealFilter(e.target.value)}
+                    className="deal-filter"
+                  >
+                    <option value="all">All Deals</option>
+                    <option value="active">Active Deals</option>
+                    <option value="expired">Expired Deals</option>
+                    <option value="featured">Featured Deals</option>
+                    <option value="discount">Discounts</option>
+                    <option value="bundle">Bundles</option>
+                    <option value="bogo">Buy One Get One</option>
+                  </select>
+                </div>
+                <button 
+                  className="add-deal-btn"
+                  onClick={() => setShowDealForm(true)}
+                >
+                  <i className="fas fa-plus"></i> Create New Deal
+                </button>
+              </div>
+
+              {dealsLoading ? (
+                <div className="loading-spinner">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <p>Loading deals...</p>
+                </div>
+              ) : filteredDeals.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fas fa-percentage"></i>
+                  <h3>No deals found</h3>
+                  <p>{dealFilter === 'all' ? 'Create your first deal to attract more customers' : 'No deals match your filter criteria'}</p>
+                  {dealFilter === 'all' && (
+                    <button className="add-deal-btn" onClick={() => setShowDealForm(true)}>
+                      <i className="fas fa-plus"></i> Create New Deal
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="deals-grid">
+                  {filteredDeals.map((product) => {
+                    const deal = product.deal_info;
+                    if (!deal) return null;
+                    
+                    // Determine if the deal is active based on dates
+                    const startDate = deal.start_date ? new Date(deal.start_date) : null;
+                    const endDate = deal.end_date ? new Date(deal.end_date) : null;
+                    const currentDate = new Date();
+                    const isExpired = endDate && endDate < currentDate;
+                    const notStartedYet = startDate && startDate > currentDate;
+                    const isActive = deal.is_active && !isExpired && !notStartedYet;
+                    
+                    // Format dates for display
+                    const formatDate = (dateString) => {
+                      if (!dateString) return 'No end date';
+                      return new Date(dateString).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric'
+                      });
+                    };
+                    
+                    // Calculate discount for display
+                    const getDiscountText = () => {
+                      if (deal.deal_type === 'DISCOUNT') {
+                        if (deal.discount_percentage) {
+                          return `${deal.discount_percentage}% OFF`;
+                        } else if (deal.discount_amount) {
+                          return `₹${deal.discount_amount} OFF`;
+                        }
+                        return 'Special Discount';
+                      } else if (deal.deal_type === 'BUY_ONE_GET_ONE') {
+                        return 'Buy 1 Get 1 Free';
+                      } else if (deal.deal_type === 'BUNDLE') {
+                        return 'Bundle Offer';
+                      } else if (deal.deal_type === 'CLEARANCE') {
+                        return 'Clearance Sale';
+                      } else if (deal.deal_type === 'FLASH_SALE') {
+                        return 'Flash Sale';
+                      }
+                      return 'Special Offer';
+                    };
+                    
+                    return (
+                      <div 
+                        key={product.product_id} 
+                        className={`deal-card ${isExpired ? 'expired' : isActive ? 'active' : 'inactive'}`}
+                      >
+                        {/* Deal Status Badge */}
+                        <div className="deal-status-badge">
+                          {isActive ? 'Active' : isExpired ? 'Expired' : 'Inactive'}
+                        </div>
+                        
+                        {/* Featured Badge */}
+                        {deal.is_featured && (
+                          <div className="featured-badge">
+                            Featured
+                          </div>
+                        )}
+                        
+                        {/* Deal Image Area */}
+                        <div className="deal-image-area">
+                          <img 
+                            src={product.image_url || './src/assests/guddu.jpeg'}
+                            alt={product.product_name}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = './src/assests/guddu.jpeg';
+                            }}
+                          />
+                          
+                          {/* Deal Type Overlay */}
+                          <div className="deal-type-overlay">
+                            {getDiscountText()}
+                          </div>
+                        </div>
+                        
+                        {/* Deal Content */}
+                        <div className="deal-content">
+                          <h3 className="deal-title">
+                            {deal.deal_title}
+                          </h3>
+                          
+                          <div className="deal-description">
+                            {deal.deal_description || 'No description provided.'}
+                          </div>
+                          
+                          <div className="deal-details">
+                            <div className="deal-product">
+                              <span>Product:</span>
+                              <strong>{product.product_name}</strong>
+                            </div>
+                            
+                            <div className="deal-dates">
+                              <div className="deal-start-date">
+                                <span>Start:</span>
+                                <strong>{formatDate(deal.start_date)}</strong>
+                              </div>
+                              
+                              <div className="deal-end-date">
+                                <span>End:</span>
+                                <strong>{formatDate(deal.end_date)}</strong>
+                              </div>
+                            </div>
+                            
+                            {/* Deal type specific details */}
+                            <div className="deal-type-details">
+                              <div className="deal-type">
+                                <span>Deal Type:</span>
+                                <strong>{deal.deal_type.replace('_', ' ')}</strong>
+                              </div>
+                              
+                              {deal.deal_type === 'DISCOUNT' && (
+                                <div className="deal-discount">
+                                  <span>Discount:</span>
+                                  <strong>
+                                    {deal.discount_percentage ? `${deal.discount_percentage}%` : `₹${deal.discount_amount}`}
+                                  </strong>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Deal Actions */}
+                          <div className="deal-actions">
+                            <button
+                              onClick={() => {
+                                setDealFormData({
+                                  product_id: product.product_id,
+                                  deal_type: deal.deal_type,
+                                  discount_percentage: deal.discount_percentage?.toString() || '',
+                                  discount_amount: deal.discount_amount?.toString() || '',
+                                  start_date: deal.start_date ? new Date(deal.start_date).toISOString().split('T')[0] : '',
+                                  end_date: deal.end_date ? new Date(deal.end_date).toISOString().split('T')[0] : '',
+                                  deal_title: deal.deal_title,
+                                  deal_description: deal.deal_description || '',
+                                  is_featured: deal.is_featured
+                                });
+                                setEditingDealId(product.product_id);
+                                setShowDealForm(true);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            
+                            <button
+                              onClick={() => handleToggleFeatureDeal(product.product_id, deal.is_featured)}
+                            >
+                              {deal.is_featured ? 'Unfeature' : 'Feature'}
+                            </button>
+                            
+                            <button
+                              onClick={() => handleRemoveDeal(product.product_id)}
+                            >
+                              Remove
                             </button>
                           </div>
                         </div>
@@ -1630,6 +2188,209 @@ const MyShop = () => {
               >
                 <i className="fas fa-times"></i>
               </button>
+            </div>
+          )}
+
+          {/* Deal Form Modal */}
+          {showDealForm && (
+            <div className="modal-overlay" onClick={() => closeDealForm()}>
+              <div className="product-form" onClick={(e) => e.stopPropagation()}>
+                <button 
+                  className="form-close"
+                  onClick={closeDealForm}
+                  aria-label="Close form"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+                
+                <div className="form-header">
+                  <h3>{editingDealId ? 'Edit Deal' : 'Create New Deal'}</h3>
+                </div>
+                
+                <form onSubmit={handleDealSubmit}>
+                  <div className="form-group">
+                    <label htmlFor="deal-title">Deal Title</label>
+                    <input
+                      id="deal-title"
+                      type="text"
+                      value={dealFormData.deal_title}
+                      onChange={(e) => setDealFormData({...dealFormData, deal_title: e.target.value})}
+                      className={dealFormErrors.deal_title ? 'error-input' : ''}
+                      placeholder="Enter deal title"
+                      required
+                    />
+                    {dealFormErrors.deal_title && <div className="error-message">{dealFormErrors.deal_title}</div>}
+                  </div>
+
+                  {!editingDealId && (
+                    <div className="form-group">
+                      <label htmlFor="product-id">Select Product</label>
+                      <select
+                        id="product-id"
+                        value={dealFormData.product_id}
+                        onChange={(e) => setDealFormData({...dealFormData, product_id: e.target.value})}
+                        className={dealFormErrors.product_id ? 'error-input' : ''}
+                        required={!editingDealId}
+                        disabled={editingDealId !== null}
+                      >
+                        <option value="">Select a product</option>
+                        {products.map(product => (
+                          <option key={product.product_id} value={product.product_id}>
+                            {product.product_name}
+                          </option>
+                        ))}
+                      </select>
+                      {dealFormErrors.product_id && <div className="error-message">{dealFormErrors.product_id}</div>}
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label htmlFor="deal-type">Deal Type</label>
+                    <select
+                      id="deal-type"
+                      value={dealFormData.deal_type}
+                      onChange={(e) => setDealFormData({...dealFormData, deal_type: e.target.value})}
+                      className={dealFormErrors.deal_type ? 'error-input' : ''}
+                      required
+                    >
+                      <option value="">Select Deal Type</option>
+                      <option value="DISCOUNT">Discount</option>
+                      <option value="BUY_ONE_GET_ONE">Buy One Get One Free</option>
+                      <option value="BUNDLE">Bundle Offer</option>
+                      <option value="FLASH_SALE">Flash Sale</option>
+                      <option value="CLEARANCE">Clearance Sale</option>
+                    </select>
+                    {dealFormErrors.deal_type && <div className="error-message">{dealFormErrors.deal_type}</div>}
+                  </div>
+
+                  {dealFormData.deal_type === 'DISCOUNT' && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="discount-percentage">Discount Percentage (%)</label>
+                        <input
+                          id="discount-percentage"
+                          type="number"
+                          value={dealFormData.discount_percentage}
+                          onChange={(e) => {
+                            setDealFormData({
+                              ...dealFormData, 
+                              discount_percentage: e.target.value,
+                              discount_amount: '' // Clear amount when percentage is entered
+                            });
+                          }}
+                          className={dealFormErrors.discount_percentage ? 'error-input' : ''}
+                          min="0"
+                          max="100"
+                          placeholder="e.g., 15"
+                          disabled={dealFormData.discount_amount}
+                        />
+                        {dealFormErrors.discount_percentage && 
+                          <div className="error-message">{dealFormErrors.discount_percentage}</div>
+                        }
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="discount-amount">Discount Amount (₹)</label>
+                        <input
+                          id="discount-amount"
+                          type="number"
+                          value={dealFormData.discount_amount}
+                          onChange={(e) => {
+                            setDealFormData({
+                              ...dealFormData, 
+                              discount_amount: e.target.value,
+                              discount_percentage: '' // Clear percentage when amount is entered
+                            });
+                          }}
+                          className={dealFormErrors.discount_amount ? 'error-input' : ''}
+                          min="0"
+                          step="0.01"
+                          placeholder="e.g., 100.00"
+                          disabled={dealFormData.discount_percentage}
+                        />
+                        {dealFormErrors.discount_amount && 
+                          <div className="error-message">{dealFormErrors.discount_amount}</div>
+                        }
+                      </div>
+                    </div>
+                  )}
+
+                  {dealFormErrors.discount && <div className="error-message">{dealFormErrors.discount}</div>}
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="start-date">Start Date</label>
+                      <input
+                        id="start-date"
+                        type="date"
+                        value={dealFormData.start_date}
+                        onChange={(e) => setDealFormData({...dealFormData, start_date: e.target.value})}
+                        className={dealFormErrors.start_date ? 'error-input' : ''}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                      {dealFormErrors.start_date && <div className="error-message">{dealFormErrors.start_date}</div>}
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="end-date">End Date</label>
+                      <input
+                        id="end-date"
+                        type="date"
+                        value={dealFormData.end_date}
+                        onChange={(e) => setDealFormData({...dealFormData, end_date: e.target.value})}
+                        className={dealFormErrors.end_date ? 'error-input' : ''}
+                        min={dealFormData.start_date || new Date().toISOString().split('T')[0]}
+                      />
+                      {dealFormErrors.end_date && <div className="error-message">{dealFormErrors.end_date}</div>}
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="deal-description">Description</label>
+                    <textarea
+                      id="deal-description"
+                      value={dealFormData.deal_description}
+                      onChange={(e) => setDealFormData({...dealFormData, deal_description: e.target.value})}
+                      rows="3"
+                      placeholder="Describe your deal (optional)"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <div className="checkbox-group">
+                      <input
+                        id="is-featured"
+                        type="checkbox"
+                        checked={dealFormData.is_featured}
+                        onChange={(e) => setDealFormData({...dealFormData, is_featured: e.target.checked})}
+                      />
+                      <label htmlFor="is-featured">Feature this deal (show on homepage)</label>
+                    </div>
+                  </div>
+
+                  {dealFormErrors.submit && (
+                    <div className="form-error">{dealFormErrors.submit}</div>
+                  )}
+
+                  <div className="form-actions">
+                    <button 
+                      type="button" 
+                      className="cancel-btn"
+                      onClick={closeDealForm}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      className={`submit-btn ${isSubmitting ? 'loading' : ''}`}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting && <span className="spinner"></span>}
+                      {isSubmitting ? 'Saving...' : (editingDealId ? 'Update Deal' : 'Create Deal')}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </div>
