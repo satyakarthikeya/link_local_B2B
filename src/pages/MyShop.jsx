@@ -87,6 +87,15 @@ const MyShop = () => {
     }
   }, [showDeliveryAssignModal]);
 
+  // Add this effect to enforce white theme for input elements
+  useEffect(() => {
+    document.querySelectorAll('input, select, textarea').forEach(input => {
+      input.style.backgroundColor = '#ffffff';
+      input.style.color = '#2c3e50';
+      input.style.border = '1px solid #dcdde1';
+    });
+  }, []);
+
   // Fetch delivery agents
   const fetchDeliveryAgents = async () => {
     setIsLoadingAgents(true);
@@ -146,23 +155,22 @@ const MyShop = () => {
       console.log('Deals API response:', response);
       
       if (response && response.data) {
-        // Handle consistent response format from updated controller
-        if (response.data.success && response.data.deals) {
-          console.log('Processed deals data:', response.data.deals);
-          setDeals(response.data.deals);
+        // Handle different possible response structures
+        let dealsData = [];
+        if (response.data.deals && Array.isArray(response.data.deals)) {
+          dealsData = response.data.deals;
         } else if (Array.isArray(response.data)) {
-          // Fallback for backward compatibility
-          console.log('Processed deals data (array format):', response.data);
-          setDeals(response.data);
-        } else {
-          console.log('No valid deals data found in response');
-          setDeals([]);
+          dealsData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          dealsData = response.data.data;
         }
+        
+        console.log('Processed deals data:', dealsData);
+        setDeals(dealsData);
       } else {
         console.log('No deals data found in response');
         setDeals([]);
       }
-      
       setDealsLoading(false);
     } catch (error) {
       console.error('Error fetching deals:', error);
@@ -430,14 +438,14 @@ const MyShop = () => {
     if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
       return;
     }
-    
+
     try {
       await api.products.deleteProduct(productId);
-      await fetchProducts();
       showNotification('Product deleted successfully!', 'success');
+      await fetchProducts();
     } catch (error) {
-      console.error('Failed to delete product:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to delete product.';
+      console.error('Error deleting product:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to delete the product.';
       showNotification(errorMessage, 'error');
     }
   };
@@ -476,83 +484,252 @@ const MyShop = () => {
     return errors;
   };
 
-  const handleDealSubmit = async (e) => {
-    e.preventDefault();
-
-    const errors = validateDealForm();
-    if (Object.keys(errors).length > 0) {
-      setDealFormErrors(errors);
-      return;
+  const validateDealForm = () => {
+    const errors = {};
+    
+    // Required fields
+    if (!dealFormData.deal_title || dealFormData.deal_title.trim().length < 3) {
+      errors.deal_title = 'Deal title is required (min 3 characters)';
     }
-
-    setIsSubmitting(true);
-
-    try {
-      // Prepare deal data
-      const dealData = {
-        deal_type: dealFormData.deal_type,
-        is_active: true,
-        deal_title: dealFormData.deal_title,
-        deal_description: dealFormData.deal_description,
-        is_featured: dealFormData.is_featured
-      };
-
-      // Add the appropriate discount fields based on deal type
-      if (dealFormData.deal_type === 'DISCOUNT') {
-        if (dealFormData.discount_percentage) {
-          dealData.discount_percentage = parseFloat(dealFormData.discount_percentage);
-        } else if (dealFormData.discount_amount) {
-          dealData.discount_amount = parseFloat(dealFormData.discount_amount);
+    
+    if (!dealFormData.deal_type) {
+      errors.deal_type = 'Please select a deal type';
+    }
+    
+    // Validation for discount deals
+    if (dealFormData.deal_type === 'DISCOUNT') {
+      if (!dealFormData.discount_percentage && !dealFormData.discount_amount) {
+        errors.discount = 'Either discount percentage or amount is required';
+      }
+      
+      if (dealFormData.discount_percentage) {
+        const percentage = parseFloat(dealFormData.discount_percentage);
+        if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+          errors.discount_percentage = 'Discount percentage must be between 1 and 100';
         }
       }
-
-      // Add date fields if they exist
-      if (dealFormData.start_date) {
-        dealData.start_date = dealFormData.start_date;
+      
+      if (dealFormData.discount_amount) {
+        const amount = parseFloat(dealFormData.discount_amount);
+        if (isNaN(amount) || amount <= 0) {
+          errors.discount_amount = 'Discount amount must be greater than 0';
+        }
       }
+    }
+    
+    // Date validations - first make sure they're valid dates
+    if (dealFormData.start_date) {
+      const startDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!startDateRegex.test(dealFormData.start_date)) {
+        errors.start_date = 'Invalid start date format (should be YYYY-MM-DD)';
+      } else {
+        const startDate = new Date(dealFormData.start_date);
+        if (isNaN(startDate.getTime())) {
+          errors.start_date = 'Invalid start date';
+        } else {
+          // Validate start date isn't in the past
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (startDate < today) {
+            errors.start_date = 'Start date cannot be in the past';
+          }
+        }
+      }
+    }
+    
+    if (dealFormData.end_date) {
+      const endDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!endDateRegex.test(dealFormData.end_date)) {
+        errors.end_date = 'Invalid end date format (should be YYYY-MM-DD)';
+      } else {
+        const endDate = new Date(dealFormData.end_date);
+        if (isNaN(endDate.getTime())) {
+          errors.end_date = 'Invalid end date';
+        }
+      }
+    }
+    
+    // Compare dates if both are valid
+    if (dealFormData.start_date && dealFormData.end_date && 
+        !errors.start_date && !errors.end_date) {
+      const startDate = new Date(dealFormData.start_date);
+      const endDate = new Date(dealFormData.end_date);
+      
+      if (endDate <= startDate) {
+        errors.end_date = 'End date must be after start date';
+      }
+    }
+    
+    // Product validation for new deals
+    if (!editingDealId && !dealFormData.product_id) {
+      errors.product_id = 'Please select a product for this deal';
+    }
+    
+    return errors;
+  };
 
+  const handleCreateOrUpdateDeal = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // Override styles for input elements to maintain white theme
+      document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], select, textarea').forEach(input => {
+        input.style.backgroundColor = '#ffffff';
+        input.style.color = '#2c3e50';
+        input.style.border = '1px solid #dcdde1';
+      });
+      
+      // Validate discount values
+      const errors = {};
+      if (dealFormData.deal_type === 'DISCOUNT') {
+        // Ensure at least one discount field is provided
+        if (!dealFormData.discount_percentage && !dealFormData.discount_amount) {
+          errors.discount = 'Either discount percentage or amount is required';
+        }
+        
+        // Validate percentage is between 0.01 and 100
+        if (dealFormData.discount_percentage) {
+          const percentage = parseFloat(dealFormData.discount_percentage);
+          if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+            errors.discount_percentage = 'Discount percentage must be between 0.01 and 100';
+          }
+        }
+        
+        // Validate amount is greater than 0
+        if (dealFormData.discount_amount) {
+          const amount = parseFloat(dealFormData.discount_amount);
+          if (isNaN(amount) || amount <= 0) {
+            errors.discount_amount = 'Discount amount must be greater than 0';
+          }
+        }
+      }
+      
+      // Check for any validation errors
+      if (Object.keys(errors).length > 0) {
+        setDealFormErrors(errors);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Prepare the deal data - make sure all fields are in the correct format
+      const dealData = {
+        deal_type: dealFormData.deal_type,
+        deal_title: dealFormData.deal_title.trim(),
+        deal_description: dealFormData.deal_description ? dealFormData.deal_description.trim() : '',
+        is_featured: dealFormData.is_featured || false
+      };
+      
+      // Only include discount percentage if it has a value and is valid
+      if (dealFormData.discount_percentage) {
+        dealData.discount_percentage = parseFloat(dealFormData.discount_percentage);
+      }
+      
+      // Only include discount amount if it has a value and is valid
+      if (dealFormData.discount_amount) {
+        dealData.discount_amount = parseFloat(dealFormData.discount_amount);
+      }
+      
+      // Format dates to ISO format if provided
+      if (dealFormData.start_date) {
+        dealData.start_date = new Date(dealFormData.start_date).toISOString().split('T')[0];
+      }
+      
       if (dealFormData.end_date) {
-        dealData.end_date = dealFormData.end_date;
+        dealData.end_date = new Date(dealFormData.end_date).toISOString().split('T')[0];
       }
 
       console.log(`${editingDealId ? 'Updating' : 'Creating'} deal with data:`, JSON.stringify(dealData, null, 2));
-
+      
       let response;
-      if (editingDealId !== null) {
+      if (editingDealId) {
+        // For updating an existing deal
         response = await api.deals.updateDeal(editingDealId, dealData);
         console.log('Deal updated successfully:', response);
-        showNotification('Deal updated successfully!');
+        showNotification('Deal updated successfully!', 'success');
       } else {
+        // For creating a new deal - make sure we have a product ID
         if (!dealFormData.product_id) {
-          throw new Error('Product ID is required');
+          throw new Error('Product ID is required to create a deal.');
         }
+        
+        // Debug info to track the API call
+        console.log(`Creating deal for product ID: ${dealFormData.product_id}`);
+        console.log('Deal data:', dealData);
+        
         response = await api.deals.createDeal(dealFormData.product_id, dealData);
-        console.log('Deal created successfully:', response);
-        showNotification('New deal added successfully!');
+        console.log('New deal created successfully:', response);
+        showNotification('New deal created successfully!', 'success');
       }
 
       await fetchDeals();
+      calculateStats(); // Update stats to reflect new/updated deal
       closeDealForm();
     } catch (error) {
-      console.error('Error submitting deal form:', error);
+      console.error('Error handling deal:', error);
+      
+      let errorMessage = 'Failed to process the deal.';
+      
       if (error.response) {
-        console.error('Server error details:', error.response.data || 'No detailed error information');
-        console.error('Server error status:', error.response.status);
-        
-        const errorMessage =
-          error.response.data?.error ||
-          error.response.data?.message ||
-          `Failed to ${editingDealId ? 'update' : 'save'} deal. ${error.response.status === 500 ? 'Server error occurred.' : 'Please try again.'}`;
-        
-        setDealFormErrors({ submit: errorMessage });
-        showNotification(errorMessage, 'error');
-      } else {
-        console.error('Unexpected error:', error.message);
-        setDealFormErrors({ submit: `An unexpected error occurred: ${error.message}. Please try again.` });
-        showNotification('An unexpected error occurred. Please try again.', 'error');
+        console.error('Server response error:', error.response);
+        if (error.response.data && error.response.data.errors) {
+          // Extract validation error messages from the array
+          const validationErrors = error.response.data.errors;
+          if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+            errorMessage = validationErrors.map(err => err.msg || err.message).join(', ');
+            
+            // Set specific field errors for better UI feedback
+            const fieldErrors = {};
+            validationErrors.forEach(err => {
+              if (err.param) {
+                fieldErrors[err.param] = err.msg || err.message;
+              }
+            });
+            
+            if (Object.keys(fieldErrors).length > 0) {
+              setDealFormErrors({
+                ...dealFormErrors,
+                ...fieldErrors,
+                submit: errorMessage
+              });
+            } else {
+              setDealFormErrors({ ...dealFormErrors, submit: errorMessage });
+            }
+          } else {
+            errorMessage = error.response.data.message || error.response.data.error || 
+                          `Failed to ${editingDealId ? 'update' : 'create'} deal. Please try again.`;
+            setDealFormErrors({ ...dealFormErrors, submit: errorMessage });
+          }
+        } else {
+          errorMessage = error.response.data?.message || 
+                        error.response.data?.error || 
+                        `Failed to ${editingDealId ? 'update' : 'create'} deal. Please try again.`;
+          setDealFormErrors({ ...dealFormErrors, submit: errorMessage });
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+        setDealFormErrors({ ...dealFormErrors, submit: errorMessage });
       }
+      
+      showNotification(errorMessage, 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteDeal = async (dealId) => {
+    if (!window.confirm('Are you sure you want to delete this deal? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await api.deals.removeDeal(dealId);
+      showNotification('Deal deleted successfully!', 'success');
+      await fetchDeals();
+    } catch (error) {
+      console.error('Error deleting deal:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to delete the deal.';
+      showNotification(errorMessage, 'error');
     }
   };
 
@@ -571,52 +748,6 @@ const MyShop = () => {
       product_id: ''
     });
     setDealFormErrors({});
-  };
-
-  const validateDealForm = () => {
-    const errors = {};
-    if (!dealFormData.deal_title || dealFormData.deal_title.trim().length < 3) {
-      errors.deal_title = 'Deal title is required (min 3 characters)';
-    }
-    
-    if (!dealFormData.deal_type) {
-      errors.deal_type = 'Deal type is required';
-    }
-    
-    if (dealFormData.deal_type === 'DISCOUNT') {
-      if (!dealFormData.discount_percentage && !dealFormData.discount_amount) {
-        errors.discount = 'Either discount percentage or amount is required';
-      }
-      if (dealFormData.discount_percentage && (parseFloat(dealFormData.discount_percentage) <= 0 || parseFloat(dealFormData.discount_percentage) > 100)) {
-        errors.discount_percentage = 'Discount percentage must be between 0 and 100';
-      }
-      if (dealFormData.discount_amount && parseFloat(dealFormData.discount_amount) <= 0) {
-        errors.discount_amount = 'Discount amount must be greater than 0';
-      }
-    }
-    
-    // Start date must be today or in the future
-    if (dealFormData.start_date) {
-      const startDate = new Date(dealFormData.start_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (startDate < today) {
-        errors.start_date = 'Start date cannot be in the past';
-      }
-    }
-    
-    // End date must be after start date
-    if (dealFormData.start_date && dealFormData.end_date) {
-      const startDate = new Date(dealFormData.start_date);
-      const endDate = new Date(dealFormData.end_date);
-      
-      if (endDate <= startDate) {
-        errors.end_date = 'End date must be after start date';
-      }
-    }
-    
-    return errors;
   };
 
   const handleRemoveDeal = async (productId) => {
@@ -647,7 +778,6 @@ const MyShop = () => {
     }
   };
 
-  // Enhance the handleAddDealFromProduct function to switch tabs
   const handleAddDealFromProduct = (product) => {
     // Pre-populate the deal form with product data
     setDealFormData({
@@ -675,78 +805,1468 @@ const MyShop = () => {
     }, 300);
   };
 
-  // Function to switch to products tab with a specific product filter
   const handleSwitchToProducts = (filter = 'all') => {
     setStockFilter(filter);
     setActiveTab('products');
   };
 
-  // Filter products based on stock status
-  const filteredProducts = products.filter(product => {
-    if (stockFilter === 'low') {
-      return product.quantity_available <= product.reorder_point && product.quantity_available > 0;
-    } else if (stockFilter === 'out') {
-      return product.quantity_available === 0;
-    }
-    return true;
-  });
-
-  // Filter orders based on status
-  const filteredOrders = orders.filter(order => {
-    if (orderFilter === 'pending') {
-      return order.status === 'Pending';
-    } else if (orderFilter === 'processing') {
-      return order.status === 'Processing';
-    } else if (orderFilter === 'completed') {
-      return order.status === 'Delivered' || order.status === 'Completed';
-    } else if (orderFilter === 'cancelled') {
-      return order.status === 'Cancelled';
-    }
-    return true; // 'all'
-  });
-
-  // Filter deals based on status or type
-  const filteredDeals = deals.filter(deal => {
-    // Deal object might be structured differently based on API response
-    // Handle both direct deal objects and those with nested deal_info
-    const dealData = deal.deal_info || deal;
-    
-    if (!dealData) return false;
-    
-    if (dealFilter === 'active') {
-      const currentDate = new Date();
-      const endDate = dealData.end_date ? new Date(dealData.end_date) : null;
-      return dealData.is_active && (!endDate || endDate > currentDate);
-    } else if (dealFilter === 'expired') {
-      const currentDate = new Date();
-      const endDate = dealData.end_date ? new Date(dealData.end_date) : null;
-      return endDate && endDate < currentDate;
-    } else if (dealFilter === 'featured') {
-      return dealData.is_featured;
-    } else if (dealFilter === 'discount') {
-      return dealData.deal_type === 'DISCOUNT';
-    } else if (dealFilter === 'bundle') {
-      return dealData.deal_type === 'BUNDLE';
-    } else if (dealFilter === 'bogo') {
-      return dealData.deal_type === 'BUY_ONE_GET_ONE';
-    }
-    return true; // 'all'
-  });
-
-  // Format date
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+  // Helper function to format currency values
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value || 0);
   };
 
-  // Format currency
-  const formatCurrency = (amount) => {
-    return `₹${parseFloat(amount).toFixed(2)}`;
+  const renderProducts = () => {
+    if (loading) {
+      return <div className="loading-spinner"><i className="fas fa-spinner fa-spin"></i> Loading products...</div>;
+    }
+    
+    if (products.length === 0) {
+      return (
+        <div className="no-items-message">
+          <i className="fas fa-box"></i>
+          <p>No products found. Start by adding your first product!</p>
+          <button className="add-item-btn" onClick={() => setShowProductForm(true)}>
+            <i className="fas fa-plus"></i> Add New Product
+          </button>
+        </div>
+      );
+    }
+
+    // Filter products based on stock filter
+    const filteredProducts = stockFilter === 'all' 
+      ? products 
+      : stockFilter === 'low-stock'
+        ? products.filter(p => p.quantity_available > 0 && p.quantity_available <= p.reorder_point)
+        : products.filter(p => !p.quantity_available || p.quantity_available <= 0);
+    
+    return (
+      <>
+        <div className="filter-controls">
+          <div className="filters">
+            <button 
+              className={`filter-btn ${stockFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setStockFilter('all')}
+            >
+              All Products
+            </button>
+            <button 
+              className={`filter-btn ${stockFilter === 'low-stock' ? 'active' : ''}`}
+              onClick={() => setStockFilter('low-stock')}
+            >
+              Low Stock
+            </button>
+            <button 
+              className={`filter-btn ${stockFilter === 'out-of-stock' ? 'active' : ''}`}
+              onClick={() => setStockFilter('out-of-stock')}
+            >
+              Out of Stock
+            </button>
+          </div>
+          
+          <button className="add-item-btn" onClick={() => {
+            setEditingProductId(null);
+            setFormData({
+              name: '',
+              category: '',
+              price: '',
+              stock: '',
+              description: '',
+              image: null,
+              moq: '1',
+              reorder_point: '10'
+            });
+            setShowProductForm(true);
+          }}>
+            <i className="fas fa-plus"></i> Add New Product
+          </button>
+        </div>
+        
+        <div className="items-grid">
+          {filteredProducts.map(product => {
+            const stockStatus = getStockStatus(product.quantity_available, product.reorder_point);
+            
+            return (
+              <div 
+                className={`product-card ${stockStatus.toLowerCase().replace(' ', '-')}`} 
+                key={product.product_id}
+                style={{
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  background: '#fff',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <div 
+                  className={`stock-tag ${stockStatus.toLowerCase().replace(' ', '-')}`}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    zIndex: 1,
+                    backdropFilter: 'blur(5px)',
+                    backgroundColor: stockStatus === 'Out of Stock' ? 'rgba(255, 59, 48, 0.9)' :
+                                   stockStatus === 'Low Stock' ? 'rgba(255, 149, 0, 0.9)' :
+                                   'rgba(52, 199, 89, 0.9)',
+                    color: '#fff'
+                  }}
+                >
+                  {stockStatus}
+                </div>
+                
+                <div 
+                  className="product-image"
+                  style={{
+                    height: '200px',
+                    width: '100%',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px 12px 0 0'
+                  }}
+                >
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.product_name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
+                      }}
+                      onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                    />
+                  ) : (
+                    <div 
+                      className="no-image"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f5f5f5',
+                        color: '#aaa'
+                      }}
+                    >
+                      <i className="fas fa-image fa-3x"></i>
+                    </div>
+                  )}
+                </div>
+                
+                <div 
+                  className="product-details"
+                  style={{
+                    padding: '16px',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <h3 style={{
+                      fontSize: '1.2rem',
+                      fontWeight: '600',
+                      marginBottom: '4px',
+                      color: '#2c3e50'
+                    }}>
+                      {product.product_name}
+                    </h3>
+                    <p style={{
+                      color: '#7f8c8d',
+                      fontSize: '0.9rem',
+                      marginBottom: '8px'
+                    }}>
+                      {product.category}
+                    </p>
+                    <p style={{
+                      fontSize: '1.3rem',
+                      fontWeight: '700',
+                      color: '#2ecc71',
+                      marginBottom: '12px'
+                    }}>
+                      ₹{product.price.toLocaleString()}
+                    </p>
+                  </div>
+                  
+                  <div 
+                    className="stock-info"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      padding: '8px 0',
+                      borderTop: '1px solid #eee',
+                      marginBottom: '12px'
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <i className="fas fa-box" style={{ color: '#7f8c8d' }}></i>
+                      <span style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>
+                        In Stock: {product.quantity_available || 0}
+                      </span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <i className="fas fa-shopping-basket" style={{ color: '#7f8c8d' }}></i>
+                      <span style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>
+                        Min Order: {product.moq || 1}
+                      </span>
+                    </span>
+                  </div>
+                  
+                  <div 
+                    className="stock-controls"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    <button 
+                      className="stock-btn decrease"
+                      onClick={() => handleAdjustStock(product.product_id, -1)}
+                      disabled={!product.quantity_available || product.quantity_available <= 0}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#f1f2f6',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <i className="fas fa-minus"></i>
+                    </button>
+                    
+                    <input 
+                      type="number"
+                      value={product.quantity_available || 0}
+                      onChange={(e) => {
+                        const newValue = parseInt(e.target.value);
+                        if (!isNaN(newValue) && newValue >= 0) {
+                          handleUpdateStock(product.product_id, newValue);
+                        }
+                      }}
+                      min="0"
+                      style={{
+                        width: '80px',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: '1px solid #dcdde1',
+                        textAlign: 'center'
+                      }}
+                    />
+                    
+                    <button 
+                      className="stock-btn increase"
+                      onClick={() => handleAdjustStock(product.product_id, 1)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#f1f2f6',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <i className="fas fa-plus"></i>
+                    </button>
+                  </div>
+                </div>
+                
+                <div 
+                  className="product-actions"
+                  style={{
+                    padding: '16px',
+                    borderTop: '1px solid #eee',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}
+                >
+                  <button 
+                    className="action-btn primary"
+                    onClick={() => handleAddDealFromProduct(product)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: '#2ecc71',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%'
+                    }}
+                    onMouseEnter={e => e.target.style.background = '#27ae60'}
+                    onMouseLeave={e => e.target.style.background = '#2ecc71'}
+                  >
+                    <i className="fas fa-tag"></i> Add Deal
+                  </button>
+                  
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      className="edit-btn"
+                      onClick={() => {
+                        setEditingProductId(product.product_id);
+                        setFormData({
+                          name: product.product_name,
+                          category: product.category,
+                          price: product.price.toString(),
+                          stock: product.quantity_available ? product.quantity_available.toString() : '0',
+                          description: product.description || '',
+                          image: null,
+                          moq: product.moq ? product.moq.toString() : '1',
+                          reorder_point: product.reorder_point ? product.reorder_point.toString() : '10'
+                        });
+                        if (product.image_url) {
+                          setImagePreview(product.image_url);
+                        }
+                        setShowProductForm(true);
+                      }}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#3498dbHey, Cortana. Find 3. Hey, Cortana. Hey, Cortana. Hey, Cortana, play Gallery. Seriously. Hey, Cortana. Hey, Cortana. Play. Wow. This correcting ₹50 key. Please. Hey, Cortana. Why? 2175. Hey, Cortana. Black market? Prime fandom. Hey, Cortana. Hey, Cortana. Hey, Cortana. Game is running 52.52.98. 60. No. Please check new sheet with this. Hey, Cortana. Hey, Cortana. Add. A second. Hey, Cortana. The water off. Hey, Cortana. Hey, Cortana. ',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        flex: 1
+                      }}
+                      onMouseEnter={e => e.target.style.background = '#2980b9'}
+                      onMouseLeave={e => e.target.style.background = '#3498db'}
+                    >
+                      <i className="fas fa-edit"></i>
+                    </button>
+                    
+                    <button 
+                      className="delete-btn"
+                      onClick={() => handleDeleteProduct(product.product_id)}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#e74c3c',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        flex: 1
+                      }}
+                      onMouseEnter={e => e.target.style.background = '#c0392b'}
+                      onMouseLeave={e => e.target.style.background = '#e74c3c'}
+                    >
+                      <i className="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </>
+    );
   };
 
-  // Get product image URL
-  const getProductImageUrl = (productId) => {
-    return `${import.meta.env.VITE_API_BASE_URL || ''}/uploads/products/${productId}.jpg`;
+  const renderDeals = () => {
+    if (dealsLoading) {
+      return (
+        <div className="loading-spinner" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px',
+          color: '#3498db'
+        }}>
+          <i className="fas fa-spinner fa-spin fa-3x" style={{ marginBottom: '15px' }}></i>
+          <p style={{ fontSize: '1.1rem', fontWeight: '500' }}>Loading deals...</p>
+        </div>
+      );
+    }
+    
+    if (deals.length === 0) {
+      return (
+        <div className="no-items-message" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '60px 0',
+          textAlign: 'center'
+        }}>
+          <i className="fas fa-percentage fa-3x" style={{ color: '#7f8c8d', marginBottom: '20px' }}></i>
+          <p style={{ fontSize: '1.2rem', color: '#2c3e50', marginBottom: '25px' }}>
+            No deals found. Create your first deal to attract more customers!
+          </p>
+          <button 
+            className="add-item-btn" 
+            onClick={() => {
+              setEditingDealId(null);
+              setDealFormData({
+                deal_type: '',
+                discount_percentage: '',
+                discount_amount: '',
+                start_date: '',
+                end_date: '',
+                deal_title: '',
+                deal_description: '',
+                is_featured: false,
+                product_id: ''
+              });
+              setDealFormErrors({});
+              setShowDealForm(true);
+            }}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#3498db',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fas fa-plus"></i> Create New Deal
+          </button>
+        </div>
+      );
+    }
+
+    const filteredDeals = dealFilter === 'all' 
+      ? deals 
+      : deals.filter(deal => deal.deal_type === dealFilter);
+    
+    return (
+      <>
+        <div className="filter-controls">
+          <div className="filters">
+            <button 
+              className={`filter-btn ${dealFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setDealFilter('all')}
+            >
+              All Deals
+            </button>
+            <button 
+              className={`filter-btn ${dealFilter === 'DISCOUNT' ? 'active' : ''}`}
+              onClick={() => setDealFilter('DISCOUNT')}
+            >
+              <i className="fas fa-percent"></i> Discounts
+            </button>
+            <button 
+              className={`filter-btn ${dealFilter === 'BUY_ONE_GET_ONE' ? 'active' : ''}`}
+              onClick={() => setDealFilter('BUY_ONE_GET_ONE')}
+            >
+              <i className="fas fa-gift"></i> BOGO
+            </button>
+            <button 
+              className={`filter-btn ${dealFilter === 'FLASH_SALE' ? 'active' : ''}`}
+              onClick={() => setDealFilter('FLASH_SALE')}
+            >
+              <i className="fas fa-bolt"></i> Flash Sales
+            </button>
+          </div>
+          
+          <button 
+            className="add-item-btn" 
+            onClick={() => {
+              setEditingDealId(null);
+              setDealFormData({
+                deal_type: '',
+                discount_percentage: '',
+                discount_amount: '',
+                start_date: '',
+                end_date: '',
+                deal_title: '',
+                deal_description: '',
+                is_featured: false,
+                product_id: ''
+              });
+              setDealFormErrors({});
+              setShowDealForm(true);
+            }}
+          >
+            <i className="fas fa-plus"></i> New Deal
+          </button>
+        </div>
+        
+        <div className="deals-grid">
+          {filteredDeals.map(deal => (
+            <div 
+              className="deal-card" 
+              key={deal.deal_id || deal.id}
+              data-type={deal.deal_type}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                background: '#fff',
+                transition: 'all 0.3s ease',
+                position: 'relative'
+              }}
+            >
+              <div 
+                className="deal-tag"
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  zIndex: 1,
+                  backdropFilter: 'blur(5px)',
+                  backgroundColor: deal.deal_type === 'DISCOUNT' ? 'rgba(52, 152, 219, 0.9)' :
+                                 deal.deal_type === 'FLASH_SALE' ? 'rgba(155, 89, 182, 0.9)' :
+                                 'rgba(243, 156, 18, 0.9)',
+                  color: '#fff'
+                }}
+              >
+                {deal.deal_type === 'DISCOUNT' && <i className="fas fa-percent"></i>}
+                {deal.deal_type === 'FLASH_SALE' && <i className="fas fa-bolt"></i>}
+                {deal.deal_type === 'BUY_ONE_GET_ONE' && <i className="fas fa-gift"></i>}
+                {' '}{deal.deal_type.replace(/_/g, ' ')}
+              </div>
+
+              <div 
+                className="deal-details"
+                style={{
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+              >
+                <div>
+                  <h3 style={{
+                    fontSize: '1.2rem',
+                    fontWeight: '600',
+                    marginBottom: '8px',
+                    color: '#2c3e50'
+                  }}>{deal.deal_title}</h3>
+                  {deal.deal_description && <p style={{
+                    color: '#7f8c8d',
+                    fontSize: '0.9rem',
+                    marginBottom: '8px'
+                  }}>{deal.deal_description}</p>}
+                </div>
+                
+                {deal.deal_type === 'DISCOUNT' && (
+                  <div 
+                    className="discount-info"
+                    style={{
+                      background: '#f8f9fa',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      textAlign: 'center',
+                      marginBottom: '10px'
+                    }}
+                  >
+                    {deal.discount_percentage ? (
+                      <p className="discount-value" style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: '#e74c3c',
+                        backgroundColor: '#ffffff',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: '1px solid #dcdde1'
+                      }}>
+                        <span className="value">{deal.discount_percentage}%</span>
+                        <span className="label"> OFF</span>
+                      </p>
+                    ) : (
+                      <p className="discount-value" style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: '#e74c3c',
+                        backgroundColor: '#ffffff',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: '1px solid #dcdde1'
+                      }}>
+                        <span className="value">₹{deal.discount_amount}</span>
+                        <span className="label"> OFF</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                <div 
+                  className="deal-meta"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    padding: '10px 0',
+                    borderTop: '1px solid #eee',
+                    borderBottom: '1px solid #eee',
+                    marginBottom: '10px'
+                  }}
+                >
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.9rem',
+                    color: '#7f8c8d'
+                  }}>
+                    <i className="fas fa-calendar-alt"></i> 
+                    {deal.start_date ? new Date(deal.start_date).toLocaleDateString() : 'No start date'} 
+                    {deal.end_date ? ` - ${new Date(deal.end_date).toLocaleDateString()}` : ''}
+                  </span>
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.9rem',
+                    color: '#7f8c8d'
+                  }}>
+                    <i className="fas fa-box"></i>
+                    {deal.product_name || 'Product'}
+                  </span>
+                </div>
+                
+                {deal.is_featured && (
+                  <div 
+                    className="featured-badge"
+                    style={{
+                      background: '#f39c12',
+                      color: '#fff',
+                      display: 'inline-block',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      marginBottom: '10px'
+                    }}
+                  >
+                    <i className="fas fa-star"></i> Featured
+                  </div>
+                )}
+
+                <div 
+                  className="deal-actions"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    marginTop: 'auto'
+                  }}
+                >
+                  <button 
+                    className="edit-btn" 
+                    onClick={() => {
+                      setEditingDealId(deal.deal_id || deal.id);
+                      setDealFormData({
+                        deal_type: deal.deal_type,
+                        discount_percentage: deal.discount_percentage || '',
+                        discount_amount: deal.discount_amount || '',
+                        start_date: deal.start_date ? deal.start_date.split('T')[0] : '',
+                        end_date: deal.end_date ? deal.end_date.split('T')[0] : '',
+                        deal_title: deal.deal_title,
+                        deal_description: deal.deal_description || '',
+                        is_featured: deal.is_featured || false,
+                        product_id: deal.product_id
+                      });
+                      setShowDealForm(true);
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: '#3498db',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      fontWeight: '600'
+                    }}
+                    onMouseEnter={e => e.target.style.background = '#2980b9'}
+                    onMouseLeave={e => e.target.style.background = '#3498db'}
+                  >
+                    <i className="fas fa-edit"></i> Edit Deal
+                  </button>
+                  <button 
+                    className="delete-btn" 
+                    onClick={() => handleDeleteDeal(deal.deal_id || deal.id)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: '#e74c3c',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      fontWeight: '600'
+                    }}
+                    onMouseEnter={e => e.target.style.background = '#c0392b'}
+                    onMouseLeave={e => e.target.style.background = '#e74c3c'}
+                  >
+                    <i className="fas fa-trash-alt"></i> Remove Deal
+                  </button>
+                  
+                  <button 
+                    className="feature-btn" 
+                    onClick={() => handleToggleFeatureDeal(deal.deal_id || deal.id, deal.is_featured)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: deal.is_featured ? '#f1c40f' : '#dfe6e9',
+                      color: deal.is_featured ? '#fff' : '#576574',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <i className={`fas ${deal.is_featured ? 'fa-star' : 'fa-star'}`}></i> 
+                    {deal.is_featured ? 'Unfeature Deal' : 'Feature Deal'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  const renderOrders = () => {
+    if (ordersLoading) {
+      return <div className="loading-spinner"><i className="fas fa-spinner fa-spin"></i> Loading orders...</div>;
+    }
+    
+    if (orders.length === 0) {
+      return (
+        <div className="no-items-message">
+          <i className="fas fa-shopping-cart"></i>
+          <p>No orders found. Check back later for incoming orders!</p>
+        </div>
+      );
+    }
+
+    // Filter orders based on status filter
+    const filteredOrders = orderFilter === 'all' 
+      ? orders 
+      : orders.filter(order => order.status.toLowerCase() === orderFilter.toLowerCase());
+    
+    return (
+      <>
+        <div className="filter-controls">
+          <div className="filters">
+            <button 
+              className={`filter-btn ${orderFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setOrderFilter('all')}
+            >
+              All Orders
+            </button>
+            <button 
+              className={`filter-btn ${orderFilter === 'pending' ? 'active' : ''}`}
+              onClick={() => setOrderFilter('pending')}
+            >
+              <span className="status-dot pending"></span> Pending
+            </button>
+            <button 
+              className={`filter-btn ${orderFilter === 'processing' ? 'active' : ''}`}
+              onClick={() => setOrderFilter('processing')}
+            >
+              <span className="status-dot processing"></span> Processing
+            </button>
+            <button 
+              className={`filter-btn ${orderFilter === 'shipped' ? 'active' : ''}`}
+              onClick={() => setOrderFilter('shipped')}
+            >
+              <span className="status-dot shipped"></span> Shipped
+            </button>
+            <button 
+              className={`filter-btn ${orderFilter === 'delivered' ? 'active' : ''}`}
+              onClick={() => setOrderFilter('delivered')}
+            >
+              <span className="status-dot delivered"></span> Delivered
+            </button>
+            <button 
+              className={`filter-btn ${orderFilter === 'cancelled' ? 'active' : ''}`}
+              onClick={() => setOrderFilter('cancelled')}
+            >
+              <span className="status-dot cancelled"></span> Cancelled
+            </button>
+          </div>
+        </div>
+        
+        <div className="orders-grid">
+          {filteredOrders.map(order => (
+            <div 
+              className={`order-card status-${order.status.toLowerCase()}`} 
+              key={order.order_id}
+              style={{
+                borderRadius: '12px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                background: '#fff',
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                border: `1px solid ${
+                  order.status.toLowerCase() === 'pending' ? '#f39c12' : 
+                  order.status.toLowerCase() === 'processing' ? '#3498db' :
+                  order.status.toLowerCase() === 'shipped' ? '#9b59b6' :
+                  order.status.toLowerCase() === 'delivered' ? '#2ecc71' :
+                  '#e74c3c'
+                }`
+              }}
+            >
+              <div 
+                className={`order-status-header status-${order.status.toLowerCase()}`}
+                style={{
+                  padding: '10px 16px',
+                  background: 
+                    order.status.toLowerCase() === 'pending' ? '#f39c12' : 
+                    order.status.toLowerCase() === 'processing' ? '#3498db' :
+                    order.status.toLowerCase() === 'shipped' ? '#9b59b6' :
+                    order.status.toLowerCase() === 'delivered' ? '#2ecc71' :
+                    '#e74c3c',
+                  color: '#fff',
+                  fontWeight: '600',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div>
+                  <i className={
+                    order.status.toLowerCase() === 'pending' ? 'fas fa-clock' : 
+                    order.status.toLowerCase() === 'processing' ? 'fas fa-cog fa-spin' :
+                    order.status.toLowerCase() === 'shipped' ? 'fas fa-shipping-fast' :
+                    order.status.toLowerCase() === 'delivered' ? 'fas fa-check-circle' :
+                    'fas fa-times-circle'
+                  }></i> {order.status}
+                </div>
+                <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
+                  Order #{order.order_id.slice(0,8)}
+                </div>
+              </div>
+              
+              <div 
+                className="order-info"
+                style={{
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}
+              >
+                <div className="order-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="order-date" style={{ fontSize: '0.9em', color: '#7f8c8d' }}>
+                    <i className="fas fa-calendar-alt"></i> 
+                    {new Date(order.order_date).toLocaleDateString()}
+                  </span>
+                  <span style={{ fontSize: '0.9em', color: '#7f8c8d' }}>•</span>
+                  <span className="order-time" style={{ fontSize: '0.9em', color: '#7f8c8d' }}>
+                    <i className="fas fa-clock"></i> 
+                    {new Date(order.order_date).toLocaleTimeString()}
+                  </span>
+                </div>
+                
+                <div className="customer-info">
+                  <div className="customer-details" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8f9fa',
+                    borderRadius: '6px',
+                    marginBottom: '10px'
+                  }}>
+                    <div className="avatar" style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: '#3498db',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontWeight: '600'
+                    }}>
+                      {order.customer_name ? order.customer_name.charAt(0).toUpperCase() : 'C'}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: '600', marginBottom: '2px' }}>
+                        {order.customer_name || 'Customer'}
+                      </p>
+                      <p style={{ fontSize: '0.9em', display: 'flex', alignItems: 'center', gap: '4px', color: '#7f8c8d' }}>
+                        <i className="fas fa-phone"></i> {order.contact_number || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="order-items-overview" style={{ marginBottom: '12px' }}>
+                  <h4 style={{ fontSize: '1rem', marginBottom: '8px' }}>Order Summary</h4>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap',
+                    gap: '6px', 
+                    marginBottom: '10px'
+                  }}>
+                    {order.items && order.items.map((item, i) => (
+                      <div key={i} style={{
+                        padding: '6px 10px',
+                        background: '#f1f2f6',
+                        borderRadius: '4px',
+                        fontSize: '0.9em',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {item.quantity}× {item.product_name}
+                      </div>
+                    ))}
+                    {(!order.items || order.items.length === 0) && (
+                      <div style={{ color: '#7f8c8d', fontSize: '0.9em' }}>
+                        No items information available
+                      </div>
+                    )}
+                  </div>
+                  <div className="order-financial" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '8px 0',
+                    borderTop: '1px dashed #ddd',
+                    borderBottom: '1px dashed #ddd',
+                  }}>
+                    <div>
+                      <span style={{ fontWeight: '600' }}>Total Amount:</span>
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: '700', color: '#2ecc71', fontSize: '1.1em' }}>
+                        {formatCurrency(order.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="delivery-info" style={{ marginBottom: '12px', fontSize: '0.9em' }}>
+                  {order.shipping_address && (
+                    <p style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '4px', color: '#7f8c8d' }}>
+                      <i className="fas fa-map-marker-alt" style={{ marginTop: '4px' }}></i>
+                      <span>{order.shipping_address}</span>
+                    </p>
+                  )}
+                  {order.delivery_agent && (
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#7f8c8d' }}>
+                      <i className="fas fa-truck"></i>
+                      <span>Delivery by: {order.delivery_agent}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="order-actions" style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button 
+                  className="view-btn" 
+                  onClick={() => handleViewOrderDetails(order)}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#f1f2f6',
+                    color: '#2c3e50',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    width: '100%',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={e => e.target.style.background = '#dfe6e9'}
+                  onMouseLeave={e => e.target.style.background = '#f1f2f6'}
+                >
+                  <i className="fas fa-eye"></i> View Details
+                </button>
+                
+                <div className="status-actions" style={{ display: 'flex', gap: '8px' }}>
+                  {order.status === 'Pending' && (
+                    <>
+                      <button 
+                        className="action-btn accept" 
+                        onClick={() => handleOrderStatusChange(order.order_id, 'Processing')}
+                        style={{
+                          padding: '10px 16px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: '#2ecc71',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          flex: 1,
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                        onMouseEnter={e => e.target.style.background = '#27ae60'}
+                        onMouseLeave={e => e.target.style.background = '#2ecc71'}
+                      >
+                        <i className="fas fa-check"></i> Accept
+                      </button>
+                      <button 
+                        className="action-btn reject" 
+                        onClick={() => handleOrderStatusChange(order.order_id, 'Cancelled')}
+                        style={{
+                          padding: '10px 16px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: '#e74c3c',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          flex: 1,
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                        onMouseEnter={e => e.target.style.background = '#c0392b'}
+                        onMouseLeave={e => e.target.style.background = '#e74c3c'}
+                      >
+                        <i className="fas fa-times"></i> Reject
+                      </button>
+                    </>
+                  )}
+                  
+                  {order.status === 'Processing' && (
+                    <button 
+                      className="action-btn ship" 
+                      onClick={() => setShowDeliveryAssignModal({ show: true, orderId: order.order_id })}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#9b59b6',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        width: '100%',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                      onMouseEnter={e => e.target.style.background = '#8e44ad'}
+                      onMouseLeave={e => e.target.style.background = '#9b59b6'}
+                    >
+                      <i className="fas fa-shipping-fast"></i> Assign Delivery
+                    </button>
+                  )}
+                  
+                  {order.status === 'Shipped' && (
+                    <button 
+                      className="action-btn complete" 
+                      onClick={() => handleOrderStatusChange(order.order_id, 'Delivered')}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#2ecc71',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        width: '100%',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                      onMouseEnter={e => e.target.style.background = '#27ae60'}
+                      onMouseLeave={e => e.target.style.background = '#2ecc71'}
+                    >
+                      <i className="fas fa-flag-checkered"></i> Mark Delivered
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Delivery Assignment Modal */}
+        {showDeliveryAssignModal.show && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h3>Assign Delivery Agent</h3>
+              
+              {isLoadingAgents ? (
+                <div className="loading-spinner"><i className="fas fa-spinner fa-spin"></i> Loading agents...</div>
+              ) : (
+                <>
+                  <select 
+                    value={selectedDeliveryAgent} 
+                    onChange={(e) => setSelectedDeliveryAgent(e.target.value)}
+                    className="agent-select"
+                  >
+                    <option value="">Select a delivery agent</option>
+                    {deliveryAgents.map(agent => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name} ({agent.vehicle_type}) - {agent.contact_number}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  <div className="modal-actions">
+                    <button 
+                      className="action-btn primary" 
+                      onClick={() => {
+                        if (selectedDeliveryAgent) {
+                          handleAssignDelivery(showDeliveryAssignModal.orderId, selectedDeliveryAgent);
+                          handleOrderStatusChange(showDeliveryAssignModal.orderId, 'Shipped');
+                          setShowDeliveryAssignModal({ show: false, orderId: null });
+                          setSelectedDeliveryAgent('');
+                        } else {
+                          showNotification('Please select a delivery agent', 'error');
+                        }
+                      }}
+                      disabled={!selectedDeliveryAgent}
+                    >
+                      <i className="fas fa-check"></i> Assign & Ship
+                    </button>
+                    <button 
+                      className="action-btn secondary" 
+                      onClick={() => {
+                        setShowDeliveryAssignModal({ show: false, orderId: null });
+                        setSelectedDeliveryAgent('');
+                      }}
+                    >
+                      <i className="fas fa-times"></i> Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Order Detail Modal */}
+        {showOrderDetailModal.show && showOrderDetailModal.order && (
+          <div className="modal-overlay">
+            <div className="modal-content order-detail-modal">
+              <h3>Order Details</h3>
+              <div className="order-id-header">
+                <span>Order #: {showOrderDetailModal.order.order_id}</span>
+                <span 
+                  className={`status-badge ${showOrderDetailModal.order.status.toLowerCase()}`}
+                >
+                  {showOrderDetailModal.order.status}
+                </span>
+              </div>
+              
+              <div className="order-detail-section">
+                <h4>Customer Information</h4>
+                <div className="customer-details">
+                  <p><strong>Name:</strong> {showOrderDetailModal.order.customer_name || 'N/A'}</p>
+                  <p><strong>Phone:</strong> {showOrderDetailModal.order.contact_number || 'N/A'}</p>
+                  <p><strong>Email:</strong> {showOrderDetailModal.order.email || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="order-detail-section">
+                <h4>Shipping Information</h4>
+                <div className="shipping-details">
+                  <p><strong>Address:</strong> {showOrderDetailModal.order.shipping_address || 'N/A'}</p>
+                  <p><strong>City:</strong> {showOrderDetailModal.order.city || 'N/A'}</p>
+                  <p><strong>Delivery Agent:</strong> {showOrderDetailModal.order.delivery_agent || 'Not assigned yet'}</p>
+                </div>
+              </div>
+              
+              <div className="order-detail-section">
+                <h4>Order Items</h4>
+                <div className="order-items-list">
+                  {showOrderDetailModal.order.items && showOrderDetailModal.order.items.length > 0 ? (
+                    <table className="items-table">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Quantity</th>
+                          <th>Price</th>
+                          <th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {showOrderDetailModal.order.items.map((item, index) => (
+                          <tr key={index}>
+                            <td>{item.product_name}</td>
+                            <td>{item.quantity}</td>
+                            <td>{formatCurrency(item.price)}</td>
+                            <td>{formatCurrency(item.quantity * item.price)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan="3" className="text-right"><strong>Subtotal</strong></td>
+                          <td>{formatCurrency(showOrderDetailModal.order.subtotal || showOrderDetailModal.order.totalAmount)}</td>
+                        </tr>
+                        {showOrderDetailModal.order.taxes && (
+                          <tr>
+                            <td colSpan="3" className="text-right">Taxes</td>
+                            <td>{formatCurrency(showOrderDetailModal.order.taxes)}</td>
+                          </tr>
+                        )}
+                        {showOrderDetailModal.order.shipping_fee && (
+                          <tr>
+                            <td colSpan="3" className="text-right">Shipping</td>
+                            <td>{formatCurrency(showOrderDetailModal.order.shipping_fee)}</td>
+                          </tr>
+                        )}
+                        <tr className="total-row">
+                          <td colSpan="3" className="text-right"><strong>Total</strong></td>
+                          <td>{formatCurrency(showOrderDetailModal.order.totalAmount)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  ) : (
+                    <p>No items found for this order.</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="order-detail-section">
+                <h4>Payment Information</h4>
+                <div className="payment-details">
+                  <p><strong>Payment Method:</strong> {showOrderDetailModal.order.payment_method || 'N/A'}</p>
+                  <p><strong>Payment Status:</strong> {showOrderDetailModal.order.payment_status || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  className="action-btn secondary" 
+                  onClick={() => setShowOrderDetailModal({ show: false, order: null })}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const renderProductForm = () => {
+    if (!showProductForm) return null;
+    
+    return (
+      <div className="modal-overlay">
+        <div className="product-form">
+          <button 
+            className="form-close" 
+            onClick={closeForm}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+
+          <div className="form-header">
+            <h3>{editingProductId ? 'Edit Product' : 'Add New Product'}</h3>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="name">Product Name</label>
+                <input
+                  type="text"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className={formErrors.name ? 'error-input' : ''}
+                  placeholder="Enter product name"
+                />
+                {formErrors.name && <div className="error-message">{formErrors.name}</div>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="category">Category</label>
+                <select
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  className={formErrors.category ? 'error-input' : ''}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Clothing">Clothing</option>
+                  <option value="Food">Food</option>
+                  <option value="Stationery">Stationery</option>
+                  <option value="Other">Other</option>
+                </select>
+                {formErrors.category && <div className="error-message">{formErrors.category}</div>}
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="price">Price (₹)</label>
+                <input
+                  type="number"
+                  id="price"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  className={formErrors.price ? 'error-input' : ''}
+                  placeholder="Enter price"
+                  min="0"
+                  step="0.01"
+                />
+                {formErrors.price && <div className="error-message">{formErrors.price}</div>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="stock">Stock Quantity</label>
+                <input
+                  type="number"
+                  id="stock"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                  className={formErrors.stock ? 'error-input' : ''}
+                  placeholder="Enter stock quantity"
+                  min="0"
+                />
+                {formErrors.stock && <div className="error-message">{formErrors.stock}</div>}
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="moq">Minimum Order Quantity</label>
+                <input
+                  type="number"
+                  id="moq"
+                  value={formData.moq}
+                  onChange={(e) => setFormData({...formData, moq: e.target.value})}
+                  className={formErrors.moq ? 'error-input' : ''}
+                  placeholder="Enter minimum order quantity"
+                  min="1"
+                />
+                {formErrors.moq && <div className="error-message">{formErrors.moq}</div>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="reorder_point">Reorder Point</label>
+                <input
+                  type="number"
+                  id="reorder_point"
+                  value={formData.reorder_point}
+                  onChange={(e) => setFormData({...formData, reorder_point: e.target.value})}
+                  className={formErrors.reorder_point ? 'error-input' : ''}
+                  placeholder="Enter reorder point"
+                  min="0"
+                />
+                {formErrors.reorder_point && <div className="error-message">{formErrors.reorder_point}</div>}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className={formErrors.description ? 'error-input' : ''}
+                placeholder="Enter product description"
+                rows="4"
+              />
+              {formErrors.description && <div className="error-message">{formErrors.description}</div>}
+            </div>
+
+            <div className="form-group">
+              <label>Product Image</label>
+              <div 
+                className="image-upload-area"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                ) : (
+                  <div className="upload-placeholder">
+                    <i className="fas fa-cloud-upload-alt"></i>
+                    <p>Click to upload image</p>
+                    <span>or drag and drop</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setFormData({...formData, image: file});
+                      setImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+
+            {formErrors.submit && <div className="form-error">{formErrors.submit}</div>}
+
+            <div className="form-actions">
+              <button type="button" className="cancel-btn" onClick={closeForm}>
+                Cancel
+              </button>
+              <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                {isSubmitting && <span className="spinner"></span>}
+                {editingProductId ? 'Update Product' : 'Add Product'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'products':
+        return renderProducts();
+      case 'deals':
+        console.log('Rendering deals tab with', deals.length, 'deals');
+        return renderDeals();
+      case 'orders':
+        return renderOrders();
+      case 'analytics':
+        return <div className="coming-soon">Analytics feature coming soon!</div>;
+      default:
+        return renderProducts();
+    }
   };
 
   return (
@@ -918,1479 +2438,482 @@ const MyShop = () => {
             </button>
           </div>
 
-          {/* Products Tab */}
-          {activeTab === 'products' && (
-            <div className="products-section">
-              <div className="products-header">
-                <div className="filters">
-                  <select 
-                    value={stockFilter} 
-                    onChange={(e) => setStockFilter(e.target.value)}
-                    className="stock-filter"
-                  >
-                    <option value="all">All Products</option>
-                    <option value="low">Low Stock</option>
-                    <option value="out">Out of Stock</option>
-                  </select>
-                </div>
-                <button 
-                  className="add-product-btn"
-                  onClick={() => setShowProductForm(true)}
-                >
-                  <i className="fas fa-plus"></i> Add New Product
-                </button>
-              </div>
-
-              {loading ? (
-                <div className="loading-spinner">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>Loading products...</p>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="empty-state">
-                  <i className="fas fa-box-open"></i>
-                  <h3>No products found</h3>
-                  <p>{stockFilter === 'all' ? 'Add your first product to get started' : 'No products match your filter criteria'}</p>
-                  {stockFilter === 'all' && (
-                    <button className="add-product-btn" onClick={() => setShowProductForm(true)}>
-                      <i className="fas fa-plus"></i> Add New Product
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="products-grid">
-                  {filteredProducts.map(product => {
-                    // Calculate availability percentage
-                    const maxStock = Math.max(product.quantity_available || 0, product.reorder_point * 3);
-                    const availabilityPercentage = Math.min(((product.quantity_available || 0) / maxStock) * 100, 100);
-                    
-                    // Determine availability level
-                    let availabilityLevel = "high";
-                    let availabilityText = "In Stock";
-                    let availabilityIcon = "fa-check-circle";
-                    
-                    if (!product.quantity_available || product.quantity_available <= 0) {
-                      availabilityLevel = "low";
-                      availabilityText = "Out of Stock";
-                      availabilityIcon = "fa-times-circle";
-                    } else if (product.quantity_available <= product.reorder_point) {
-                      availabilityLevel = "medium";
-                      availabilityText = "Low Stock";
-                      availabilityIcon = "fa-exclamation-triangle";
-                    }
-                    
-                    return (
-                      <div key={product.product_id} className={`product-card ${product.quantity_available === 0 ? 'out-of-stock' : product.quantity_available <= product.reorder_point ? 'low-stock' : ''}`}
-                        style={{ 
-                          border: '1px solid #eee',
-                          borderRadius: '12px',
-                          overflow: 'hidden',
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.transform = 'translateY(-8px)';
-                          e.currentTarget.style.boxShadow = '0 12px 25px rgba(0, 0, 0, 0.1)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.06)';
-                        }}
-                      >
-                        <div className="product-image">
-                          <img 
-                            src={getProductImageUrl(product.product_id)} 
-                            alt={product.product_name} 
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = './src/assests/guddu.jpeg'; // Default image on error
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="product-info" style={{ padding: '20px' }}>
-                          <div style={{ 
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '15px'
-                          }}>
-                            <span className="product-category">{product.category}</span>
-                            <span className={`availability-text ${availabilityLevel}`} style={{ 
-                              fontSize: '0.8rem',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              backgroundColor: 
-                                availabilityLevel === 'high' ? 'rgba(40, 199, 111, 0.1)' :
-                                availabilityLevel === 'medium' ? 'rgba(255, 159, 67, 0.1)' :
-                                'rgba(255, 90, 96, 0.1)'
-                            }}>
-                              <i className={`fas ${availabilityIcon}`}></i>
-                              {availabilityText}
-                            </span>
-                          </div>
-                          
-                          <h3 className="product-title" style={{ fontSize: '1.25rem', marginBottom: '10px' }}>
-                            {product.product_name}
-                          </h3>
-                          
-                          <div className="product-price" style={{ marginBottom: '15px' }}>
-                            <span className="price-amount">{formatCurrency(product.price)}</span>
-                          </div>
-                          
-                          {/* New Availability Indicator */}
-                          <div className="availability-indicator">
-                            <div className="availability-bar">
-                              <div 
-                                className={`availability-bar-fill ${availabilityLevel}`} 
-                                style={{ width: `${availabilityPercentage}%` }}
-                              ></div>
-                            </div>
-                            <div style={{ 
-                              fontWeight: '600',
-                              fontSize: '0.95rem',
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              width: '35px',
-                              height: '35px',
-                              borderRadius: '50%',
-                              backgroundColor: 
-                                availabilityLevel === 'high' ? 'rgba(40, 199, 111, 0.1)' :
-                                availabilityLevel === 'medium' ? 'rgba(255, 159, 67, 0.1)' :
-                                'rgba(255, 90, 96, 0.1)',
-                              color: 
-                                availabilityLevel === 'high' ? '#28C76F' :
-                                availabilityLevel === 'medium' ? '#FF9F43' :
-                                '#FF5A60'
-                            }}>
-                              {product.quantity_available}
-                            </div>
-                          </div>
-                          
-                          <div className="stock-management" style={{ marginTop: '15px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                              <span className="stock-label" style={{ fontSize: '0.9rem' }}>Update Stock</span>
-                              <small style={{ 
-                                color: 'var(--gray-color)',
-                                fontSize: '0.8rem',
-                                fontStyle: 'italic' 
-                              }}>
-                                Reorder at: <b>{product.reorder_point}</b>
-                              </small>
-                            </div>
-                            <div className="stock-controls">
-                              <button 
-                                className="stock-btn decrease"
-                                onClick={() => handleAdjustStock(product.product_id, -1)}
-                                disabled={product.quantity_available <= 0}
-                                style={{
-                                  backgroundColor: 'white',
-                                  color: product.quantity_available <= 0 ? '#ccc' : '#FF5A60',
-                                  border: `1px solid ${product.quantity_available <= 0 ? '#eee' : '#FF5A60'}`,
-                                }}
-                              >
-                                <i className="fas fa-minus"></i>
-                              </button>
-                              <input
-                                type="number"
-                                value={product.quantity_available}
-                                onChange={(e) => handleUpdateStock(
-                                  product.product_id,
-                                  parseInt(e.target.value) || 0
-                                )}
-                                min="0"
-                                className="stock-input"
-                              />
-                              <button
-                                className="stock-btn increase"
-                                onClick={() => handleAdjustStock(product.product_id, 1)}
-                                style={{
-                                  backgroundColor: 'white',
-                                  color: '#28C76F',
-                                  border: '1px solid #28C76F',
-                                }}
-                              >
-                                <i className="fas fa-plus"></i>
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="inventory-details" style={{
-                            padding: '12px',
-                            backgroundColor: 'rgba(248, 249, 250, 0.5)',
-                            borderRadius: '8px',
-                            marginTop: '15px',
-                            marginBottom: '15px'
-                          }}>
-                            <div className="inventory-item">
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                                <i className="fas fa-box" style={{ color: 'var(--primary-color)', fontSize: '0.9rem' }}></i>
-                                <span className="inventory-label">MOQ</span>
-                                <span className="inventory-value" style={{ 
-                                  backgroundColor: 'var(--primary-light)',
-                                  color: 'var(--primary-color)',
-                                  padding: '2px 8px',
-                                  borderRadius: '4px',
-                                  fontSize: '0.85rem',
-                                  fontWeight: '600'
-                                }}>{product.moq}</span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <i className="fas fa-history" style={{ color: 'var(--primary-color)', fontSize: '0.9rem' }}></i>
-                                <span className="inventory-label">Last updated</span>
-                                <span className="inventory-value" style={{ 
-                                  fontSize: '0.85rem',
-                                  color: 'var(--gray-color)',
-                                  fontStyle: 'italic'
-                                }}>Today</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="product-actions">
-                            <button
-                              onClick={() => {
-                                setFormData({
-                                  name: product.product_name,
-                                  category: product.category,
-                                  price: product.price.toString(),
-                                  stock: product.quantity_available.toString(),
-                                  description: product.description || '',
-                                  moq: product.moq.toString(),
-                                  reorder_point: product.reorder_point.toString()
-                                });
-                                setEditingProductId(product.product_id);
-                                setShowProductForm(true);
-                              }}
-                              className="action-btn edit"
-                              title="Edit product"
-                            >
-                              <i className="fas fa-edit"></i> Edit
-                            </button>
-                            
-                            {/* Add Create Deal button */}
-                            <button
-                              onClick={() => handleAddDealFromProduct(product)}
-                              className="action-btn deal"
-                              title="Create deal"
-                              style={{
-                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                                color: '#ff6b6b',
-                                border: '1px solid #ff6b6b'
-                              }}
-                            >
-                              <i className="fas fa-percentage"></i> Create Deal
-                            </button>
-                            
-                            <button
-                              onClick={() => handleDeleteProduct(product.product_id)}
-                              className="action-btn delete"
-                              title="Delete product"
-                            >
-                              <i className="fas fa-trash"></i> Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Deals Tab */}
-          {activeTab === 'deals' && (
-            <div className="deals-section">
-              <div className="deals-header">
-                <div className="filters">
-                  <select 
-                    value={dealFilter} 
-                    onChange={(e) => setDealFilter(e.target.value)}
-                    className="deal-filter"
-                  >
-                    <option value="all">All Deals</option>
-                    <option value="active">Active Deals</option>
-                    <option value="expired">Expired Deals</option>
-                    <option value="featured">Featured Deals</option>
-                    <option value="discount">Discounts</option>
-                    <option value="bundle">Bundles</option>
-                    <option value="bogo">Buy One Get One</option>
-                  </select>
-                </div>
-                <button 
-                  className="add-deal-btn"
-                  onClick={() => setShowDealForm(true)}
-                >
-                  <i className="fas fa-plus"></i> Create New Deal
-                </button>
-              </div>
-
-              {dealsLoading ? (
-                <div className="loading-spinner">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>Loading deals...</p>
-                </div>
-              ) : filteredDeals.length === 0 ? (
-                <div className="empty-state">
-                  <i className="fas fa-percentage"></i>
-                  <h3>No deals found</h3>
-                  <p>{dealFilter === 'all' ? 'Create your first deal to attract more customers' : 'No deals match your filter criteria'}</p>
-                  {dealFilter === 'all' && (
-                    <button className="add-deal-btn" onClick={() => setShowDealForm(true)}>
-                      <i className="fas fa-plus"></i> Create New Deal
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="deals-grid">
-                  {filteredDeals.map((product) => {
-                    const deal = product.deal_info;
-                    if (!deal) return null;
-                    
-                    // Determine if the deal is active based on dates
-                    const startDate = deal.start_date ? new Date(deal.start_date) : null;
-                    const endDate = deal.end_date ? new Date(deal.end_date) : null;
-                    const currentDate = new Date();
-                    const isExpired = endDate && endDate < currentDate;
-                    const notStartedYet = startDate && startDate > currentDate;
-                    const isActive = deal.is_active && !isExpired && !notStartedYet;
-                    
-                    // Format dates for display
-                    const formatDate = (dateString) => {
-                      if (!dateString) return 'No end date';
-                      return new Date(dateString).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric'
-                      });
-                    };
-                    
-                    // Calculate discount for display
-                    const getDiscountText = () => {
-                      if (deal.deal_type === 'DISCOUNT') {
-                        if (deal.discount_percentage) {
-                          return `${deal.discount_percentage}% OFF`;
-                        } else if (deal.discount_amount) {
-                          return `₹${deal.discount_amount} OFF`;
-                        }
-                        return 'Special Discount';
-                      } else if (deal.deal_type === 'BUY_ONE_GET_ONE') {
-                        return 'Buy 1 Get 1 Free';
-                      } else if (deal.deal_type === 'BUNDLE') {
-                        return 'Bundle Offer';
-                      } else if (deal.deal_type === 'CLEARANCE') {
-                        return 'Clearance Sale';
-                      } else if (deal.deal_type === 'FLASH_SALE') {
-                        return 'Flash Sale';
-                      }
-                      return 'Special Offer';
-                    };
-                    
-                    return (
-                      <div 
-                        key={product.product_id} 
-                        className={`deal-card ${isExpired ? 'expired' : isActive ? 'active' : 'inactive'}`}
-                      >
-                        {/* Deal Status Badge */}
-                        <div className="deal-status-badge">
-                          {isActive ? 'Active' : isExpired ? 'Expired' : 'Inactive'}
-                        </div>
-                        
-                        {/* Featured Badge */}
-                        {deal.is_featured && (
-                          <div className="featured-badge">
-                            Featured
-                          </div>
-                        )}
-                        
-                        {/* Deal Image Area */}
-                        <div className="deal-image-area">
-                          <img 
-                            src={product.image_url || './src/assests/guddu.jpeg'}
-                            alt={product.product_name}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = './src/assests/guddu.jpeg';
-                            }}
-                          />
-                          
-                          {/* Deal Type Overlay */}
-                          <div className="deal-type-overlay">
-                            {getDiscountText()}
-                          </div>
-                        </div>
-                        
-                        {/* Deal Content */}
-                        <div className="deal-content">
-                          <h3 className="deal-title">
-                            {deal.deal_title}
-                          </h3>
-                          
-                          <div className="deal-description">
-                            {deal.deal_description || 'No description provided.'}
-                          </div>
-                          
-                          <div className="deal-details">
-                            <div className="deal-product">
-                              <span>Product:</span>
-                              <strong>{product.product_name}</strong>
-                            </div>
-                            
-                            <div className="deal-dates">
-                              <div className="deal-start-date">
-                                <span>Start:</span>
-                                <strong>{formatDate(deal.start_date)}</strong>
-                              </div>
-                              
-                              <div className="deal-end-date">
-                                <span>End:</span>
-                                <strong>{formatDate(deal.end_date)}</strong>
-                              </div>
-                            </div>
-                            
-                            {/* Deal type specific details */}
-                            <div className="deal-type-details">
-                              <div className="deal-type">
-                                <span>Deal Type:</span>
-                                <strong>{deal.deal_type.replace('_', ' ')}</strong>
-                              </div>
-                              
-                              {deal.deal_type === 'DISCOUNT' && (
-                                <div className="deal-discount">
-                                  <span>Discount:</span>
-                                  <strong>
-                                    {deal.discount_percentage ? `${deal.discount_percentage}%` : `₹${deal.discount_amount}`}
-                                  </strong>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Deal Actions */}
-                          <div className="deal-actions">
-                            <button
-                              onClick={() => {
-                                setDealFormData({
-                                  product_id: product.product_id,
-                                  deal_type: deal.deal_type,
-                                  discount_percentage: deal.discount_percentage?.toString() || '',
-                                  discount_amount: deal.discount_amount?.toString() || '',
-                                  start_date: deal.start_date ? new Date(deal.start_date).toISOString().split('T')[0] : '',
-                                  end_date: deal.end_date ? new Date(deal.end_date).toISOString().split('T')[0] : '',
-                                  deal_title: deal.deal_title,
-                                  deal_description: deal.deal_description || '',
-                                  is_featured: deal.is_featured
-                                });
-                                setEditingDealId(product.product_id);
-                                setShowDealForm(true);
-                              }}
-                            >
-                              Edit
-                            </button>
-                            
-                            <button
-                              onClick={() => handleToggleFeatureDeal(product.product_id, deal.is_featured)}
-                            >
-                              {deal.is_featured ? 'Unfeature' : 'Feature'}
-                            </button>
-                            
-                            <button
-                              onClick={() => handleRemoveDeal(product.product_id)}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Orders Tab */}
-          {activeTab === 'orders' && (
-            <div className="orders-section">
-              <div className="orders-header">
-                <div className="filters">
-                  <select 
-                    value={orderFilter} 
-                    onChange={(e) => setOrderFilter(e.target.value)}
-                    className="order-filter"
-                  >
-                    <option value="all">All Orders</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-              </div>
-
-              {ordersLoading ? (
-                <div className="loading-spinner">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>Loading orders...</p>
-                </div>
-              ) : filteredOrders.length === 0 ? (
-                <div className="empty-state">
-                  <i className="fas fa-shopping-cart"></i>
-                  <h3>No orders found</h3>
-                  <p>{orderFilter === 'all' ? 'You don\'t have any orders yet' : 'No orders match your filter criteria'}</p>
-                </div>
-              ) : (
-                <div className="orders-grid">
-                  {filteredOrders.map(order => (
-                    <div key={order.id} className={`order-card order-${order.status.toLowerCase()}`}
-                      style={{
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                        borderRadius: '12px',
-                        transition: 'all 0.3s ease',
-                        backgroundColor: '#fff',
-                        border: '1px solid #f0f0f0',
-                        borderLeft: `4px solid ${
-                          order.status === 'Pending' ? '#FF9F43' :
-                          order.status === 'Processing' ? '#4A6FFF' :
-                          order.status === 'Delivered' || order.status === 'Completed' ? '#28C76F' :
-                          '#FF5A60'
-                        }`
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'translateY(-5px)';
-                        e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)';
-                      }}
-                    >
-                      <div className="order-header">
-                        <div className="order-id" style={{ fontWeight: '700', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className="fas fa-shopping-cart" style={{ color: '#4A6FFF' }}></i>
-                          Order #{order.id}
-                        </div>
-                        <div className={`order-status status-${order.status.toLowerCase()}`}
-                          style={{
-                            padding: '6px 15px',
-                            borderRadius: '20px',
-                            fontWeight: '600',
-                            fontSize: '0.85rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            backgroundColor: 
-                              order.status === 'Pending' ? 'rgba(255, 159, 67, 0.15)' :
-                              order.status === 'Processing' ? 'rgba(74, 111, 255, 0.15)' :
-                              order.status === 'Delivered' || order.status === 'Completed' ? 'rgba(40, 199, 111, 0.15)' :
-                              'rgba(255, 90, 96, 0.15)',
-                            color:
-                              order.status === 'Pending' ? '#FF9F43' :
-                              order.status === 'Processing' ? '#4A6FFF' :
-                              order.status === 'Delivered' || order.status === 'Completed' ? '#28C76F' :
-                              '#FF5A60'
-                          }}
-                        >
-                          <i className={`fas ${
-                            order.status === 'Pending' ? 'fa-clock' :
-                            order.status === 'Processing' ? 'fa-spinner fa-spin' :
-                            order.status === 'Delivered' || order.status === 'Completed' ? 'fa-check-circle' :
-                            'fa-times-circle'
-                          }`}></i>
-                          {order.status}
-                        </div>
-                      </div>
-                      
-                      <div className="order-details" style={{ 
-                        marginTop: '15px', 
-                        padding: '15px',
-                        backgroundColor: 'rgba(248, 249, 250, 0.5)',
-                        borderRadius: '8px',
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: '15px'
-                      }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <span style={{ color: '#7A7C85', fontSize: '0.85rem' }}>Customer</span>
-                          <span style={{ fontWeight: '600', color: '#2A2E43', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <i className="fas fa-user" style={{ color: '#4A6FFF', fontSize: '0.85rem' }}></i>
-                            {order.customer?.name || 'N/A'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <span style={{ color: '#7A7C85', fontSize: '0.85rem' }}>Order Date</span>
-                          <span style={{ fontWeight: '600', color: '#2A2E43', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <i className="fas fa-calendar" style={{ color: '#4A6FFF', fontSize: '0.85rem' }}></i>
-                            {formatDate(order.orderDate)}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: '1 / -1' }}>
-                          <span style={{ color: '#7A7C85', fontSize: '0.85rem' }}>Total Amount</span>
-                          <span style={{ 
-                            fontWeight: '700', 
-                            color: '#4A6FFF', 
-                            fontSize: '1.25rem', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '6px'
-                          }}>
-                            <i className="fas fa-rupee-sign" style={{ fontSize: '1rem' }}></i>
-                            {formatCurrency(order.totalAmount).replace('₹', '')}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="order-items" style={{ 
-                        marginTop: '15px',
-                        maxHeight: '140px',
-                        overflowY: 'auto',
-                        padding: '15px 5px',
-                        borderRadius: '8px'
-                      }}>
-                        <h4 style={{ 
-                          margin: '0 0 10px 0', 
-                          fontSize: '0.95rem', 
-                          color: '#2A2E43',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}>
-                          <i className="fas fa-box-open" style={{ color: '#4A6FFF' }}></i>
-                          Order Items ({order.items?.length || 0})
-                        </h4>
-                        {order.items?.map((item, idx) => (
-                          <div key={idx} className="order-item" style={{ 
-                            padding: '10px', 
-                            borderBottom: idx < order.items.length - 1 ? '1px solid #eee' : 'none',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            backgroundColor: idx % 2 === 0 ? 'rgba(248, 249, 250, 0.5)' : 'transparent',
-                            borderRadius: '6px'
-                          }}>
-                            <span className="item-name" style={{ fontWeight: '500', flex: '1' }}>{item.name}</span>
-                            <span className="item-quantity" style={{ 
-                              backgroundColor: 'rgba(74, 111, 255, 0.1)', 
-                              color: '#4A6FFF',
-                              padding: '3px 8px',
-                              borderRadius: '12px',
-                              fontSize: '0.8rem',
-                              fontWeight: '600',
-                              marginRight: '10px'
-                            }}>x{item.quantity}</span>
-                            <span className="item-price" style={{ fontWeight: '600', color: '#4A6FFF' }}>{formatCurrency(item.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="order-actions" style={{ 
-                        display: 'flex', 
-                        gap: '8px',
-                        marginTop: '20px',
-                        flexWrap: 'wrap'
-                      }}>
-                        {order.status === 'Pending' && (
-                          <>
-                            <button 
-                              className="order-btn accept"
-                              style={{
-                                flex: '1',
-                                minWidth: '120px',
-                                padding: '10px 15px',
-                                backgroundColor: '#28C76F',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '10px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onClick={() => handleOrderStatusChange(order.id, 'Processing')}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(40, 199, 111, 0.3)';
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                              }}
-                            >
-                              <i className="fas fa-check"></i> Accept
-                            </button>
-                            <button 
-                              className="order-btn reject"
-                              style={{
-                                flex: '1',
-                                minWidth: '120px',
-                                padding: '10px 15px',
-                                backgroundColor: '#FF5A60',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '10px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onClick={() => handleOrderStatusChange(order.id, 'Cancelled')}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(255, 90, 96, 0.3)';
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                              }}
-                            >
-                              <i className="fas fa-times"></i> Reject
-                            </button>
-                          </>
-                        )}
-                        
-                        {order.status === 'Processing' && (
-                          <>
-                            <button 
-                              className="order-btn complete"
-                              style={{
-                                flex: '1',
-                                minWidth: '120px',
-                                padding: '10px 15px',
-                                backgroundColor: '#28C76F',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '10px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onClick={() => handleOrderStatusChange(order.id, 'Completed')}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(40, 199, 111, 0.3)';
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                              }}
-                            >
-                              <i className="fas fa-check-circle"></i> Mark as Complete
-                            </button>
-                            {!order.agent_id && (
-                              <button 
-                                className="order-btn assign"
-                                style={{
-                                  flex: '1',
-                                  minWidth: '120px',
-                                  padding: '10px 15px',
-                                  backgroundColor: '#4A6FFF',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '10px',
-                                  fontWeight: '600',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '8px',
-                                  transition: 'all 0.2s ease'
-                                }}
-                                onClick={() => setShowDeliveryAssignModal({ show: true, orderId: order.id })}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.transform = 'translateY(-2px)';
-                                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(74, 111, 255, 0.3)';
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.transform = 'translateY(0)';
-                                  e.currentTarget.style.boxShadow = 'none';
-                                }}
-                              >
-                                <i className="fas fa-truck"></i> Assign Delivery
-                              </button>
-                            )}
-                          </>
-                        )}
-                        
-                        <button 
-                          className="order-btn details"
-                          style={{
-                            flex: order.status !== 'Pending' && order.status !== 'Processing' ? '1' : 'initial',
-                            minWidth: '120px',
-                            padding: '10px 15px',
-                            backgroundColor: 'rgba(248, 249, 250, 0.9)',
-                            color: '#2A2E43',
-                            border: '1px solid #eee',
-                            borderRadius: '10px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onClick={() => handleViewOrderDetails(order)}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.backgroundColor = '#edf2ff';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.backgroundColor = 'rgba(248, 249, 250, 0.9)';
-                          }}
-                        >
-                          <i className="fas fa-eye"></i> View Details
-                        </button>
-                      </div>
-                      
-                      {/* Order timeline indicator */}
-                      <div style={{ 
-                        marginTop: '15px', 
-                        paddingTop: '15px',
-                        borderTop: '1px solid #eee',
-                        display: 'flex',
-                        justifyContent: 'center'
-                      }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          width: '80%',
-                          position: 'relative'
-                        }}>
-                          <div style={{ 
-                            width: '100%', 
-                            height: '3px', 
-                            backgroundColor: '#eee',
-                            position: 'absolute',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 1
-                          }}></div>
-                          
-                          {/* Progress bar */}
-                          <div style={{ 
-                            width: 
-                              order.status === 'Pending' ? '0%' :
-                              order.status === 'Processing' ? '50%' :
-                              order.status === 'Delivered' || order.status === 'Completed' ? '100%' :
-                              order.status === 'Cancelled' ? '0%' : '0%',
-                            height: '3px', 
-                            backgroundColor: 
-                              order.status === 'Cancelled' ? '#FF5A60' : '#28C76F',
-                            position: 'absolute',
-                            top: '50%',
-                            left: 0,
-                            transform: 'translateY(-50%)',
-                            zIndex: 2,
-                            transition: 'width 0.5s ease'
-                          }}></div>
-                          
-                          {/* Order Timeline Steps */}
-                          <div style={{ 
-                            width: '20px', 
-                            height: '20px', 
-                            borderRadius: '50%', 
-                            backgroundColor: 
-                              order.status === 'Pending' || 
-                              order.status === 'Processing' || 
-                              order.status === 'Delivered' || 
-                              order.status === 'Completed' ? '#28C76F' : 
-                              '#FF5A60',
-                            zIndex: 3,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <i className="fas fa-check" style={{ fontSize: '0.7rem', color: 'white' }}></i>
-                          </div>
-                          
-                          <div style={{ 
-                            flexGrow: 1, 
-                            display: 'flex', 
-                            justifyContent: 'center' 
-                          }}>
-                            <div style={{ 
-                              width: '20px', 
-                              height: '20px', 
-                              borderRadius: '50%', 
-                              backgroundColor: 
-                                order.status === 'Processing' || 
-                                order.status === 'Delivered' || 
-                                order.status === 'Completed' ? '#28C76F' : 
-                                order.status === 'Cancelled' ? '#FF5A60' : 
-                                '#eee',
-                              zIndex: 3,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              {(order.status === 'Processing' || order.status === 'Delivered' || order.status === 'Completed') && 
-                                <i className="fas fa-truck" style={{ fontSize: '0.7rem', color: 'white' }}></i>
-                              }
-                              {order.status === 'Cancelled' && 
-                                <i className="fas fa-times" style={{ fontSize: '0.7rem', color: 'white' }}></i>
-                              }
-                            </div>
-                          </div>
-                          
-                          <div style={{ 
-                            width: '20px', 
-                            height: '20px', 
-                            borderRadius: '50%', 
-                            backgroundColor: 
-                              order.status === 'Delivered' || 
-                              order.status === 'Completed' ? '#28C76F' : 
-                              order.status === 'Cancelled' ? '#FF5A60' : 
-                              '#eee',
-                            zIndex: 3,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            {(order.status === 'Delivered' || order.status === 'Completed') && 
-                              <i className="fas fa-flag-checkered" style={{ fontSize: '0.7rem', color: 'white' }}></i>
-                            }
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Order timestamp */}
-                      <div style={{ 
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        marginTop: '10px',
-                        fontSize: '0.8rem',
-                        color: '#7A7C85',
-                        fontStyle: 'italic'
-                      }}>
-                        <span>
-                          <i className="fas fa-history" style={{ marginRight: '5px' }}></i>
-                          Last updated: {formatDate(order.updatedAt || order.orderDate)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="analytics-section">
-              <div className="analytics-cards">
-                <div className="analytics-card">
-                  <h3>Revenue Overview</h3>
-                  <div className="analytics-content">
-                    <p>This feature will be available soon.</p>
-                    <p>Track your sales performance, popular products, and business growth.</p>
-                  </div>
-                </div>
-                
-                <div className="analytics-card">
-                  <h3>Product Performance</h3>
-                  <div className="analytics-content">
-                    <p>This feature will be available soon.</p>
-                    <p>See which products are performing best and identify growth opportunities.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
+          {/* Render Tab Content */}
+          {renderTabContent()}
+          
           {/* Product Form Modal */}
-          {showProductForm && (
-            <div className="modal-overlay" onClick={() => closeForm()}>
-              <div className="product-form" onClick={(e) => e.stopPropagation()}>
-                <button 
-                  className="form-close"
-                  onClick={closeForm}
-                  aria-label="Close form"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-                
-                <div className="form-header">
-                  <h3>{editingProductId ? 'Edit Product' : 'Add New Product'}</h3>
-                </div>
-                
-                <form onSubmit={handleSubmit}>
-                  <div className="form-group">
-                    <label htmlFor="product-name">Product Name</label>
-                    <input
-                      id="product-name"
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className={formErrors.name ? 'error-input' : ''}
-                      placeholder="Enter product name"
-                      required
-                    />
-                    {formErrors.name && <div className="error-message">{formErrors.name}</div>}
-                  </div>
+          {renderProductForm()}
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="product-category">Category</label>
-                      <select
-                        id="product-category"
-                        value={formData.category}
-                        onChange={(e) => setFormData({...formData, category: e.target.value})}
-                        className={formErrors.category ? 'error-input' : ''}
-                        required
-                      >
-                        <option value="">Select Category</option>
-                        <option value="Fresh Produce">Fresh Produce</option>
-                        <option value="Dairy & Eggs">Dairy & Eggs</option>
-                        <option value="Pantry Items">Pantry Items</option>
-                        <option value="Wholesale">Wholesale</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="Stationery">Stationery</option>
-                        <option value="Textiles">Textiles</option>
-                        <option value="Supermarket">Supermarket</option>
-                        <option value="Restaurant">Restaurant</option>
-                      </select>
-                      {formErrors.category && <div className="error-message">{formErrors.category}</div>}
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="product-price">Price (₹)</label>
-                      <input
-                        id="product-price"
-                        type="number"
-                        value={formData.price}
-                        onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className={formErrors.price ? 'error-input' : ''}
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        required
-                      />
-                      {formErrors.price && <div className="error-message">{formErrors.price}</div>}
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="product-stock">Initial Stock</label>
-                      <input
-                        id="product-stock"
-                        type="number"
-                        value={formData.stock}
-                        onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                        className={formErrors.stock ? 'error-input' : ''}
-                        min="0"
-                        placeholder="0"
-                        required
-                      />
-                      {formErrors.stock && <div className="error-message">{formErrors.stock}</div>}
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="product-moq">Minimum Order Quantity</label>
-                      <input
-                        id="product-moq"
-                        type="number"
-                        value={formData.moq}
-                        onChange={(e) => setFormData({...formData, moq: e.target.value})}
-                        className={formErrors.moq ? 'error-input' : ''}
-                        min="1"
-                        placeholder="1"
-                        required
-                      />
-                      {formErrors.moq && <div className="error-message">{formErrors.moq}</div>}
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="product-reorder">Reorder Point</label>
-                      <input
-                        id="product-reorder"
-                        type="number"
-                        value={formData.reorder_point}
-                        onChange={(e) => setFormData({...formData, reorder_point: e.target.value})}
-                        className={formErrors.reorder_point ? 'error-input' : ''}
-                        min="0"
-                        placeholder="10"
-                        required
-                      />
-                      {formErrors.reorder_point && <div className="error-message">{formErrors.reorder_point}</div>}
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="product-description">Description</label>
-                    <textarea
-                      id="product-description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      rows="3"
-                      placeholder="Describe your product (optional)"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Product Image</label>
-                    <div 
-                      className="image-upload-area"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {imagePreview ? (
-                        <img src={imagePreview} alt="Preview" className="image-preview" />
-                      ) : (
-                        <div className="upload-placeholder">
-                          <i className="fas fa-cloud-upload-alt"></i>
-                          <p>Click to upload an image</p>
-                          <span>or drag and drop</span>
-                        </div>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setFormData({...formData, image: file});
-                            setImagePreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                      />
-                    </div>
-                  </div>
-
-                  {formErrors.submit && (
-                    <div className="form-error">{formErrors.submit}</div>
-                  )}
-
-                  <div className="form-actions">
-                    <button 
-                      type="button" 
-                      className="cancel-btn"
-                      onClick={closeForm}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit" 
-                      className={`submit-btn ${isSubmitting ? 'loading' : ''}`}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting && <span className="spinner"></span>}
-                      {isSubmitting ? 'Saving...' : (editingProductId ? 'Update Product' : 'Add Product')}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Delivery Agent Assignment Modal */}
-          {showDeliveryAssignModal.show && (
-            <div className="modal-overlay" onClick={() => setShowDeliveryAssignModal({ show: false, orderId: null })}>
-              <div className="delivery-assign-modal" onClick={(e) => e.stopPropagation()}>
-                <button 
-                  className="form-close"
-                  onClick={() => setShowDeliveryAssignModal({ show: false, orderId: null })}
-                  aria-label="Close form"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-                
-                <div className="form-header">
-                  <h3>Assign Delivery Agent</h3>
-                </div>
-                
-                {isLoadingAgents ? (
-                  <div className="loading-spinner">
-                    <i className="fas fa-spinner fa-spin"></i>
-                    <p>Loading delivery agents...</p>
-                  </div>
-                ) : deliveryAgents.length === 0 ? (
-                  <div className="empty-state">
-                    <i className="fas fa-user"></i>
-                    <h3>No delivery agents available</h3>
-                    <p>Please add delivery agents to assign orders.</p>
-                  </div>
-                ) : (
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!selectedDeliveryAgent) {
-                      showNotification('Please select a delivery agent', 'error');
-                      return;
-                    }
-                    handleAssignDelivery(showDeliveryAssignModal.orderId, parseInt(selectedDeliveryAgent));
-                    setShowDeliveryAssignModal({ show: false, orderId: null });
-                    setSelectedDeliveryAgent('');
-                  }}>
-                    <div className="form-group">
-                      <label htmlFor="delivery-agent">Select Delivery Agent</label>
-                      <select
-                        id="delivery-agent"
-                        value={selectedDeliveryAgent}
-                        onChange={(e) => setSelectedDeliveryAgent(e.target.value)}
-                        required
-                      >
-                        <option value="">Select Agent</option>
-                        {deliveryAgents.map(agent => (
-                          <option key={agent.id} value={agent.id}>
-                            {agent.name} ({agent.vehicle_type}) - {agent.contact_number}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-actions">
-                      <button 
-                        type="button" 
-                        className="cancel-btn"
-                        onClick={() => setShowDeliveryAssignModal({ show: false, orderId: null })}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        type="submit" 
-                        className="submit-btn"
-                      >
-                        Assign Agent
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Notification */}
-          {notification.show && (
-            <div className={`notification ${notification.type}`}>
-              <i className={`fas ${notification.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
-              <p>{notification.message}</p>
+          {/* Deal Form Modal - Move this outside the renderDeals function */}
+          {showDealForm && (
+          <div className="modal-overlay">
+            <div className="product-form deal-form" style={{ width: '90%', maxWidth: '600px' }}>
               <button 
-                className="close-notification"
-                onClick={() => setNotification({ ...notification, show: false })}
+                className="form-close" 
+                onClick={closeDealForm}
+                style={{
+                  position: 'absolute',
+                  right: '15px',
+                  top: '15px',
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  color: '#555'
+                }}
               >
                 <i className="fas fa-times"></i>
               </button>
-            </div>
-          )}
 
-          {/* Deal Form Modal */}
-          {showDealForm && (
-            <div className="modal-overlay" onClick={() => closeDealForm()}>
-              <div className="product-form" onClick={(e) => e.stopPropagation()}>
-                <button 
-                  className="form-close"
-                  onClick={closeDealForm}
-                  aria-label="Close form"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-                
-                <div className="form-header">
-                  <h3>{editingDealId ? 'Edit Deal' : 'Create New Deal'}</h3>
-                </div>
-                
-                <form onSubmit={handleDealSubmit}>
+              <div className="form-header" style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <h3 style={{ color: '#2c3e50', fontSize: '1.5rem' }}>
+                  {editingDealId ? 'Edit Deal' : 'Create New Deal'}
+                </h3>
+                <p style={{ color: '#7f8c8d', fontSize: '0.9rem', marginTop: '5px' }}>
+                  {editingDealId ? 'Update your deal details' : 'Add a new deal to attract more customers'}
+                </p>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const errors = validateDealForm();
+                if (Object.keys(errors).length > 0) {
+                  setDealFormErrors(errors);
+                  return;
+                }
+                handleCreateOrUpdateDeal();
+              }}>
+                <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="deal-title">Deal Title</label>
+                    <label htmlFor="deal_title" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                      Deal Title <span style={{ color: 'red' }}>*</span>
+                    </label>
                     <input
-                      id="deal-title"
                       type="text"
+                      id="deal_title"
                       value={dealFormData.deal_title}
                       onChange={(e) => setDealFormData({...dealFormData, deal_title: e.target.value})}
                       className={dealFormErrors.deal_title ? 'error-input' : ''}
                       placeholder="Enter deal title"
-                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: dealFormErrors.deal_title ? '1px solid #e74c3c' : '1px solid #dcdde1',
+                        fontSize: '0.9rem'
+                      }}
                     />
-                    {dealFormErrors.deal_title && <div className="error-message">{dealFormErrors.deal_title}</div>}
+                    {dealFormErrors.deal_title && (
+                      <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                        <i className="fas fa-exclamation-circle"></i> {dealFormErrors.deal_title}
+                      </div>
+                    )}
                   </div>
 
-                  {!editingDealId && (
-                    <div className="form-group">
-                      <label htmlFor="product-id">Select Product</label>
-                      <select
-                        id="product-id"
-                        value={dealFormData.product_id}
-                        onChange={(e) => setDealFormData({...dealFormData, product_id: e.target.value})}
-                        className={dealFormErrors.product_id ? 'error-input' : ''}
-                        required={!editingDealId}
-                        disabled={editingDealId !== null}
-                      >
-                        <option value="">Select a product</option>
-                        {products.map(product => (
-                          <option key={product.product_id} value={product.product_id}>
-                            {product.product_name}
-                          </option>
-                        ))}
-                      </select>
-                      {dealFormErrors.product_id && <div className="error-message">{dealFormErrors.product_id}</div>}
-                    </div>
-                  )}
-
                   <div className="form-group">
-                    <label htmlFor="deal-type">Deal Type</label>
+                    <label htmlFor="deal_type" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                      Deal Type <span style={{ color: 'red' }}>*</span>
+                    </label>
                     <select
-                      id="deal-type"
+                      id="deal_type"
                       value={dealFormData.deal_type}
                       onChange={(e) => setDealFormData({...dealFormData, deal_type: e.target.value})}
                       className={dealFormErrors.deal_type ? 'error-input' : ''}
-                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: dealFormErrors.deal_type ? '1px solid #e74c3c' : '1px solid #dcdde1',
+                        fontSize: '0.9rem',
+                        backgroundColor: '#fff'
+                      }}
                     >
-                      <option value="">Select Deal Type</option>
+                      <option value="">Select deal type</option>
                       <option value="DISCOUNT">Discount</option>
-                      <option value="BUY_ONE_GET_ONE">Buy One Get One Free</option>
-                      <option value="BUNDLE">Bundle Offer</option>
+                      <option value="BUY_ONE_GET_ONE">Buy One Get One</option>
                       <option value="FLASH_SALE">Flash Sale</option>
-                      <option value="CLEARANCE">Clearance Sale</option>
                     </select>
-                    {dealFormErrors.deal_type && <div className="error-message">{dealFormErrors.deal_type}</div>}
+                    {dealFormErrors.deal_type && (
+                      <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                        <i className="fas fa-exclamation-circle"></i> {dealFormErrors.deal_type}
+                      </div>
+                    )}
                   </div>
+                </div>
 
-                  {dealFormData.deal_type === 'DISCOUNT' && (
+                {dealFormData.deal_type === 'DISCOUNT' && (
+                  <div className="discount-options" style={{ 
+                    backgroundColor: '#f8f9fa', 
+                    padding: '15px', 
+                    borderRadius: '8px',
+                    marginBottom: '15px'
+                  }}>
+                    <p style={{ fontSize: '0.9rem', marginBottom: '10px', fontWeight: '500', color: '#e67e22' }}>
+                      <i className="fas fa-info-circle"></i> Choose either percentage OR amount discount
+                    </p>
                     <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="discount-percentage">Discount Percentage (%)</label>
-                        <input
-                          id="discount-percentage"
-                          type="number"
-                          value={dealFormData.discount_percentage}
-                          onChange={(e) => {
-                            setDealFormData({
-                              ...dealFormData, 
-                              discount_percentage: e.target.value,
-                              discount_amount: '' // Clear amount when percentage is entered
-                            });
-                          }}
-                          className={dealFormErrors.discount_percentage ? 'error-input' : ''}
-                          min="0"
-                          max="100"
-                          placeholder="e.g., 15"
-                          disabled={dealFormData.discount_amount}
-                        />
-                        {dealFormErrors.discount_percentage && 
-                          <div className="error-message">{dealFormErrors.discount_percentage}</div>
-                        }
+                      <div className="form-group" style={{ 
+                        opacity: dealFormData.discount_amount ? '0.5' : '1',
+                        transition: 'opacity 0.3s'
+                      }}>
+                        <label htmlFor="discount_percentage" style={{ 
+                          display: 'block', 
+                          marginBottom: '8px', 
+                          fontWeight: '500',
+                          color: dealFormData.discount_percentage ? '#2980b9' : '#7f8c8d'
+                        }}>
+                          Discount Percentage (%)
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="number"
+                            id="discount_percentage"
+                            value={dealFormData.discount_percentage}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDealFormData({
+                                ...dealFormData, 
+                                discount_percentage: val,
+                                discount_amount: val ? '' : dealFormData.discount_amount
+                              });
+                            }}
+                            className={dealFormErrors.discount_percentage ? 'error-input' : ''}
+                            placeholder="e.g., 10"
+                            min="0"
+                            max="100"
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              borderRadius: '6px',
+                              border: dealFormData.discount_percentage 
+                                ? '2px solid #3498db' 
+                                : dealFormErrors.discount_percentage 
+                                  ? '1px solid #e74c3c' 
+                                  : '1px solid #dcdde1',
+                              fontSize: '0.9rem',
+                              backgroundColor: dealFormData.discount_amount ? '#f5f5f5' : '#ffffff',
+                              color: '#333333',
+                              cursor: dealFormData.discount_amount ? 'not-allowed' : 'text'
+                            }}
+                          />
+                          <span style={{ 
+                            position: 'absolute', 
+                            right: '10px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)', 
+                            color: dealFormData.discount_percentage ? '#3498db' : '#7f8c8d' 
+                          }}>%</span>
+                        </div>
+                        {dealFormErrors.discount_percentage && (
+                          <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                            <i className="fas fa-exclamation-circle"></i> {dealFormErrors.discount_percentage}
+                          </div>
+                        )}
                       </div>
 
-                      <div className="form-group">
-                        <label htmlFor="discount-amount">Discount Amount (₹)</label>
-                        <input
-                          id="discount-amount"
-                          type="number"
-                          value={dealFormData.discount_amount}
-                          onChange={(e) => {
-                            setDealFormData({
-                              ...dealFormData, 
-                              discount_amount: e.target.value,
-                              discount_percentage: '' // Clear percentage when amount is entered
-                            });
-                          }}
-                          className={dealFormErrors.discount_amount ? 'error-input' : ''}
-                          min="0"
-                          step="0.01"
-                          placeholder="e.g., 100.00"
-                          disabled={dealFormData.discount_percentage}
-                        />
-                        {dealFormErrors.discount_amount && 
-                          <div className="error-message">{dealFormErrors.discount_amount}</div>
-                        }
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        margin: '0 15px',
+                        position: 'relative'
+                      }}>
+                        <span style={{ 
+                          fontWeight: 'bold', 
+                          color: '#7f8c8d',
+                          background: '#f8f9fa',
+                          padding: '5px 10px',
+                          borderRadius: '50%',
+                          border: '1px solid #dcdde1'
+                        }}>OR</span>
+                      </div>
+
+                      <div className="form-group" style={{ 
+                        opacity: dealFormData.discount_percentage ? '0.5' : '1',
+                        transition: 'opacity 0.3s'
+                      }}>
+                        <label htmlFor="discount_amount" style={{ 
+                          display: 'block', 
+                          marginBottom: '8px', 
+                          fontWeight: '500',
+                          color: dealFormData.discount_amount ? '#27ae60' : '#7f8c8d'
+                        }}>
+                          Discount Amount
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <span style={{ 
+                            position: 'absolute', 
+                            left: '10px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)', 
+                            color: dealFormData.discount_amount ? '#27ae60' : '#7f8c8d' 
+                          }}>₹</span>
+                          <input
+                            type="number"
+                            id="discount_amount"
+                            value={dealFormData.discount_amount}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDealFormData({
+                                ...dealFormData, 
+                                discount_amount: val,
+                                discount_percentage: val ? '' : dealFormData.discount_percentage
+                              });
+                            }}
+                            className={dealFormErrors.discount_amount ? 'error-input' : ''}
+                            placeholder="e.g., 100"
+                            min="0"
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px 10px 25px',
+                              borderRadius: '6px',
+                              border: dealFormData.discount_amount 
+                                ? '2px solid #2ecc71' 
+                                : dealFormErrors.discount_amount 
+                                  ? '1px solid #e74c3c' 
+                                  : '1px solid #dcdde1',
+                              fontSize: '0.9rem',
+                              backgroundColor: dealFormData.discount_percentage ? '#f5f5f5' : '#ffffff',
+                              color: '#333333',
+                              cursor: dealFormData.discount_percentage ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        </div>
+                        {dealFormErrors.discount_amount && (
+                          <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                            <i className="fas fa-exclamation-circle"></i> {dealFormErrors.discount_amount}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-
-                  {dealFormErrors.discount && <div className="error-message">{dealFormErrors.discount}</div>}
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="start-date">Start Date</label>
-                      <input
-                        id="start-date"
-                        type="date"
-                        value={dealFormData.start_date}
-                        onChange={(e) => setDealFormData({...dealFormData, start_date: e.target.value})}
-                        className={dealFormErrors.start_date ? 'error-input' : ''}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                      {dealFormErrors.start_date && <div className="error-message">{dealFormErrors.start_date}</div>}
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="end-date">End Date</label>
-                      <input
-                        id="end-date"
-                        type="date"
-                        value={dealFormData.end_date}
-                        onChange={(e) => setDealFormData({...dealFormData, end_date: e.target.value})}
-                        className={dealFormErrors.end_date ? 'error-input' : ''}
-                        min={dealFormData.start_date || new Date().toISOString().split('T')[0]}
-                      />
-                      {dealFormErrors.end_date && <div className="error-message">{dealFormErrors.end_date}</div>}
-                    </div>
+                    {dealFormErrors.discount && (
+                      <div className="error-message" style={{ 
+                        color: '#e74c3c', 
+                        fontSize: '0.8rem', 
+                        marginTop: '5px',
+                        textAlign: 'center',
+                        padding: '8px',
+                        backgroundColor: '#ffeaea',
+                        borderRadius: '4px'
+                      }}>
+                        <i className="fas fa-exclamation-triangle"></i> {dealFormErrors.discount}
+                      </div>
+                    )}
                   </div>
-
+                )}
+                
+                <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="deal-description">Description</label>
-                    <textarea
-                      id="deal-description"
-                      value={dealFormData.deal_description}
-                      onChange={(e) => setDealFormData({...dealFormData, deal_description: e.target.value})}
-                      rows="3"
-                      placeholder="Describe your deal (optional)"
+                    <label htmlFor="start_date" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      id="start_date"
+                      value={dealFormData.start_date}
+                      onChange={(e) => setDealFormData({...dealFormData, start_date: e.target.value})}
+                      className={dealFormErrors.start_date ? 'error-input' : ''}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: dealFormErrors.start_date ? '1px solid #e74c3c' : '1px solid #dcdde1',
+                        fontSize: '0.9rem'
+                      }}
                     />
+                    {dealFormErrors.start_date && (
+                      <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                        <i className="fas fa-exclamation-circle"></i> {dealFormErrors.start_date}
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-group">
-                    <div className="checkbox-group">
-                      <input
-                        id="is-featured"
-                        type="checkbox"
-                        checked={dealFormData.is_featured}
-                        onChange={(e) => setDealFormData({...dealFormData, is_featured: e.target.checked})}
-                      />
-                      <label htmlFor="is-featured">Feature this deal (show on homepage)</label>
-                    </div>
+                    <label htmlFor="end_date" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      id="end_date"
+                      value={dealFormData.end_date}
+                      onChange={(e) => setDealFormData({...dealFormData, end_date: e.target.value})}
+                      className={dealFormErrors.end_date ? 'error-input' : ''}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: dealFormErrors.end_date ? '1px solid #e74c3c' : '1px solid #dcdde1',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                    {dealFormErrors.end_date && (
+                      <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                        <i className="fas fa-exclamation-circle"></i> {dealFormErrors.end_date}
+                      </div>
+                    )}
                   </div>
+                </div>
 
-                  {dealFormErrors.submit && (
-                    <div className="form-error">{dealFormErrors.submit}</div>
-                  )}
+                <div className="form-group">
+                  <label htmlFor="deal_description" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                    Description
+                  </label>
+                  <textarea
+                    id="deal_description"
+                    value={dealFormData.deal_description}
+                    onChange={(e) => setDealFormData({...dealFormData, deal_description: e.target.value})}
+                    placeholder="Describe your deal to customers"
+                    rows="3"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #dcdde1',
+                      fontSize: '0.9rem',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
 
-                  <div className="form-actions">
-                    <button 
-                      type="button" 
-                      className="cancel-btn"
-                      onClick={closeDealForm}
+                {!editingDealId && (
+                  <div className="form-group">
+                    <label htmlFor="product_id" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                      Select Product <span style={{ color: 'red' }}>*</span>
+                    </label>
+                    <select
+                      id="product_id"
+                      value={dealFormData.product_id}
+                      onChange={(e) => setDealFormData({...dealFormData, product_id: e.target.value})}
+                      className={dealFormErrors.product_id ? 'error-input' : ''}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: dealFormErrors.product_id ? '1px solid #e74c3c' : '1px solid #dcdde1',
+                        fontSize: '0.9rem',
+                        backgroundColor: '#fff'
+                      }}
                     >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit" 
-                      className={`submit-btn ${isSubmitting ? 'loading' : ''}`}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting && <span className="spinner"></span>}
-                      {isSubmitting ? 'Saving...' : (editingDealId ? 'Update Deal' : 'Create Deal')}
-                    </button>
+                      <option value="">Select a product</option>
+                      {products.map(product => (
+                        <option key={product.product_id} value={product.product_id}>
+                          {product.product_name} - ₹{product.price}
+                        </option>
+                      ))}
+                    </select>
+                    {dealFormErrors.product_id && (
+                      <div className="error-message" style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px' }}>
+                        <i className="fas fa-exclamation-circle"></i> {dealFormErrors.product_id}
+                      </div>
+                    )}
                   </div>
-                </form>
-              </div>
+                )}
+
+                <div className="form-group checkbox-group" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '15px',
+                  padding: '10px',
+                  backgroundColor: dealFormData.is_featured ? '#fff8e1' : '#f8f9fa',
+                  borderRadius: '6px',
+                  border: dealFormData.is_featured ? '1px solid #ffd54f' : '1px solid #eee'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="is_featured"
+                    checked={dealFormData.is_featured}
+                    onChange={(e) => setDealFormData({...dealFormData, is_featured: e.target.checked})}
+                    style={{ width: '18px', height: '18px', accentColor: '#f39c12' }}
+                  />
+                  <label htmlFor="is_featured" style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    {dealFormData.is_featured && <i className="fas fa-star" style={{ color: '#f39c12' }}></i>}
+                    Feature this deal (show on homepage)
+                  </label>
+                </div>
+
+                {dealFormErrors.submit && (
+                  <div className="form-error" style={{
+                    color: '#fff',
+                    background: '#e74c3c',
+                    padding: '10px 15px',
+                    borderRadius: '6px',
+                    marginTop: '15px',
+                    fontSize: '0.9rem'
+                  }}>
+                    <i className="fas fa-exclamation-triangle"></i> {dealFormErrors.submit}
+                  </div>
+                )}
+
+                <div className="form-actions" style={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  marginTop: '25px',
+                  gap: '10px'
+                }}>
+                  <button 
+                    type="button" 
+                    className="cancel-btn" 
+                    onClick={closeDealForm}
+                    style={{
+                      padding: '10px 20px',
+                      borderRadius: '6px',
+                      border: '1px solid #dcdde1',
+                      background: '#f5f6fa',
+                      color: '#2d3436',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={e => e.target.style.background = '#dfe6e9'}
+                    onMouseLeave={e => e.target.style.background = '#f5f6fa'}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="submit-btn" 
+                    style={{
+                      padding: '10px 30px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: '#2ecc71',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={e => e.target.style.background = '#27ae60'}
+                    onMouseLeave={e => e.target.style.background = '#2ecc71'}
+                  >
+                    <i className={`fas ${editingDealId ? 'fa-save' : 'fa-plus-circle'}`}></i>
+                    {editingDealId ? 'Update Deal' : 'Create Deal'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+          {/* Notification */}
+          {notification.show && (
+            <div className={`notification ${notification.type}`}>
+              <i className={`fas ${
+                notification.type === 'success' ? 'fa-check-circle' :
+                notification.type === 'error' ? 'fa-exclamation-circle' :
+                'fa-info-circle'
+              }`}></i>
+              <p>{notification.message}</p>
+              <button 
+                className="close-notification"
+                onClick={() => setNotification({ show: false, message: '', type: '' })}
+              >
+                <i className="fas fa-times"></i>
+              </button>
             </div>
           )}
         </div>
