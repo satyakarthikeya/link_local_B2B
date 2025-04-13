@@ -12,7 +12,7 @@ const D_Homepage = () => {
   const { currentUser, getProfileName } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState("Coimbatore, Tamil Nadu");
+  const [currentLocation, setCurrentLocation] = useState("coimbatore, tamil nadu");
   const [activeTab, setActiveTab] = useState("all");
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -560,25 +560,25 @@ const D_Homepage = () => {
                 <input type="text" placeholder="Search location..." />
               </div>
               <div className="location-list">
-                <div className="location-option" onClick={() => updateLocation("Coimbatore, Tamil Nadu")}>
+                <div className="location-option" onClick={() => updateLocation("coimbatore, tamil nadu")}>
                   <i className="fas fa-map-marker-alt"></i>
-                  <span>Coimbatore, Tamil Nadu</span>
+                  <span>coimbatore, tamil nadu</span>
                 </div>
-                <div className="location-option" onClick={() => updateLocation("Chennai, Tamil Nadu")}>
+                <div className="location-option" onClick={() => updateLocation("chennai, tamil nadu")}>
                   <i className="fas fa-map-marker-alt"></i>
-                  <span>Chennai, Tamil Nadu</span>
+                  <span>chennai, tamil nadu</span>
                 </div>
-                <div className="location-option" onClick={() => updateLocation("Bengaluru, Karnataka")}>
+                <div className="location-option" onClick={() => updateLocation("bengaluru, karnataka")}>
                   <i className="fas fa-map-marker-alt"></i>
-                  <span>Bengaluru, Karnataka</span>
+                  <span>bengaluru, karnataka</span>
                 </div>
-                <div className="location-option" onClick={() => updateLocation("Madurai, Tamil Nadu")}>
+                <div className="location-option" onClick={() => updateLocation("madurai, tamil nadu")}>
                   <i className="fas fa-map-marker-alt"></i>
-                  <span>Madurai, Tamil Nadu</span>
+                  <span>madurai, tamil nadu</span>
                 </div>
-                <div className="location-option" onClick={() => updateLocation("Salem, Tamil Nadu")}>
+                <div className="location-option" onClick={() => updateLocation("salem, tamil nadu")}>
                   <i className="fas fa-map-marker-alt"></i>
-                  <span>Salem, Tamil Nadu</span>
+                  <span>salem, tamil nadu</span>
                 </div>
               </div>
               <button 

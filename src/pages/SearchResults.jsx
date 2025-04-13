@@ -17,7 +17,7 @@ const PRODUCTS = [
     category: "stationery",
     seller: "Sunrise Stationers",
     moq: "5 packs",
-    location: "Coimbatore",
+    location: "coimbatore",
     area: "RS Puram",
     rating: 4.5,
     deliveryTime: "1-2 days",
@@ -33,7 +33,7 @@ const PRODUCTS = [
     category: "textiles",
     seller: "Chennai Silks",
     moq: "10 meters",
-    location: "Coimbatore",
+    location: "coimbatore",
     area: "Town Hall",
     rating: 4.2,
     deliveryTime: "2-3 days",
@@ -49,7 +49,7 @@ const PRODUCTS = [
     category: "electronics",
     seller: "Sunrise Electronics",
     moq: "20 sets",
-    location: "Coimbatore",
+    location: "coimbatore",
     area: "Gandhipuram",
     rating: 4.0,
     deliveryTime: "1 day",
@@ -65,7 +65,7 @@ const PRODUCTS = [
     category: "food",
     seller: "Lulu Market",
     moq: "5 units",
-    location: "Coimbatore",
+    location: "coimbatore",
     area: "Peelamedu",
     rating: 4.7,
     deliveryTime: "Same day",
@@ -81,7 +81,7 @@ const PRODUCTS = [
     category: "electronics",
     seller: "Sunrise Electronics",
     moq: "10 units",
-    location: "Coimbatore",
+    location: "coimbatore",
     area: "Gandhipuram",
     rating: 4.6,
     deliveryTime: "2-3 days",
@@ -97,7 +97,7 @@ const PRODUCTS = [
     category: "textiles",
     seller: "Brookfields Textiles",
     moq: "15 bundles",
-    location: "Coimbatore",
+    location: "coimbatore",
     area: "Brookfields",
     rating: 4.3,
     deliveryTime: "1-2 days",
@@ -114,7 +114,7 @@ const SearchResults = () => {
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
-  const [selectedCity, setSelectedCity] = useState('Coimbatore');
+  const [selectedCity, setSelectedCity] = useState('coimbatore');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

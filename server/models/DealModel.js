@@ -261,6 +261,58 @@ export const DealModel = {
     );
     
     return parseInt(result.rows[0].deal_count) > 0;
+  },
+
+  /**
+   * Get all deals with pagination and filtering
+   */
+  async getAllDeals(filters = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      sort_by = 'created_at',
+      sort_order = 'desc',
+      deal_type
+    } = filters;
+
+    let query = `
+      SELECT d.*, p.product_name, p.price, p.quantity_available, p.category, p.description,
+        b.business_name, b.area, b.street, b.city,
+        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock
+      FROM Deals d
+      JOIN Product p ON d.product_id = p.product_id
+      JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
+      WHERE 1=1
+    `;
+
+    const queryParams = [];
+    let paramCount = 1;
+
+    if (deal_type) {
+      query += ` AND d.deal_type = $${paramCount}`;
+      queryParams.push(deal_type);
+      paramCount++;
+    }
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) FROM (${query}) AS count`;
+    const totalResult = await db.query(countQuery, queryParams);
+    const total = parseInt(totalResult.rows[0].count);
+
+    // Add sorting
+    query += ` ORDER BY d.${sort_by} ${sort_order}`;
+    
+    // Add pagination
+    const offset = (page - 1) * limit;
+    query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    queryParams.push(limit, offset);
+
+    const result = await db.query(query, queryParams);
+
+    return {
+      deals: result.rows,
+      total
+    };
   }
 };
 

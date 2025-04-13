@@ -225,6 +225,18 @@ export const authAPI = {
 
 // Deals API
 export const dealAPI = {
+  // Get all deals (updated to use correct endpoint)
+  getAll: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams(filters);
+      const response = await api.get(`/deals/all?${params}`);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching deals:', error);
+      return [];
+    }
+  },
+
   // Create a new deal for a product
   createDeal: (productId, dealData) => api.post(`/deals/product/${productId}`, dealData),
 

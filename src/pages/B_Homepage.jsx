@@ -9,7 +9,7 @@ import api from '../utils/api';
 const ProductCard = lazy(() => import('../components/ProductCard'));
 const Cart = lazy(() => import('../components/Cart'));
 
-const CITIES = ['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi'];
+const CITIES = ['coimbatore', 'chennai', 'bangalore', 'mumbai', 'delhi'];
 const CATEGORIES = [
   { id: 'all', name: 'All Categories', icon: 'fa-th-large' },
   { id: 'SuperMarket', name: 'Supermarket', icon: 'fa-shopping-basket' },
@@ -45,7 +45,6 @@ const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue];
 };
 
-
 const B_Homepage = () => {
   useEffect(() => {
     document.body.style.minHeight = '100vh';
@@ -59,7 +58,7 @@ const B_Homepage = () => {
   const navigate = useNavigate();
   const { currentUser, getProfileName } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCity, setSelectedCity] = useState('Coimbatore');
+  const [selectedCity, setSelectedCity] = useState('coimbatore');
   const { cartItems, addToCart } = useCart();
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,13 +67,11 @@ const B_Homepage = () => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
   
-  // New state for products loaded from API
   const [products, setProducts] = useState([]);
+  const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [hotSellers, setHotSellers] = useState([]);
 
-  // Get business owner name
   const getBusinessOwnerName = () => {
     if (currentUser && currentUser.owner_name) {
       return currentUser.owner_name;
@@ -82,42 +79,76 @@ const B_Homepage = () => {
     return 'Business Owner';
   };
 
-  // Fetch products from backend API with city filter
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // Pass currentUser.city to filter products by city
-        let productsData = await api.products.getAll({ city: currentUser?.city });
-        if (!Array.isArray(productsData)) {
-          productsData = productsData?.data || [];
-        }
+        const response = await api.products.getProducts({ city: currentUser?.city });
+        let productsData = response.data?.products || [];
         
-        // Transform the products to match the expected format
+        console.log('API Response:', response);
+        console.log('Raw products data:', productsData);
+        
         const transformedProducts = productsData.map(product => ({
-          id: product.product_id,
-          name: product.product_name,
+          id: product.id,
+          name: product.name,
           price: `₹${product.price}`,
           numericPrice: product.price,
           category: product.category || 'uncategorized',
-          seller: product.business_name,
-          moq: `${Math.ceil(product.quantity_available * 0.1)} units`, // Just an example
-          location: product.area || 'Coimbatore',
-          area: product.street || 'Local Area',
-          rating: 4.5, // Example default rating
+          seller: product.seller,
+          seller_id: product.seller_id,
+          business_id: product.business_id,
+          moq: product.moq ? `${product.moq} units` : '1 unit',
+          location: product.location || 'coimbatore',
+          area: product.area || 'Local Area',
+          rating: 4.5,
           deliveryTime: "1-3 days",
-          image: product.image_url || "./src/assests/guddu.jpeg", // Default image if none provided
+          image: product.image_url || "./src/assests/guddu.jpeg",
           inStock: product.quantity_available > 0,
-          popularity: Math.floor(Math.random() * (100 - 70) + 70), // Generate random popularity
+          popularity: Math.floor(Math.random() * (100 - 70) + 70),
           description: product.description || 'No description available',
           quantity_available: product.quantity_available
         }));
         
         setProducts(transformedProducts);
+        console.log('Transformed products:', transformedProducts);
         
-        // Sort by popularity and set hot sellers
-        const popularProducts = [...transformedProducts].sort((a, b) => b.popularity - a.popularity);
-        setHotSellers(popularProducts.slice(0, 4));
+        try {
+          const dealsResponse = await api.deals.getActiveDeals({ city: currentUser?.city });
+          let dealsData = [];
+          
+          if (dealsResponse.data && dealsResponse.data.data) {
+            // Access the deals array from the nested data property
+            dealsData = dealsResponse.data.data;
+          }
+          
+          const transformedDeals = Array.isArray(dealsData) ? dealsData.map(deal => ({
+            id: deal.deal_id || deal.product_id,
+            name: deal.product_name,
+            price: `₹${deal.discounted_price || deal.price}`,
+            originalPrice: deal.original_price ? `₹${deal.original_price}` : undefined,
+            numericPrice: deal.discounted_price || deal.price,
+            discount: deal.discount_percentage || 0,
+            category: deal.category || 'uncategorized',
+            seller: deal.business_name,
+            moq: deal.moq ? `${deal.moq} units` : '1 unit',
+            location: deal.area || 'coimbatore',
+            area: deal.street || 'Local Area',
+            rating: 4.5,
+            deliveryTime: "1-3 days",
+            image: deal.image_url || "./src/assests/guddu.jpeg",
+            inStock: deal.quantity_available > 0,
+            popularity: Math.floor(Math.random() * (100 - 70) + 70),
+            description: deal.description || 'No description available',
+            quantity_available: deal.quantity_available,
+            isDeal: true
+          })) : [];
+          
+          setDeals(transformedDeals);
+        } catch (dealErr) {
+          console.error('Failed to fetch deals:', dealErr);
+          setDeals([]);
+        }
       } catch (err) {
         console.error('Failed to fetch products:', err);
         setError('Failed to load products. Please try again later.');
@@ -126,7 +157,7 @@ const B_Homepage = () => {
       }
     };
     
-    fetchProducts();
+    fetchData();
   }, [currentUser?.city]);
 
   useEffect(() => {
@@ -135,7 +166,6 @@ const B_Homepage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Handle add to cart with notification
   const handleAddToCart = (product) => {
     addToCart(product);
     setShowCartNotification(true);
@@ -143,16 +173,31 @@ const B_Homepage = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    if (!products.length) return [];
+    if (!products.length) {
+      console.log('No products available before filtering');
+      return [];
+    }
     
-    let filtered = products.filter((product) => {
-      return (
-        (selectedCategory === 'all' || product.category === selectedCategory) &&
-        (searchQuery === '' ||
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.seller.toLowerCase().includes(searchQuery.toLowerCase()))
+    console.log('Products before filtering:', products);
+    console.log('Current user:', currentUser);
+    console.log('Selected category:', selectedCategory);
+    console.log('Search query:', searchQuery);
+    
+    // Temporary: less strict filtering to debug issues
+    let filtered = products;
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    if (searchQuery !== '') {
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.seller.toLowerCase().includes(searchQuery.toLowerCase())
       );
-    });
+    }
+
+    console.log('Filtered products count:', filtered.length);
 
     return filtered.sort((a, b) => {
       switch (sortBy) {
@@ -167,7 +212,38 @@ const B_Homepage = () => {
           return b.popularity - a.popularity;
       }
     });
-  }, [products, selectedCategory, searchQuery, sortBy]);
+  }, [products, deals, selectedCategory, searchQuery, sortBy]);
+
+  const filteredDeals = useMemo(() => {
+    if (!deals.length) return [];
+    
+    let filtered = deals.filter((deal) => {
+      return (
+        (selectedCategory === 'all' || deal.category === selectedCategory) &&
+        (searchQuery === '' ||
+          deal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          deal.seller.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    });
+
+    console.log('Filtered deals:', filtered);
+
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'priceLow':
+          return a.numericPrice - b.numericPrice;
+        case 'priceHigh':
+          return b.numericPrice - a.numericPrice;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'discount':
+          return b.discount - a.discount;
+        case 'popular':
+        default:
+          return b.popularity - a.popularity;
+      }
+    });
+  }, [deals, selectedCategory, searchQuery, sortBy]);
 
   return (
     <div className="business-app">
@@ -184,7 +260,6 @@ const B_Homepage = () => {
       />
 
       <main className="business-main">
-        {/* Welcome Message */}
         <div className="welcome-banner">
           <div className="container">
             <h2>Welcome, {getBusinessOwnerName()}! 👋</h2>
@@ -192,7 +267,6 @@ const B_Homepage = () => {
           </div>
         </div>
 
-        {/* Hero Section */}
         <section className="hero-section">
           <div className="container">
             <div className="hero-content">
@@ -216,75 +290,30 @@ const B_Homepage = () => {
           </div>
         </section>
 
-        {/* HOT SELLERS - New Premium Showcase Section */}
-        <section className="hot-sellers-section">
-          <div className="container">
-            <div className="section-header">
-              <h2><i className="fas fa-fire"></i> Hot Sellers</h2>
-              <p>Today's most popular products from top suppliers</p>
-            </div>
-            
-            <div className="hot-deals-grid">
-              {!loading ? hotSellers.map((product) => (
-                <div key={product.id} className="deal-card">
-                  <div className="deal-img">
-                    <img src={product.image} alt={product.name} />
-                    <div className="deal-tag">HOT</div>
-                  </div>
-                  <div className="deal-content">
-                    <h3 className="deal-title">{product.name}</h3>
-                    <div className="deal-meta">
-                      <span className="deal-seller">
-                        <i className="fas fa-store"></i> {product.seller}
-                      </span>
-                      <span className="deal-rating">
-                        <i className="fas fa-star"></i> {product.rating}
-                      </span>
-                    </div>
-                    <div className="deal-price">
-                      {product.price}
-                    </div>
-                    <div className="deal-actions">
-                      <button className="add-cart-btn" onClick={() => handleAddToCart(product)}>
-                        <i className="fas fa-shopping-cart"></i> Add to Cart
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )) : (
-                <>
-                  <div className="deal-card skeleton"></div>
-                  <div className="deal-card skeleton"></div>
-                  <div className="deal-card skeleton"></div>
-                  <div className="deal-card skeleton"></div>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Products Showcase */}
         <section className="featured-products-showcase">
           <div className="container">
             <div className="section-header">
-              <h2>Today's Top Deals</h2>
-              <p>Best offers from local suppliers</p>
+              <h2><i className="fas fa-tag"></i> Today's Best Deals</h2>
+              <p>Special offers from local suppliers</p>
             </div>
             
             <div className="featured-products-grid">
-              {!loading && filteredProducts.slice(0, 3).map((product) => (
-                <div key={product.id} className="featured-product-card">
+              {!loading && filteredDeals.slice(0, 2).map((deal) => (
+                <div key={deal.id} className="featured-product-card">
                   <div className="featured-product-image">
-                    <img src={product.image} alt={product.name} />
-                    <div className="featured-badge">Featured</div>
+                    <img src={deal.image} alt={deal.name} />
+                    <div className="featured-badge">Save {deal.discount}%</div>
                   </div>
                   <div className="featured-product-info">
-                    <h3>{product.name}</h3>
-                    <div className="featured-product-price">{product.price}</div>
-                    <div className="featured-product-seller">by {product.seller}</div>
+                    <h3>{deal.name}</h3>
+                    <div className="featured-product-price">
+                      <span className="current-price">{deal.price}</span>
+                      <span className="original-price">{deal.originalPrice}</span>
+                    </div>
+                    <div className="featured-product-seller">by {deal.seller}</div>
                     <button 
                       className="featured-add-to-cart"
-                      onClick={() => handleAddToCart(product)}
+                      onClick={() => handleAddToCart(deal)}
                     >
                       Add to Cart
                     </button>
@@ -296,14 +325,18 @@ const B_Homepage = () => {
                 <>
                   <div className="featured-product-skeleton"></div>
                   <div className="featured-product-skeleton"></div>
-                  <div className="featured-product-skeleton"></div>
                 </>
+              )}
+
+              {!loading && filteredDeals.length === 0 && (
+                <div className="no-deals-message">
+                  <p>No deals available currently. Check back soon!</p>
+                </div>
               )}
             </div>
           </div>
         </section>
 
-        {/* Categories Section */}
         <section className="categories-section">
           <div className="container">
             <div className="section-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -326,18 +359,20 @@ const B_Homepage = () => {
           </div>
         </section>
 
-        {/* Products Section */}
         <section className="products-section">
           <div className="container">
-            <div className="products-header">
-              <h2>Featured Products</h2>
-              <div className="sort-options">
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="popular">Most Popular</option>
-                  <option value="priceLow">Price: Low to High</option>
-                  <option value="priceHigh">Price: High to Low</option>
-                  <option value="rating">Highest Rated</option>
-                </select>
+            <div className="section-header">
+              <h2>Regular Products</h2>
+              <div className="header-meta">
+                <p>Browse regular priced products from trusted sellers</p>
+                <div className="sort-options">
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="popular">Most Popular</option>
+                    <option value="priceLow">Price: Low to High</option>
+                    <option value="priceHigh">Price: High to Low</option>
+                    <option value="rating">Highest Rated</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -353,25 +388,45 @@ const B_Homepage = () => {
                 <button onClick={() => window.location.reload()}>Try Again</button>
               </div>
             ) : (
-              <div className="products-grid">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
-                      <ProductCard product={product} onAddToCart={handleAddToCart} />
-                    </Suspense>
-                  ))
-                ) : (
-                  <div className="no-products">
-                    <i className="fas fa-search"></i>
-                    <h3>No products found</h3>
-                    <p>Try adjusting your search criteria</p>
-                    <button onClick={() => {
-                      setSelectedCategory('all');
-                      setSearchQuery('');
-                    }}>Clear Filters</button>
-                  </div>
-                )}
-              </div>
+              <>
+                <div className="products-count">
+                  <span>{filteredProducts.length} products found</span>
+                </div>
+                <div className="products-grid">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product) => (
+                      <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
+                        <ProductCard 
+                          product={{
+                            product_id: product.id,
+                            product_name: product.name,
+                            price: parseFloat(product.numericPrice),
+                            quantity_available: product.quantity_available,
+                            image_url: product.image,
+                            category: product.category,
+                            moq: parseInt(product.moq) || 1,
+                            business_name: product.seller,
+                            area: product.area,
+                            in_stock: product.inStock,
+                            description: product.description
+                          }} 
+                          onAddToCart={handleAddToCart} 
+                        />
+                      </Suspense>
+                    ))
+                  ) : (
+                    <div className="no-products">
+                      <i className="fas fa-box-open"></i>
+                      <h3>No regular products found</h3>
+                      <p>Check out our deals section for special offers!</p>
+                      <button onClick={() => {
+                        setSelectedCategory('all');
+                        setSearchQuery('');
+                      }}>Clear Filters</button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -383,7 +438,6 @@ const B_Homepage = () => {
         )}
       </main>
 
-      {/* Cart Sidebar */}
       {showCart && (
         <Suspense fallback={<div>Loading cart...</div>}>
           <Cart items={cartItems} onClose={() => setShowCart(false)} />

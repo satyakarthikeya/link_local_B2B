@@ -38,7 +38,7 @@ const OrderHistory = () => {
           orderDate: '2025-03-10',
           deliveryStatus: 'Accepted',
           totalAmount: 50000.00,
-          deliveryAddress: 'Street 1, Market Area, Coimbatore',
+          deliveryAddress: 'street 1, market area, coimbatore',
           deliveryAgent: {
             name: 'Myla',
             contactNumber: '9876543210',
@@ -66,7 +66,7 @@ const OrderHistory = () => {
           orderDate: '2025-03-10',
           deliveryStatus: 'In Transit',
           totalAmount: 500.00,
-          deliveryAddress: 'Street 3, Industrial Hub, Coimbatore',
+          deliveryAddress: 'street 3, industrial hub, coimbatore',
           deliveryAgent: {
             name: 'khadar',
             contactNumber: '8765432109',
@@ -94,7 +94,7 @@ const OrderHistory = () => {
           orderDate: '2025-03-01',
           deliveryStatus: 'Delivered',
           totalAmount: 600.00,
-          deliveryAddress: 'Street 4, Food Street, Coimbatore',
+          deliveryAddress: 'street 4, food street, coimbatore',
           deliveryAgent: {
             name: 'Dona',
             contactNumber: '7395684921',
@@ -122,7 +122,7 @@ const OrderHistory = () => {
           orderDate: '2025-03-08',
           deliveryStatus: 'In Transit',
           totalAmount: 2000.00,
-          deliveryAddress: 'Street 2, Tech Park, Coimbatore',
+          deliveryAddress: 'street 2, tech park, coimbatore',
           deliveryAgent: {
             name: 'Myla',
             contactNumber: '9876543210',

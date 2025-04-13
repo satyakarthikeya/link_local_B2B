@@ -54,7 +54,7 @@ const B_Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [selectedCity, setSelectedCity] = useState('Coimbatore');
+  const [selectedCity, setSelectedCity] = useState('coimbatore');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([
@@ -185,7 +185,7 @@ const B_Navbar = () => {
               
               {showLocationDropdown && (
                 <div className="location-dropdown">
-                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad'].map(city => (
+                  {['coimbatore', 'chennai', 'bangalore', 'mumbai', 'delhi', 'hyderabad'].map(city => (
                     <div 
                       key={city} 
                       className={`location-option ${selectedCity === city ? 'active' : ''}`}
