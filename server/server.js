@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import deliveryRoutes from './routes/deliveryRoutes.js'; // Add import for delivery routes
 import validateEnv from './config/validateEnv.js';
 import config from './config/appConfig.js';
 import { logger, requestLogger } from './utils/logger.js';
@@ -54,6 +55,19 @@ app.use('/api/products/:id/quantity', (req, res, next) => {
   next();
 });
 
+// Add specific CORS headers for delivery routes
+app.use('/api/delivery', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send();
+  }
+  next();
+});
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -65,6 +79,7 @@ app.use(requestLogger);
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/delivery', deliveryRoutes); // Add delivery routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -83,7 +98,8 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       products: '/api/products',
-      orders: '/api/orders'
+      orders: '/api/orders',
+      delivery: '/api/delivery' // Add delivery endpoint to documentation
     }
   });
 });

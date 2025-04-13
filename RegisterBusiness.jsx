@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registerBusiness } from '../api';
+import { useAuth } from './AuthContext';
 
 const RegisterBusiness = () => {
   const [formData, setFormData] = useState({
@@ -12,7 +12,9 @@ const RegisterBusiness = () => {
     phone: ''
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const { registerBusiness } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,41 +27,21 @@ const RegisterBusiness = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    // Validate required fields
-    if (!formData.name || !formData.email || !formData.password) {
-      setError('Please fill all required fields');
-      return;
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    
-    // Validate password strength
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+    setSuccess('');
 
     try {
-      // Format the data properly according to API requirements
-      const businessData = {
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        // Include other required fields based on your API
-        businessType: formData.businessType || 'default',
-        address: formData.address || '',
-        phone: formData.phone || ''
-      };
-      
-      console.log("Submitting business data:", businessData);
-      await registerBusiness(businessData);
-      navigate('/login');
+      // Attempt to register the business
+      const result = await registerBusiness(formData);
+
+      // If successful, redirect to login page
+      if (result.success) {
+        setSuccess('Registration successful! Please log in with your credentials.');
+
+        // Redirect to login page after a short delay (optional)
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500); // 1.5 seconds delay to show the success message
+      }
     } catch (error) {
       console.log("Registration error:", error);
       setError(error.message || 'Registration failed. Please try again.');
@@ -70,6 +52,7 @@ const RegisterBusiness = () => {
     <div>
       <h1>Register Your Business</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
+      {success && <p style={{ color: 'green' }}>{success}</p>}
       <form onSubmit={handleSubmit}>
         <input
           type="text"

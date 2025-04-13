@@ -152,6 +152,55 @@ const OrderModel = {
     return result.rows;
   },
 
+  // Get delivery agent's order history with filters
+  async getDeliveryHistory(agentId, filters = {}) {
+    const { status, start_date, end_date } = filters;
+    
+    // Build the query with optional filters
+    let query = `
+      SELECT o.*,
+        bp_ord.business_name as ordering_business_name, bp_ord.area as ordering_area, bp_ord.street as ordering_street,
+        bp_sup.business_name as supplying_business_name, bp_sup.area as supplying_area, bp_sup.street as supplying_street,
+        p.product_name, p.price,
+        op.quantity_requested
+      FROM Orders o
+      JOIN BusinessProfile bp_ord ON o.ordering_businessman_id = bp_ord.businessman_id
+      JOIN BusinessProfile bp_sup ON o.supplying_businessman_id = bp_sup.businessman_id
+      JOIN OrderProducts op ON o.order_id = op.order_id
+      JOIN Product p ON op.product_id = p.product_id
+      WHERE o.agent_id = $1
+    `;
+    
+    const queryParams = [agentId];
+    let paramCount = 2;
+    
+    // Add status filter if provided
+    if (status) {
+      query += ` AND o.delivery_status = $${paramCount}`;
+      queryParams.push(status);
+      paramCount++;
+    }
+    
+    // Add date range filter if provided
+    if (start_date) {
+      query += ` AND o.created_at >= $${paramCount}`;
+      queryParams.push(start_date);
+      paramCount++;
+    }
+    
+    if (end_date) {
+      query += ` AND o.created_at <= $${paramCount}`;
+      queryParams.push(end_date);
+      paramCount++;
+    }
+    
+    // Add ordering
+    query += ` ORDER BY o.created_at DESC`;
+    
+    const result = await db.query(query, queryParams);
+    return result.rows;
+  },
+
   // Assign delivery agent to order
   async assignAgent(orderId, agentId) {
     const result = await db.query(

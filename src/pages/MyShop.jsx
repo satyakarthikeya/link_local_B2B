@@ -90,36 +90,36 @@ const MyShop = () => {
   
   // Fetch products on component mount
   useEffect(() => {
-    fetchProducts();
-    fetchOrders();
-    fetchStats();
+    const loadData = async () => {
+      await fetchProducts();
+      await fetchOrders();
+      calculateStats();
+    };
+    loadData();
   }, []);
 
-  // Auto-hide notifications after 3 seconds
-  useEffect(() => {
-    if (notification.show) {
-      const timer = setTimeout(() => {
-        setNotification({ ...notification, show: false });
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
-
-  const fetchStats = async () => {
+  // Updated: calculate stats based on current products and orders
+  const calculateStats = () => {
     try {
       const statsData = {
         totalProducts: products.length,
-        lowStock: products.filter(p => p.quantity_available <= p.reorder_point && p.quantity_available > 0).length,
+        lowStock: products.filter(p => p.quantity_available > 0 && p.quantity_available <= p.reorder_point).length,
         outOfStock: products.filter(p => !p.quantity_available || p.quantity_available <= 0).length,
         totalOrders: orders.length,
         pendingOrders: orders.filter(o => o.status === 'Pending').length,
-        revenue: orders.filter(o => o.status === 'Delivered' || o.status === 'Completed')
-          .reduce((sum, order) => sum + order.totalAmount, 0)
+        revenue: orders
+          .filter(o => o.status === 'Delivered' || o.status === 'Completed')
+          .reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0)
       };
       setStats(statsData);
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      console.error('Failed to calculate stats:', error);
     }
+  };
+
+  // Replaced the old fetchStats with better implementation
+  const fetchStats = () => {
+    calculateStats();
   };
 
   const fetchProducts = async () => {
@@ -129,7 +129,8 @@ const MyShop = () => {
       const response = await api.products.getBusinessProducts();
       console.log('Products fetched successfully:', response.data);
       setProducts(response.data || []);
-      setTimeout(() => fetchStats(), 300);
+      // Call calculateStats after updating products
+      setTimeout(() => calculateStats(), 0);
     } catch (error) {
       console.error('Failed to fetch products:', error);
       if (error.response) {
@@ -162,7 +163,7 @@ const MyShop = () => {
       const response = await api.orders.getBusinessOrders('supplier');
       console.log('Orders fetched successfully:', response.data);
       setOrders(response.data || []);
-      setTimeout(() => fetchStats(), 300);
+      setTimeout(() => calculateStats(), 0);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
       if (error.response) {
@@ -317,16 +318,8 @@ const MyShop = () => {
           return product;
         });
         
-        // Update all stats immediately
-        setTimeout(() => {
-          const newStats = {
-            ...stats,
-            totalProducts: updatedProducts.length,
-            lowStock: updatedProducts.filter(p => p.quantity_available <= p.reorder_point && p.quantity_available > 0).length,
-            outOfStock: updatedProducts.filter(p => !p.quantity_available || p.quantity_available <= 0).length
-          };
-          setStats(newStats);
-        }, 0);
+        // Calculate and update stats after updating products
+        setTimeout(() => calculateStats(), 0);
         
         return updatedProducts;
       });
@@ -349,6 +342,8 @@ const MyShop = () => {
     try {
       await api.orders.updateOrderStatus(orderId, { status: newStatus });
       await fetchOrders();
+      // Make sure to recalculate stats after changing order status
+      calculateStats();
       showNotification(`Order status updated to ${newStatus}!`);
     } catch (error) {
       console.error("Error updating order status:", error);

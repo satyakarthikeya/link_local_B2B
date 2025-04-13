@@ -148,10 +148,60 @@ export const orderAPI = {
   },
 
   // Get delivery orders
-  getDeliveryOrders: () => api.get('/orders/delivery/orders'),
+  getDeliveryOrders: (statusFilter) => {
+    const params = statusFilter ? `?status=${statusFilter}` : '';
+    return api.get(`/orders/delivery/orders${params}`);
+  },
 
   // Assign delivery agent
-  assignDeliveryAgent: (assignData) => api.post('/orders/assign-delivery', assignData)
+  assignDeliveryAgent: (assignData) => api.post('/orders/assign-delivery', assignData),
+  
+  // Update delivery status by delivery agent
+  updateDeliveryStatus: (orderId, statusData) => api.patch(`/orders/${orderId}/delivery-status`, statusData)
+};
+
+// Delivery Agent API
+export const deliveryAPI = {
+  // Get profile information
+  getProfile: () => api.get('/delivery/profile'),
+  
+  // Update profile information
+  updateProfile: (agentId, profileData) => api.put(`/delivery/profile/${agentId}`, profileData),
+  
+  // Update availability status (online/offline)
+  updateAvailabilityStatus: (agentId, isAvailable) => 
+    api.patch(`/delivery/availability/${agentId}`, { status: isAvailable }),
+  
+  // Get current orders assigned to the delivery agent
+  getCurrentOrders: () => api.get('/delivery/orders/current'),
+  
+  // Get order history
+  getOrderHistory: (filter = {}) => {
+    const params = new URLSearchParams(filter);
+    return api.get(`/delivery/orders/history?${params}`);
+  },
+  
+  // Get earnings information
+  getEarnings: (period) => {
+    const params = period ? `?period=${period}` : '';
+    return api.get(`/delivery/earnings${params}`);
+  },
+  
+  // Get earnings history - Added for profile page
+  getEarningsHistory: () => api.get('/delivery/earnings/history'),
+  
+  // Get documents - Added for profile page
+  getDocuments: () => api.get('/delivery/documents'),
+  
+  // Get performance stats - Added for profile page
+  getPerformanceStats: () => api.get('/delivery/stats/performance'),
+  
+  // Update current location
+  updateLocation: (locationData) => 
+    api.post('/delivery/location', locationData),
+  
+  // Get stats and analytics
+  getStats: () => api.get('/delivery/stats')
 };
 
 // Auth API
@@ -195,5 +245,6 @@ api.auth = authAPI;
 api.products = productAPI;
 api.orders = orderAPI;
 api.uploadImage = uploadImage;
+api.delivery = deliveryAPI; // Add delivery API to the main api object
 
 export default api;

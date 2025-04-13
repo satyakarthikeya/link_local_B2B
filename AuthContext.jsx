@@ -13,14 +13,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await api.businessRegister(businessData);
-      if (response.data?.token) {
-        localStorage.setItem('token', response.data.token);
-        setToken(response.data.token);
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-      }
       setLoading(false);
-      return response.data;
+      return { success: true, data: response.data };
     } catch (error) {
       setLoading(false);
       const errorMessage = error.response?.data?.message || error.message;

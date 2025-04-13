@@ -96,7 +96,43 @@ const schemas = {
   orderStatusUpdate: Joi.object({
     status: Joi.string().valid('Requested', 'Accepted', 'Rejected', 'Cancelled', 'Completed'),
     delivery_status: Joi.string().valid('Pending', 'Assigned', 'PickedUp', 'InTransit', 'Delivered', 'Failed')
-  })
+  }),
+
+  // Delivery profile schema
+  deliveryProfileUpdate: Joi.object({
+    name: Joi.string().min(2).max(100),
+    email: Joi.string().email(),
+    phone_number: Joi.string().pattern(/^\d{10}$/),
+    gender: Joi.string().valid('Male', 'Female', 'Other'),
+    date_of_birth: Joi.string().allow('', null),
+    address: Joi.object({
+      street: Joi.string().allow('', null),
+      area: Joi.string().allow('', null),
+      city: Joi.string().allow('', null),
+      state: Joi.string().allow('', null),
+      pincode: Joi.string().pattern(/^\d{6}$/).allow('', null)
+    }),
+    vehicle_type: Joi.string(),
+    vehicle_number: Joi.string(),
+    license_number: Joi.string(),
+    about: Joi.string().allow('', null),
+    availability_status: Joi.string().valid('Available', 'Unavailable'),
+    preferred_working_hours: Joi.object().pattern(
+      Joi.string(), // day keys
+      Joi.object({
+        working: Joi.boolean(),
+        start: Joi.string().allow('', null),
+        end: Joi.string().allow('', null)
+      })
+    ),
+    bankDetails: Joi.object({
+      account_holder_name: Joi.string(),
+      account_number: Joi.string(),
+      ifsc_code: Joi.string(),
+      bank_name: Joi.string(),
+      branch_name: Joi.string().allow('', null)
+    })
+  }).min(1)
 };
 
 export { validateRequest, schemas };

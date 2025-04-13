@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import api from "../utils/api";
 import "../styles/delivery_home.css"; 
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import logo from "../assests/Logo.png";
@@ -13,6 +14,7 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
   const [profileDropdown, setProfileDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Get delivery agent name and initial for profile display
   const deliveryName = currentUser?.name || 'Delivery Partner';
@@ -33,18 +35,54 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
 
   // Sync local state with global state
   useEffect(() => {
-    if (setIsOnlineGlobal && isOnlineGlobal !== undefined) {
+    if (isOnlineGlobal !== undefined) {
       setIsOnline(isOnlineGlobal);
     }
   }, [isOnlineGlobal]);
 
+  // Fetch initial status from backend when component mounts or user changes
+  useEffect(() => {
+    const fetchAvailabilityStatus = async () => {
+      if (currentUser?.agent_id) {
+        try {
+          const profileResponse = await api.delivery.getProfile();
+          const serverStatus = profileResponse.data.availability_status === "Available";
+          setIsOnline(serverStatus);
+          if (setIsOnlineGlobal) {
+            setIsOnlineGlobal(serverStatus);
+          }
+        } catch (error) {
+          console.error("Failed to fetch availability status:", error);
+          // Continue with default status if fetch fails
+        }
+      }
+    };
+
+    fetchAvailabilityStatus();
+  }, [currentUser, setIsOnlineGlobal]);
+
   // Handle status toggle
-  const toggleStatus = () => {
-    const newStatus = !isOnline;
-    setIsOnline(newStatus);
-    // Update global state if callback is provided
-    if (setIsOnlineGlobal) {
-      setIsOnlineGlobal(newStatus);
+  const toggleStatus = async () => {
+    if (isUpdatingStatus) return;
+    
+    setIsUpdatingStatus(true);
+    try {
+      const newStatus = !isOnline;
+      
+      if (currentUser && currentUser.agent_id) {
+        await api.delivery.updateAvailabilityStatus(currentUser.agent_id, newStatus);
+      }
+      
+      setIsOnline(newStatus);
+      // Update global state if callback is provided
+      if (setIsOnlineGlobal) {
+        setIsOnlineGlobal(newStatus);
+      }
+    } catch (error) {
+      console.error("Failed to update availability status:", error);
+      alert("Failed to update your status. Please try again.");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -66,6 +104,17 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
+      
+      // Set delivery agent offline before logout
+      if (currentUser?.agent_id && isOnline) {
+        try {
+          await api.delivery.updateAvailabilityStatus(currentUser.agent_id, false);
+        } catch (statusErr) {
+          console.error("Error setting offline status during logout:", statusErr);
+          // Continue with logout even if status update fails
+        }
+      }
+      
       await logout();
       setIsLoggingOut(false);
       navigate('/login-delivery', { replace: true });
@@ -148,12 +197,13 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
           <div className="navbar-right">
             {/* Online/Offline Toggle Button */}
             <button 
-              className={`status-button ${isOnline ? 'online' : 'offline'}`} 
+              className={`status-button ${isOnline ? 'online' : 'offline'} ${isUpdatingStatus ? 'updating' : ''}`} 
               onClick={toggleStatus}
+              disabled={isUpdatingStatus}
               title={isOnline ? "You are online - Click to go offline" : "You are offline - Click to go online"}
             >
-              <i className="fas fa-circle"></i>
-              <span>{isOnline ? "Online" : "Offline"}</span>
+              <i className={`fas ${isUpdatingStatus ? 'fa-spinner fa-spin' : 'fa-circle'}`}></i>
+              <span>{isUpdatingStatus ? 'Updating...' : isOnline ? "Online" : "Offline"}</span>
             </button>
             
             {/* Profile Button with Dropdown */}
@@ -179,12 +229,28 @@ const D_Navbar = ({ isOnlineGlobal, setIsOnlineGlobal }) => {
                   <Link to="/map-view">
                     <i className="fas fa-map-marked-alt"></i> Map View
                   </Link>
+                  <div className="dropdown-divider"></div>
+                  <div className="dropdown-status-toggle">
+                    <span>Status: </span>
+                    <button 
+                      className={`dropdown-status-btn ${isOnline ? 'online' : 'offline'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleStatus();
+                      }}
+                      disabled={isUpdatingStatus}
+                    >
+                      <i className={`fas ${isUpdatingStatus ? 'fa-spinner fa-spin' : 'fa-circle'}`}></i>
+                      <span>{isOnline ? 'Online' : 'Offline'}</span>
+                    </button>
+                  </div>
+                  <div className="dropdown-divider"></div>
                   <button 
                     onClick={handleLogout} 
                     className="dropdown-logout" 
                     disabled={isLoggingOut}
                   >
-                    <i className="fas fa-sign-out-alt"></i>
+                    <i className={`fas ${isLoggingOut ? 'fa-spinner fa-spin' : 'fa-sign-out-alt'}`}></i>
                     <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                   </button>
                 </div>

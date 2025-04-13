@@ -95,10 +95,33 @@ const DeliveryModel = {
         );
       }
 
+      // Extract address fields if they exist in nested structure
+      let street = updateData.street;
+      let area = updateData.area;
+      let city = null;
+      let state = null;
+      let pincode = null;
+
+      // Handle nested address object if it exists
+      if (updateData.address) {
+        street = updateData.address.street || street;
+        area = updateData.address.area || area;
+        city = updateData.address.city;
+        state = updateData.address.state;
+        pincode = updateData.address.pincode;
+      }
+
+      // Map phone_number to contact_number if it exists
+      const contact_number = updateData.phone_number || updateData.contact_number;
+      
+      // Map license_number to license_no if it exists
+      const license_no = updateData.license_number || updateData.license_no;
+
       // Update profile information
       if (Object.keys(updateData).some(key => 
-        ['name', 'contact_number', 'gender', 'date_of_birth', 'area', 'street', 
-         'vehicle_type', 'vehicle_number', 'license_no', 'about', 'availability_status'].includes(key))) {
+        ['name', 'contact_number', 'phone_number', 'gender', 'date_of_birth', 'area', 'street', 
+         'vehicle_type', 'vehicle_number', 'license_no', 'license_number', 'about', 'availability_status'].includes(key)) || 
+        updateData.address) {
         
         await client.query(
           `UPDATE DeliveryProfile 
@@ -108,23 +131,31 @@ const DeliveryModel = {
                date_of_birth = COALESCE($4, date_of_birth),
                area = COALESCE($5, area),
                street = COALESCE($6, street),
-               vehicle_type = COALESCE($7, vehicle_type),
-               vehicle_number = COALESCE($8, vehicle_number),
-               license_no = COALESCE($9, license_no),
-               about = COALESCE($10, about),
-               availability_status = COALESCE($11, availability_status)
-           WHERE agent_id = $12`,
+               city = COALESCE($7, city),
+               state = COALESCE($8, state),
+               pincode = COALESCE($9, pincode),
+               vehicle_type = COALESCE($10, vehicle_type),
+               vehicle_number = COALESCE($11, vehicle_number),
+               license_no = COALESCE($12, license_no),
+               about = COALESCE($13, about),
+               availability_status = COALESCE($14, availability_status)
+           WHERE agent_id = $15`,
           [
             updateData.name,
-            updateData.contact_number,
+            contact_number,
             updateData.gender,
             updateData.date_of_birth,
-            updateData.area,
-            updateData.street,
+            area,
+            street,
+            city,
+            state, 
+            pincode,
             updateData.vehicle_type,
             updateData.vehicle_number,
-            updateData.license_no,
+            license_no,
             updateData.about,
+            updateData.availability_status === true ? 'Available' : 
+            updateData.availability_status === false ? 'Unavailable' : 
             updateData.availability_status,
             id
           ]
