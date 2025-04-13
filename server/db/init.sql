@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS Businessman CASCADE;
 DROP TABLE IF EXISTS DeliveryProfile CASCADE;
 DROP TABLE IF EXISTS Delivery_Banking CASCADE;
 DROP TABLE IF EXISTS DeliveryAgent CASCADE;
+DROP TABLE IF EXISTS Deals CASCADE;
 
 -- Base table for Business Users
 CREATE TABLE IF NOT EXISTS Businessman (
@@ -153,6 +154,37 @@ CREATE TABLE IF NOT EXISTS Delivery (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create Deals table
+CREATE TABLE IF NOT EXISTS Deals (
+    deal_id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES Product(product_id) ON DELETE CASCADE,
+    businessman_id INTEGER NOT NULL REFERENCES BusinessProfile(businessman_id) ON DELETE CASCADE,
+    deal_type VARCHAR(50) NOT NULL CHECK (deal_type IN ('DISCOUNT', 'BUY_ONE_GET_ONE', 'BUNDLE', 'CLEARANCE', 'FLASH_SALE')),
+    deal_title VARCHAR(100) NOT NULL,
+    deal_description TEXT,
+    discount_percentage DECIMAL(5,2),
+    discount_amount DECIMAL(10,2),
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_featured BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Ensure discount_percentage or discount_amount is provided for DISCOUNT type
+    CONSTRAINT check_discount CHECK (
+        deal_type != 'DISCOUNT' OR
+        (discount_percentage IS NOT NULL OR discount_amount IS NOT NULL)
+    ),
+    
+    -- Ensure start_date is before end_date if both are provided
+    CONSTRAINT check_dates CHECK (
+        end_date IS NULL OR 
+        start_date IS NULL OR
+        start_date <= end_date
+    )
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_product_businessman ON Product(businessman_id);
 CREATE INDEX idx_orders_ordering_businessman ON Orders(ordering_businessman_id);
@@ -166,6 +198,10 @@ CREATE INDEX idx_businessman_email ON Businessman(email);
 CREATE INDEX idx_delivery_agent_email ON DeliveryAgent(email);
 CREATE INDEX idx_business_profile_area ON BusinessProfile(area);
 CREATE INDEX idx_delivery_profile_area ON DeliveryProfile(area);
+CREATE INDEX idx_deals_product_id ON Deals(product_id);
+CREATE INDEX idx_deals_businessman_id ON Deals(businessman_id);
+CREATE INDEX idx_deals_is_active ON Deals(is_active);
+CREATE INDEX idx_deals_is_featured ON Deals(is_featured);
 
 -- Create update timestamp trigger function
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -196,3 +232,8 @@ FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_delivery_agent_modtime
 BEFORE UPDATE ON DeliveryAgent
 FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_deals_updated_at
+BEFORE UPDATE ON Deals
+FOR EACH ROW
+EXECUTE FUNCTION update_modified_column();
