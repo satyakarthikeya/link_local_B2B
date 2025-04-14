@@ -295,18 +295,93 @@ const ProductController = {
   // Search products
   async searchProducts(req, res) {
     try {
-      const { query } = req.query;
+      const { 
+        search_query, 
+        category,
+        min_price, 
+        max_price,
+        stock_status,
+        page = 1,
+        limit = 12,
+        city
+      } = req.query;
       
-      if (!query) {
-        return res.status(400).json({ error: 'Search query is required' });
+      // Add current user ID to exclude their products
+      let currentUserBusinessId = null;
+      if (req.user && (req.user.id || req.user.businessman_id)) {
+        currentUserBusinessId = req.user.businessman_id || req.user.id;
       }
       
-      const products = await ProductModel.search(query);
+      // Add pagination and enhanced filtering
+      const filters = {
+        search_query: search_query || null,
+        category: category !== 'all' ? category : null,
+        min_price: min_price ? parseFloat(min_price) : null,
+        max_price: max_price ? parseFloat(max_price) : null,
+        stock_status,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        city: city || null,
+        // New filter parameters
+        exclude_businessman_id: currentUserBusinessId, // Filter out current user's products
+        exclude_deals: true  // Filter out products that are already part of deals
+      };
+
+      // Log the filters being applied for debugging
+      console.log('Applying search filters:', filters);
+
+      // Use the search method if there's a search query, otherwise use getAll
+      const products = search_query 
+        ? await ProductModel.search(search_query, filters)
+        : await ProductModel.getAll(filters);
       
-      res.json(products);
+      const total = products.length > 0 ? products[0].total_count : 0;
+      
+      if (!products || !products.length) {
+        return res.json({
+          products: [],
+          message: 'No products found',
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: 0,
+            totalProducts: 0
+          }
+        });
+      }
+
+      // Transform product data for frontend
+      const transformedProducts = products.map(product => ({
+        id: product.product_id,
+        name: product.product_name,
+        price: product.price,
+        category: product.category,
+        seller: product.business_name,
+        seller_id: product.businessman_id, // Add this to identify the seller
+        business_id: product.businessman_id, // Add for consistent naming with frontend
+        moq: product.moq || 1,
+        location: product.area,
+        area: product.street,
+        city: product.city,
+        inStock: product.quantity_available > 0,
+        quantity_available: product.quantity_available,
+        image_url: product.image_url,
+        description: product.description
+      }));
+
+      res.json({
+        products: transformedProducts,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalProducts: parseInt(total)
+        }
+      });
     } catch (error) {
-      console.error('Search products error:', error.message);
-      res.status(500).json({ error: 'Server error searching products' });
+      console.error('Search products error:', error);
+      res.status(500).json({ 
+        error: 'Server error searching products',
+        message: error.message || 'Failed to search products' 
+      });
     }
   },
 

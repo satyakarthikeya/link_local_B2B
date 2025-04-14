@@ -307,19 +307,119 @@ const ProductModel = {
     return result.rows[0]?.has_stock || false;
   },
 
-  // Search products by name or description
-  async search(searchQuery) {
-    const result = await db.query(
-      `SELECT p.*, b.business_name, b.area, b.category,
-        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock
-       FROM Product p
-       JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
-       WHERE p.product_name ILIKE $1 OR p.description ILIKE $1
-       ORDER BY 
-        CASE WHEN p.quantity_available > 0 THEN 0 ELSE 1 END,
-        p.created_at DESC`,
-      [`%${searchQuery}%`]
-    );
+  // Search products by name, description, or category with filters
+  async search(searchQuery, filters = {}) {
+    const {
+      category,
+      min_price,
+      max_price,
+      stock_status,
+      page = 1,
+      limit = 12,
+      city,
+      exclude_businessman_id,
+      exclude_deals
+    } = filters;
+    
+    let query = `
+      SELECT p.*, b.business_name, b.area, b.street, b.city,
+        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
+        CASE 
+          WHEN p.quantity_available = 0 THEN 'Out of Stock'
+          WHEN p.quantity_available <= p.reorder_point THEN 'Low Stock'
+          ELSE 'In Stock'
+        END as stock_status,
+        COUNT(*) OVER() as total_count
+      FROM Product p
+      JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
+    `;
+    
+    // Add LEFT JOIN with deals table if we need to exclude deals
+    if (exclude_deals) {
+      query = `
+        SELECT p.*, b.business_name, b.area, b.street, b.city,
+          CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
+          CASE 
+            WHEN p.quantity_available = 0 THEN 'Out of Stock'
+            WHEN p.quantity_available <= p.reorder_point THEN 'Low Stock'
+            ELSE 'In Stock'
+          END as stock_status,
+          COUNT(*) OVER() as total_count
+        FROM Product p
+        JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
+        LEFT JOIN Deals d ON p.product_id = d.product_id
+        WHERE d.deal_id IS NULL
+      `;
+    } else {
+      query += ` WHERE 1=1`;
+    }
+    
+    const params = [searchQuery ? `%${searchQuery}%` : ''];
+    let paramIndex = 1;
+    
+    // Add search term filter
+    if (searchQuery) {
+      query += ` AND (p.product_name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex} OR p.category ILIKE $${paramIndex} OR b.business_name ILIKE $${paramIndex})`;
+      paramIndex++;
+    }
+    
+    // Add category filter
+    if (category) {
+      params.push(category);
+      query += ` AND p.category = $${paramIndex}`;
+      paramIndex++;
+    }
+    
+    // Add location filter
+    if (city) {
+      params.push(city);
+      query += ` AND b.city = $${paramIndex}`;
+      paramIndex++;
+    }
+    
+    // Add price range filters
+    if (min_price !== null && min_price !== undefined) {
+      params.push(min_price);
+      query += ` AND p.price >= $${paramIndex}`;
+      paramIndex++;
+    }
+    
+    if (max_price !== null && max_price !== undefined) {
+      params.push(max_price);
+      query += ` AND p.price <= $${paramIndex}`;
+      paramIndex++;
+    }
+    
+    // Add stock status filter
+    if (stock_status) {
+      if (stock_status === 'in_stock') {
+        query += ` AND p.quantity_available > 0`;
+      } else if (stock_status === 'out_of_stock') {
+        query += ` AND p.quantity_available = 0`;
+      } else if (stock_status === 'low_stock') {
+        query += ` AND p.quantity_available <= p.reorder_point AND p.quantity_available > 0`;
+      }
+    }
+    
+    // Exclude products from a specific businessman (for filtering out user's own products)
+    if (exclude_businessman_id) {
+      params.push(exclude_businessman_id);
+      query += ` AND p.businessman_id <> $${paramIndex}`;
+      paramIndex++;
+    }
+    
+    // Add sorting options
+    query += ` ORDER BY p.created_at DESC`;
+    
+    // Add pagination
+    const offset = (page - 1) * limit;
+    params.push(limit, offset);
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    
+    console.log('Executing search query:', query);
+    console.log('With params:', params);
+    
+    const result = await db.query(query, params);
     return result.rows;
   }
 };

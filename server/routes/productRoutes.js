@@ -1,52 +1,31 @@
 import express from 'express';
-import Joi from 'joi';
-import ProductController from '../controllers/productController.js';
-import { authenticateToken, authorizeBusiness } from '../middleware/auth.js';
-import { validateRequest, schemas } from '../middleware/validateRequest.js';
-import { catchAsync } from '../utils/errorHandler.js';
+import { ProductController } from '../controllers/productController.js';
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/authMiddleware.js';
+import multer from 'multer';
 
 const router = express.Router();
+const productController = new ProductController();
 
-// Public routes
-router.get('/', catchAsync(ProductController.getAllProducts));
-router.get('/search', catchAsync(ProductController.searchProducts));
-router.get('/:id', catchAsync(ProductController.getProduct));
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/products/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = file.originalname.split('.').pop();
+    cb(null, `product-${uniqueSuffix}.${ext}`);
+  }
+});
+const upload = multer({ storage });
 
-// Protected routes - requires authentication
-router.use(authenticateToken);
-
-// Business routes
-router.use('/business', authorizeBusiness);
-router.get('/business/myproducts', catchAsync(ProductController.getBusinessProducts));
-router.get('/business/low-stock', catchAsync(ProductController.getLowStockProducts));
-
-// Product management
-router.post(
-  '/', 
-  authorizeBusiness,
-  validateRequest(schemas.productCreate),
-  catchAsync(ProductController.createProduct)
-);
-router.put(
-  '/:id', 
-  authorizeBusiness,
-  validateRequest(schemas.productUpdate),
-  catchAsync(ProductController.updateProduct)
-);
-router.delete(
-  '/:id', 
-  authorizeBusiness,
-  catchAsync(ProductController.deleteProduct)
-);
-
-// Inventory management
-router.patch(
-  '/:id/quantity', 
-  authorizeBusiness,
-  validateRequest(Joi.object({
-    quantity: Joi.number().required().min(0)
-  })),
-  catchAsync(ProductController.updateProductQuantity)
-);
+// Products routes
+router.get('/', optionalAuthMiddleware, productController.getAllProducts);
+router.get('/search', optionalAuthMiddleware, productController.searchProducts);
+router.get('/:id', productController.getProductById);
+router.get('/business/:businessId', productController.getBusinessProducts);
+router.post('/', authMiddleware, upload.single('image'), productController.createProduct);
+router.put('/:id', authMiddleware, upload.single('image'), productController.updateProduct);
+router.delete('/:id', authMiddleware, productController.deleteProduct);
 
 export default router;

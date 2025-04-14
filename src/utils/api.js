@@ -121,7 +121,28 @@ export const productAPI = {
     api.patch(`/products/${id}/quantity`, { quantity, operation }),
 
   // Search products
-  searchProducts: (query) => api.get(`/products/search?query=${query}`),
+  searchProducts: async (filters = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      // Add each filter to query parameters
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, value);
+        }
+      });
+      
+      const response = await axios.get(
+        `${api.defaults.baseURL}/products/search?${queryParams.toString()}`,
+        { headers: api.defaults.headers.common }
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Failed to search products:', error);
+      throw error;
+    }
+  },
 
   // Upload product image
   uploadProductImage: (productId, formData) => {
@@ -169,7 +190,7 @@ export const orderAPI = {
   // Get business orders
   getBusinessOrders: (role) => {
     const params = role ? `?role=${role}` : '';
-    return api.get(`/orders/business/orders${params}`);
+    return api.get(`/api/orders/history${params}`);
   },
 
   // Get delivery orders
