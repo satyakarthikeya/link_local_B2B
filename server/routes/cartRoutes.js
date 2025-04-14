@@ -1,14 +1,15 @@
 import express from 'express';
 import CartController from '../controllers/cartController.js';
 import { catchAsync } from '../utils/errorHandler.js';
-import { authorizeBusiness } from '../middleware/auth.js';
+import { authenticateToken, authorizeBusiness } from '../middleware/auth.js';
 import Joi from 'joi';
-import validateRequest from '../middleware/validateRequest.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 
 const router = express.Router();
 
 // All cart routes require business authentication
-router.use(authorizeBusiness[0]);
+// Using authenticateToken instead of the array to fix the 404 error
+router.use(authenticateToken);
 
 // Get user's cart
 router.get('/', catchAsync(CartController.getCart));

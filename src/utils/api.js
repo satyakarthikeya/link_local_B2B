@@ -130,6 +130,30 @@ export const productAPI = {
   }
 };
 
+// Cart API
+export const cartAPI = {
+  // Get user's cart
+  getCart: () => api.get('/cart'),
+  
+  // Get cart items count
+  getCartCount: () => api.get('/cart/count'),
+  
+  // Add item to cart
+  addToCart: (product_id, quantity = 1) => 
+    api.post('/cart/add', { product_id, quantity }),
+  
+  // Update cart item quantity
+  updateCartItem: (product_id, quantity) => 
+    api.put('/cart/update', { product_id, quantity }),
+  
+  // Remove item from cart
+  removeFromCart: (product_id) => 
+    api.delete(`/cart/remove/${product_id}`),
+  
+  // Clear cart
+  clearCart: () => api.delete('/cart/clear')
+};
+
 // Orders API
 export const orderAPI = {
   // Create a new order
@@ -351,5 +375,6 @@ api.orders = orderAPI;
 api.uploadImage = uploadImage;
 api.delivery = deliveryAPI;
 api.deals = dealAPI; // Add deals API to the main api object
+api.cart = cartAPI; // Add cart API to the main api object
 
 export default api;

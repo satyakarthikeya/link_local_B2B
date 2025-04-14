@@ -10,7 +10,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 const Checkout = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { cartItems, removeFromCart } = useCart();
+  const { cartItems, clearCart } = useCart();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -103,27 +103,22 @@ const Checkout = () => {
         total_amount: calculateTotal()
       };
       
-      // In a real scenario, this would make an API call to create an order
-      // For now, let's simulate an API call
       console.log('Creating order with data:', orderData);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // In a real-world scenario, you'd call the API to create an order
+      // const response = await api.orders.createOrder(orderData);
+      // const orderId = response.data.order_id;
       
-      // Generate random order ID for demo
+      // For now, we'll simulate the API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
       const generatedOrderId = 'ORD-' + Math.floor(Math.random() * 100000);
       
-      // Clear cart after successful order
-      cartItems.forEach(item => removeFromCart(item.id));
+      // Clear cart after successful order - this will clear both local and database cart
+      await clearCart();
       
       // Update state to show success message
       setOrderPlaced(true);
       setOrderNumber(generatedOrderId);
-      
-      // In a real app, this would store the order in the database via API call
-      // For example: 
-      // const response = await api.orders.createOrder(orderData);
-      // setOrderNumber(response.data.order_id);
       
     } catch (err) {
       console.error('Error creating order:', err);

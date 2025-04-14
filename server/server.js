@@ -8,6 +8,7 @@ import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js'; // Add import for delivery routes
 import dealRoutes from './routes/dealRoutes.js'; // Add import for deal routes
+import cartRoutes from './routes/cartRoutes.js'; // Add import for cart routes
 import validateEnv from './config/validateEnv.js';
 import config from './config/appConfig.js';
 import { logger, requestLogger } from './utils/logger.js';
@@ -82,6 +83,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes); // Add delivery routes
 app.use('/api/deals', dealRoutes); // Add deal routes
+app.use('/api/cart', cartRoutes); // Add cart routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -102,7 +104,8 @@ app.get('/', (req, res) => {
       products: '/api/products',
       orders: '/api/orders',
       delivery: '/api/delivery',
-      deals: '/api/deals' // Add deals endpoint to documentation
+      deals: '/api/deals', // Add deals endpoint to documentation
+      cart: '/api/cart' // Add cart endpoint to documentation
     }
   });
 });

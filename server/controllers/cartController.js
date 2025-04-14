@@ -68,8 +68,7 @@ const CartController = {
   async updateCartItem(req, res) {
     try {
       const businessman_id = req.user.id;
-      const { product_id } = req.params;
-      const { quantity } = req.body;
+      const { product_id, quantity } = req.body;
       
       // Validate required fields
       if (!product_id || !quantity) {
