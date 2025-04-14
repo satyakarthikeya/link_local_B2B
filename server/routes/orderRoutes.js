@@ -23,6 +23,13 @@ router.post(
   catchAsync(OrderController.createOrder)
 );
 
+// Bulk order creation from cart - only for business users
+router.post(
+  '/bulk', 
+  authorizeBusiness[1], // Skip the authenticateToken since we already have it
+  catchAsync(OrderController.createBulkOrder)
+);
+
 // Get specific order - for both business and delivery users
 router.get(
   '/:id', 

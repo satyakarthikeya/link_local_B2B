@@ -32,38 +32,67 @@ const OrderHistory = () => {
           queryParams.append('status', filter);
         }
         queryParams.append('sort', sortBy);
+        
+        // Force 'ordering' role to get only orders where you are the customer
+        queryParams.append('role', 'ordering');
+
+        // Log the request for debugging
+        console.log(`Fetching orders from: ${API_URL}/api/orders/history?${queryParams}`);
+        console.log(`Using auth token: ${localStorage.getItem('authToken')}`);
 
         const response = await axios.get(`${API_URL}/api/orders/history?${queryParams}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-
-        setOrders(response.data);
-        setError(null);
-
-        // Initialize reviewedOrders state from API data
-        const reviewedOrdersMap = {};
-        response.data.forEach(order => {
-          if (order.rating) {
-            reviewedOrdersMap[order.order_id] = {
-              rating: order.rating,
-              comment: order.comment,
-              date: order.review_date
-            };
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
           }
         });
-        setReviewedOrders(reviewedOrdersMap);
+
+        console.log('Order history response:', response.data);
+
+        // Check if response data is valid
+        if (Array.isArray(response.data)) {
+          setOrders(response.data);
+          setError(null);
+
+          // Initialize reviewedOrders state from API data
+          const reviewedOrdersMap = {};
+          response.data.forEach(order => {
+            if (order.rating) {
+              reviewedOrdersMap[order.order_id] = {
+                rating: order.rating,
+                comment: order.comment,
+                date: order.review_date
+              };
+            }
+          });
+          setReviewedOrders(reviewedOrdersMap);
+        } else {
+          console.error('Invalid orders data format:', response.data);
+          setError('Received invalid data format from server');
+          setOrders([]);
+        }
       } catch (err) {
         console.error('Error fetching orders:', err);
+        // More detailed error logging
+        if (err.response) {
+          console.error('Error response:', err.response.status, err.response.data);
+        }
         setError('Failed to load orders. Please try again later.');
+        setOrders([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (user) {
+    // Only fetch if user is authenticated
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
       fetchOrders();
+    } else {
+      setError('Please log in to view your order history');
+      setIsLoading(false);
     }
-  }, [user, filter, sortBy]);
+  }, [filter, sortBy]);
 
   const handleFilterChange = (e) => {
     setFilter(e.target.value);
@@ -167,7 +196,7 @@ const OrderHistory = () => {
     if (window.confirm('Are you sure you want to cancel this order?')) {
       try {
         await axios.patch(`${API_URL}/api/orders/${orderId}/cancel`, {}, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
         });
         
         // Update the order status locally
@@ -185,7 +214,7 @@ const OrderHistory = () => {
   const handleReorder = async (orderId) => {
     try {
       const response = await axios.post(`${API_URL}/api/orders/${orderId}/reorder`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
       });
       
       // Add the new order to the list
@@ -210,7 +239,7 @@ const OrderHistory = () => {
         rating: reviewData.ratingValue,
         comment: reviewData.comment
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
       });
       
       // Update local state

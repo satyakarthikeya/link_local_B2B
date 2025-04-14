@@ -1,5 +1,7 @@
 import DeliveryModel from '../models/deliveryModel.js';
 import OrderModel from '../models/orderModel.js';
+import OrderNotificationModel from '../models/orderNotificationModel.js';
+import db from '../config/db.js';
 
 // Delivery agent controller for delivery-related operations
 const DeliveryController = {
@@ -367,6 +369,135 @@ const DeliveryController = {
     } catch (error) {
       console.error('Get documents error:', error.message);
       res.status(500).json({ error: 'Server error fetching documents' });
+    }
+  },
+  
+  // Get pending order notifications for delivery agent
+  async getOrderNotifications(req, res) {
+    try {
+      const agent_id = req.user.id;
+      
+      const notifications = await OrderNotificationModel.getPendingByAgentId(agent_id);
+      
+      res.json({
+        count: notifications.length,
+        notifications: notifications
+      });
+    } catch (error) {
+      console.error('Get order notifications error:', error.message);
+      res.status(500).json({ error: 'Server error fetching order notifications' });
+    }
+  },
+  
+  // Accept an order from notifications
+  async acceptOrderFromNotification(req, res) {
+    try {
+      const agent_id = req.user.id;
+      const { notification_id, order_id } = req.params;
+      
+      if (!notification_id || !order_id) {
+        return res.status(400).json({ error: 'Notification ID and Order ID are required' });
+      }
+      
+      // Check if the agent is available
+      const agent = await DeliveryModel.findById(agent_id);
+      if (agent.availability_status !== 'Available') {
+        return res.status(400).json({ error: 'You must be online to accept orders' });
+      }
+      
+      // Check if the order is still available
+      const order = await OrderModel.findById(order_id);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      
+      if (order.agent_id) {
+        // Order already assigned to another agent
+        await OrderNotificationModel.updateStatus(notification_id, 'Expired');
+        return res.status(400).json({ error: 'Order has already been assigned to another delivery agent' });
+      }
+      
+      // Start transaction: update notification status, assign order to agent, and mark other notifications as expired
+      const client = await db.pool.connect();
+      
+      try {
+        await client.query('BEGIN');
+        
+        // Update notification status
+        await client.query(
+          `UPDATE OrderNotifications 
+           SET status = 'Accepted', response_time = CURRENT_TIMESTAMP
+           WHERE notification_id = $1 AND agent_id = $2`,
+          [notification_id, agent_id]
+        );
+        
+        // Assign agent to order
+        await client.query(
+          `UPDATE Orders
+           SET agent_id = $1, delivery_status = 'Assigned', updated_at = CURRENT_TIMESTAMP
+           WHERE order_id = $2 AND agent_id IS NULL`,
+          [agent_id, order_id]
+        );
+        
+        // Create delivery tracking entry
+        await client.query(
+          `INSERT INTO Delivery (order_id, agent_id)
+           VALUES ($1, $2)`,
+          [order_id, agent_id]
+        );
+        
+        // Mark other pending notifications for this order as expired
+        await client.query(
+          `UPDATE OrderNotifications
+           SET status = 'Expired', response_time = CURRENT_TIMESTAMP
+           WHERE order_id = $1 AND notification_id != $2 AND status = 'Pending'`,
+          [order_id, notification_id]
+        );
+        
+        await client.query('COMMIT');
+        
+        // Get updated order
+        const updatedOrder = await OrderModel.findById(order_id);
+        
+        res.json({
+          message: 'Order accepted successfully',
+          order: updatedOrder
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Accept order notification error:', error.message);
+      res.status(500).json({ error: 'Server error accepting order notification' });
+    }
+  },
+  
+  // Reject an order notification
+  async rejectOrderNotification(req, res) {
+    try {
+      const agent_id = req.user.id;
+      const { notification_id } = req.params;
+      
+      if (!notification_id) {
+        return res.status(400).json({ error: 'Notification ID is required' });
+      }
+      
+      const updatedNotification = await OrderNotificationModel.updateStatus(notification_id, 'Rejected');
+      
+      if (!updatedNotification) {
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+      
+      res.json({
+        message: 'Order notification rejected',
+        notification: updatedNotification
+      });
+    } catch (error) {
+      console.error('Reject order notification error:', error.message);
+      res.status(500).json({ error: 'Server error rejecting order notification' });
     }
   }
 };

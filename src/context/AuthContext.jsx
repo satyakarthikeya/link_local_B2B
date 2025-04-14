@@ -184,6 +184,9 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('userType');
       localStorage.removeItem('userData');
       
+      // Clear cart data to ensure next user doesn't see previous user's cart
+      localStorage.removeItem('cart');
+      
       // Clear any other potential remnants
       localStorage.removeItem('cartItems');
       sessionStorage.removeItem('currentUserData');

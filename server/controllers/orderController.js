@@ -1,6 +1,7 @@
 import OrderModel from '../models/orderModel.js';
 import ProductModel from '../models/productModel.js';
 import DeliveryModel from '../models/deliveryModel.js';
+import OrderNotificationModel from '../models/orderNotificationModel.js';
 
 // Order controller for order-related operations
 const OrderController = {
@@ -44,6 +45,63 @@ const OrderController = {
       }
       
       res.status(500).json({ error: 'Server error creating order' });
+    }
+  },
+  
+  // Create multiple orders from a cart checkout
+  async createBulkOrder(req, res) {
+    try {
+      const { supplying_businessman_id, items, shipping_info, notes } = req.body;
+      const requesting_businessman_id = req.user.id;
+      
+      // Validate required fields
+      if (!supplying_businessman_id || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ 
+          error: 'Required fields missing',
+          details: 'Need supplying_businessman_id and at least one item'
+        });
+      }
+      
+      // Check if each item has product_id and quantity_requested
+      const invalidItems = items.filter(
+        item => !item.product_id || !item.quantity_requested || item.quantity_requested <= 0
+      );
+      
+      if (invalidItems.length > 0) {
+        return res.status(400).json({ 
+          error: 'Invalid items', 
+          details: 'Each item must have a product_id and a positive quantity_requested'
+        });
+      }
+      
+      // Create the bulk order - group items by supplier if needed
+      const order = await OrderModel.createBulk({
+        requesting_businessman_id,
+        supplying_businessman_id,
+        items,
+        shipping_info: shipping_info || {},
+        notes: notes || ''
+      });
+      
+      res.status(201).json({
+        message: 'Order created successfully',
+        order
+      });
+    } catch (error) {
+      console.error('Create bulk order error:', error);
+      
+      if (error.message.includes('Product not found')) {
+        return res.status(404).json({ error: 'One or more products not found' });
+      }
+      
+      if (error.message.includes('Not enough quantity available')) {
+        return res.status(400).json({ error: 'Not enough quantity available for one or more products' });
+      }
+      
+      res.status(500).json({ 
+        error: 'Server error creating order',
+        message: error.message 
+      });
     }
   },
   
@@ -103,6 +161,24 @@ const OrderController = {
         }
         
         const updatedOrder = await OrderModel.updateStatus(id, status);
+
+        // If status is changed to "Confirmed", notify available delivery agents
+        if (status === 'Confirmed' && !order.agent_id) {
+          try {
+            // Find nearby delivery agents
+            const nearbyAgentIds = await OrderNotificationModel.findNearbyAgentsForOrder(id);
+            
+            if (nearbyAgentIds.length > 0) {
+              // Create notifications for all nearby agents
+              await OrderNotificationModel.createNotifications(id, nearbyAgentIds);
+              console.log(`Notified ${nearbyAgentIds.length} delivery agents about order ${id}`);
+            }
+          } catch (notificationError) {
+            console.error('Error notifying delivery agents:', notificationError);
+            // Continue without failing the status update
+          }
+        }
+        
         return res.json({
           message: 'Order status updated successfully',
           order: updatedOrder
@@ -117,6 +193,7 @@ const OrderController = {
         }
         
         const updatedOrder = await OrderModel.updateStatus(id, order.status, delivery_status);
+        
         return res.json({
           message: 'Delivery status updated successfully',
           order: updatedOrder
@@ -212,7 +289,7 @@ const OrderController = {
     try {
       const userId = req.user.id;
       const userType = req.user.type;
-      const { status, startDate, endDate, sort } = req.query;
+      const { status, startDate, endDate, sort, role } = req.query;
       
       let orders = [];
       
@@ -220,7 +297,7 @@ const OrderController = {
         // Get business orders with filters
         orders = await OrderModel.getOrderHistoryByBusiness(
           userId, 
-          { status, startDate, endDate, sort }
+          { status, startDate, endDate, sort, role }
         );
       } else if (userType === 'delivery') {
         // Get delivery agent orders with filters

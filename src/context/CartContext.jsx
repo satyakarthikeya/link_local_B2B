@@ -17,8 +17,9 @@ export const CartProvider = ({ children }) => {
   // Fetch cart from backend when user is logged in
   useEffect(() => {
     const fetchCart = async () => {
-      // Only fetch cart if user is logged in and is a business
+      // If user is not logged in, just use whatever is in localStorage
       if (!currentUser || !localStorage.getItem('authToken')) {
+        loadCartFromLocalStorage();
         return;
       }
       
@@ -38,13 +39,26 @@ export const CartProvider = ({ children }) => {
           setCartItems(formattedItems);
           setCartCount(formattedItems.reduce((sum, item) => sum + item.quantity, 0));
           
-          // Also update localStorage for offline access
+          // Replace localStorage cart with server cart to ensure consistency
           localStorage.setItem('cart', JSON.stringify(formattedItems));
+        } else {
+          // If server returned empty cart, clear local cart too
+          setCartItems([]);
+          setCartCount(0);
+          localStorage.removeItem('cart');
         }
       } catch (error) {
         console.error('Error fetching cart:', error);
-        // Fall back to local storage if API call fails
-        loadCartFromLocalStorage();
+        // Only use localStorage if we know it belongs to this user
+        // We can assume it does if they were already logged in
+        if (currentUser && localStorage.getItem('cart')) {
+          loadCartFromLocalStorage();
+        } else {
+          // For new logins, assume empty cart is safer than potentially showing another user's cart
+          setCartItems([]);
+          setCartCount(0);
+          localStorage.removeItem('cart');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -60,6 +74,10 @@ export const CartProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error loading cart from localStorage:', error);
+        // If there's an error parsing, remove the corrupt data
+        localStorage.removeItem('cart');
+        setCartItems([]);
+        setCartCount(0);
       }
     };
 

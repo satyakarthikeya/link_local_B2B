@@ -108,6 +108,25 @@ router.get(
   catchAsync(DeliveryController.getDashboardStats)
 );
 
+// Order notifications routes
+router.get(
+  '/order-notifications',
+  authorizeDelivery[1],
+  catchAsync(DeliveryController.getOrderNotifications)
+);
+
+router.post(
+  '/order-notifications/:notification_id/:order_id/accept',
+  authorizeDelivery[1],
+  catchAsync(DeliveryController.acceptOrderFromNotification)
+);
+
+router.post(
+  '/order-notifications/:notification_id/reject',
+  authorizeDelivery[1],
+  catchAsync(DeliveryController.rejectOrderNotification)
+);
+
 router.get(
   '/documents',
   authorizeDelivery[1],

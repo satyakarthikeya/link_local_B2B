@@ -85,44 +85,35 @@ const Checkout = () => {
     setError(null);
     
     try {
-      // Format order data
-      const orderData = {
-        items: cartItems.map(item => ({
-          product_id: item.product_id || item.id,
-          quantity: item.quantity,
-          price: item.price
-        })),
-        shipping_info: {
-          address: formData.shipping_address,
-          city: formData.city,
-          phone: formData.phone,
-          email: formData.email
-        },
+      // Format shipping info for the order
+      const shippingInfo = {
+        address: formData.shipping_address,
+        city: formData.city,
+        phone: formData.phone,
+        email: formData.email,
         payment_method: formData.payment_method,
-        notes: formData.notes,
-        total_amount: calculateTotal()
+        notes: formData.notes
       };
       
-      console.log('Creating order with data:', orderData);
+      console.log('Creating order with shipping info:', shippingInfo);
       
-      // In a real-world scenario, you'd call the API to create an order
-      // const response = await api.orders.createOrder(orderData);
-      // const orderId = response.data.order_id;
+      // Create order from cart - this will handle grouping by supplier
+      const response = await api.orders.createOrderFromCart(shippingInfo);
       
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const generatedOrderId = 'ORD-' + Math.floor(Math.random() * 100000);
+      // Clear cart after successful order - handled by createOrderFromCart
       
-      // Clear cart after successful order - this will clear both local and database cart
-      await clearCart();
+      // Get the first order number to display (we'll just show one even if multiple orders were created)
+      const firstOrderId = response.orders && response.orders.length > 0 ? 
+        response.orders[0].order_id : 
+        'ORD-' + Math.floor(Math.random() * 100000);
       
       // Update state to show success message
       setOrderPlaced(true);
-      setOrderNumber(generatedOrderId);
+      setOrderNumber(firstOrderId);
       
     } catch (err) {
       console.error('Error creating order:', err);
-      setError('Failed to place your order. Please try again.');
+      setError(err.response?.data?.error || 'Failed to place your order. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -27,6 +27,7 @@ const D_Homepage = () => {
   });
   const [orders, setOrders] = useState([]);
   const [nearbyOrders, setNearbyOrders] = useState([]);
+  const [showOrderRequestsSection, setShowOrderRequestsSection] = useState(false);
   const [dashboardStats, setDashboardStats] = useState({
     orders: { active: 0, completed: 0, total: 0 },
     earnings: { today: "₹0", weekly: "₹0", monthly: "₹0" },
@@ -36,14 +37,14 @@ const D_Homepage = () => {
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
       try {
-        if (currentUser && currentUser.agent_id) {
-          const profileResponse = await api.delivery.getProfile();
+        setIsLoading(true);
+        await fetchOrders();
+        await fetchDashboardStats();
+        
+        const profileResponse = await api.delivery.getProfile();
+        if (profileResponse && profileResponse.data) {
           setIsOnline(profileResponse.data.availability_status === "Available");
-          await fetchOrders();
           await fetchDashboardStats();
           getUserLocation();
           if (profileResponse.data.availability_status === "Available") {
@@ -59,7 +60,21 @@ const D_Homepage = () => {
     };
 
     fetchInitialData();
-  }, [currentUser]);
+
+    const orderRequestsInterval = setInterval(() => {
+      if (isOnline) {
+        fetchNearbyOrders();
+      }
+    }, 30000);
+    
+    return () => {
+      clearInterval(orderRequestsInterval);
+    };
+  }, [currentUser, isOnline]);
+
+  useEffect(() => {
+    setShowOrderRequestsSection(isOnline && nearbyOrders.length > 0);
+  }, [isOnline, nearbyOrders]);
 
   const fetchOrders = async () => {
     try {
@@ -96,24 +111,41 @@ const D_Homepage = () => {
   };
 
   const fetchNearbyOrders = async () => {
+    if (!isOnline) return;
+    
     try {
       const response = await api.delivery.getNearbyOrders();
-      const formattedNearbyOrders = response.data.map(order => ({
-        id: order.order_id,
-        pickup: `${order.supplying_business_name}, ${order.supplying_area}`,
-        dropoff: `${order.ordering_business_name}, ${order.ordering_area}`,
-        customerName: order.ordering_business_name,
-        customerPhone: order.ordering_phone || "9876543210",
-        timestamp: formatDateForDisplay(order.created_at),
-        items: `${order.product_name} x ${order.quantity_requested}`,
-        amount: formatCurrency(order.total_amount),
-        distance: calculateDistance(order.supplying_area, order.ordering_area),
-        time: estimateDeliveryTime(order.supplying_area, order.ordering_area)
-      }));
-      setNearbyOrders(formattedNearbyOrders);
+      
+      if (response && response.data) {
+        const formattedNearbyOrders = response.data.map(order => ({
+          id: order.order_id,
+          pickup: `${order.supplying_business_name}, ${order.supplying_area}`,
+          dropoff: `${order.ordering_business_name}, ${order.ordering_area}`,
+          customerName: order.ordering_business_name,
+          customerPhone: order.ordering_phone || "9876543210",
+          timestamp: formatDateForDisplay(order.created_at),
+          items: `${order.product_name} x ${order.quantity_requested}`,
+          amount: formatCurrency(order.total_amount),
+          distance: calculateDistance(order.supplying_area, order.ordering_area),
+          time: estimateDeliveryTime(order.supplying_area, order.ordering_area),
+          notes: order.notes || ""
+        }));
+        
+        const previousOrderIds = nearbyOrders.map(o => o.id);
+        const newOrders = formattedNearbyOrders.filter(o => !previousOrderIds.includes(o.id));
+        
+        setNearbyOrders(formattedNearbyOrders);
+        
+        if (!isLoading && newOrders.length > 0) {
+          try {
+            console.log("New order requests available!");
+          } catch (err) {
+            console.error("Audio notification failed:", err);
+          }
+        }
+      }
     } catch (err) {
       console.error("Error fetching nearby orders:", err);
-      setNearbyOrders([]);
     }
   };
 
@@ -159,6 +191,26 @@ const D_Homepage = () => {
     }
   };
   
+  const acceptOrder = async (orderId) => {
+    try {
+      setIsStatusUpdating(true);
+      await api.delivery.acceptOrder(orderId);
+      
+      setNearbyOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+      
+      await fetchOrders();
+      
+      await fetchDashboardStats();
+      
+      alert("Order accepted successfully!");
+    } catch (err) {
+      console.error("Error accepting order:", err);
+      alert("Failed to accept order. Please try again.");
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  };
+
   const getFilteredOrders = useCallback(() => {
     if (activeTab === 'all') return orders;
     return orders.filter(order => order.status === activeTab);
@@ -179,17 +231,13 @@ const D_Homepage = () => {
       );
     }
   };
-
-  const acceptOrder = async (orderId) => {
-    try {
-      await api.delivery.acceptOrder(orderId);
-      await fetchOrders();
-      setNearbyOrders(nearbyOrders.filter(order => order.id !== orderId));
-      alert("Order accepted successfully!");
-    } catch (err) {
-      console.error("Error accepting order:", err);
-      alert("Failed to accept order. Please try again.");
-    }
+  
+  const showSuccessToast = (message) => {
+    alert(message);
+  };
+  
+  const showErrorToast = (message) => {
+    alert(message);
   };
 
   const goToEarningsPage = () => {
@@ -366,12 +414,15 @@ const D_Homepage = () => {
             </button>
           </div>
 
-          {isOnline && nearbyOrders.length > 0 && (
-            <div className="orders-section nearby-orders">
+          {showOrderRequestsSection && (
+            <div className="orders-section order-requests-section">
               <div className="orders-header">
-                <h2><i className="fas fa-bell"></i> New Available Orders</h2>
-                <div className="orders-count">
-                  {nearbyOrders.length} order{nearbyOrders.length !== 1 ? 's' : ''}
+                <h2>New Order Requests</h2>
+                <div className="refresh-icon" onClick={fetchNearbyOrders}>
+                  <i className="fas fa-sync-alt"></i>
+                </div>
+                <div className="order-count">
+                  {nearbyOrders.length} request{nearbyOrders.length !== 1 ? 's' : ''}
                 </div>
               </div>
               <div className="orders-grid nearby-orders-grid">
@@ -379,7 +430,7 @@ const D_Homepage = () => {
                   <div className="order-card order-nearby" key={order.id}>
                     <div className="order-header">
                       <span className="status-badge status-new">
-                        New Order
+                        New Request
                       </span>
                       <span className="order-time">{order.timestamp}</span>
                     </div>
@@ -406,7 +457,16 @@ const D_Homepage = () => {
                         <button 
                           className="action-btn accept-btn"
                           onClick={() => acceptOrder(order.id)}
-                        >Accept Order</button>
+                          disabled={isStatusUpdating}
+                        >
+                          {isStatusUpdating ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin"></i> Processing...
+                            </>
+                          ) : (
+                            <>Accept Request</>
+                          )}
+                        </button>
                         <button 
                           className="action-btn details-btn"
                           onClick={() => viewOrderDetails(order)}
@@ -416,6 +476,29 @@ const D_Homepage = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {!isOnline && (
+            <div className="offline-notification">
+              <div className="offline-icon">
+                <i className="fas fa-power-off"></i>
+              </div>
+              <h3>You are currently offline</h3>
+              <p>Go online to receive new order requests</p>
+              <button className="go-online-btn" onClick={toggleStatus}>
+                Go Online
+              </button>
+            </div>
+          )}
+
+          {isOnline && nearbyOrders.length === 0 && !isLoading && (
+            <div className="no-orders-notification">
+              <div className="orders-icon">
+                <i className="fas fa-clipboard-list"></i>
+              </div>
+              <h3>No new order requests</h3>
+              <p>New orders will appear here as they come in</p>
             </div>
           )}
 

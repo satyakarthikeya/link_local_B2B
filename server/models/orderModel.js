@@ -67,6 +67,108 @@ const OrderModel = {
     }
   },
 
+  // Create a bulk order with multiple products
+  async createBulk(orderData) {
+    const {
+      requesting_businessman_id,
+      supplying_businessman_id,
+      items,
+      shipping_info,
+      notes
+    } = orderData;
+    
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Validate each product and calculate total
+      let total_amount = 0;
+      const validatedItems = [];
+
+      for (const item of items) {
+        // Check if product exists and get price
+        const productResult = await client.query(
+          'SELECT product_id, price, quantity_available FROM Product WHERE product_id = $1',
+          [item.product_id]
+        );
+        
+        if (productResult.rows.length === 0) {
+          throw new Error(`Product not found: ${item.product_id}`);
+        }
+        
+        const product = productResult.rows[0];
+        
+        if (product.quantity_available < item.quantity_requested) {
+          throw new Error(`Not enough quantity available for product ${item.product_id}`);
+        }
+        
+        const subtotal = product.price * item.quantity_requested;
+        total_amount += subtotal;
+        
+        validatedItems.push({
+          ...item,
+          unit_price: product.price,
+          subtotal
+        });
+      }
+      
+      // Store shipping information for debugging
+      console.log('Shipping info received:', shipping_info);
+      console.log('Notes received:', notes);
+      
+      // Create the order - only using fields that exist in the Orders table
+      const orderResult = await client.query(
+        `INSERT INTO Orders 
+         (ordering_businessman_id, supplying_businessman_id, status, delivery_status, total_amount) 
+         VALUES ($1, $2, 'Requested', 'Pending', $3) 
+         RETURNING *`,
+        [requesting_businessman_id, supplying_businessman_id, total_amount]
+      );
+      
+      const order = orderResult.rows[0];
+      
+      // Store shipping details in the order object for return value, even though it's not saved to DB
+      if (shipping_info) {
+        order.shipping_address = shipping_info.address || '';
+        order.shipping_city = shipping_info.city || '';
+        order.contact_phone = shipping_info.phone || '';
+        order.contact_email = shipping_info.email || '';
+        order.shipping_notes = notes || '';
+      }
+      
+      // Add all products to the order
+      for (const item of validatedItems) {
+        // Create order product entry
+        await client.query(
+          `INSERT INTO OrderProducts 
+           (order_id, product_id, quantity_requested, unit_price, subtotal)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [order.order_id, item.product_id, item.quantity_requested, item.unit_price, item.subtotal]
+        );
+        
+        // Update product quantity
+        await client.query(
+          'UPDATE Product SET quantity_available = quantity_available - $1 WHERE product_id = $2',
+          [item.quantity_requested, item.product_id]
+        );
+      }
+      
+      await client.query('COMMIT');
+      
+      // Return order with items
+      order.items = validatedItems;
+      return order;
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error in createBulk:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
   // Find order by ID
   async findById(id) {
     const result = await db.query(
@@ -165,7 +267,7 @@ const OrderModel = {
 
   // Get delivery agent's order history with filters
   async getDeliveryHistory(agentId, filters = {}) {
-    const { status, start_date, end_date } = filters;
+    const { status, startDate, endDate, sort } = filters;
     
     // Build the query with optional filters
     let query = `
@@ -193,20 +295,28 @@ const OrderModel = {
     }
     
     // Add date range filter if provided
-    if (start_date) {
+    if (startDate) {
       query += ` AND o.created_at >= $${paramCount}`;
-      queryParams.push(start_date);
+      queryParams.push(startDate);
       paramCount++;
     }
     
-    if (end_date) {
+    if (endDate) {
       query += ` AND o.created_at <= $${paramCount}`;
-      queryParams.push(end_date);
+      queryParams.push(endDate);
       paramCount++;
     }
     
     // Add ordering
-    query += ` ORDER BY o.created_at DESC`;
+    if (sort === 'oldest') {
+      query += ` ORDER BY o.created_at ASC`;
+    } else {
+      // Default to newest first
+      query += ` ORDER BY o.created_at DESC`;
+    }
+    
+    console.log('Executing delivery history query:', query);
+    console.log('With params:', queryParams);
     
     const result = await db.query(query, queryParams);
     return result.rows;
@@ -325,7 +435,7 @@ const OrderModel = {
 
   // Get business order history with filters
   async getOrderHistoryByBusiness(businessmanId, filters = {}) {
-    const { status, startDate, endDate, sort = 'newest' } = filters;
+    const { status, startDate, endDate, sort = 'newest', role = 'both' } = filters;
     
     // Build the query with optional filters
     let query = `
@@ -345,8 +455,16 @@ const OrderModel = {
       JOIN Product p ON op.product_id = p.product_id
       LEFT JOIN DeliveryProfile da ON o.agent_id = da.agent_id
       LEFT JOIN Reviews r ON r.order_id = o.order_id
-      WHERE (o.ordering_businessman_id = $1 OR o.supplying_businessman_id = $1)
-    `;
+      WHERE `;
+    
+    // Apply role-based filtering
+    if (role === 'ordering') {
+      query += 'o.ordering_businessman_id = $1';
+    } else if (role === 'supplying') {
+      query += 'o.supplying_businessman_id = $1';
+    } else {
+      query += '(o.ordering_businessman_id = $1 OR o.supplying_businessman_id = $1)';
+    }
     
     const queryParams = [businessmanId];
     let paramCount = 2;
@@ -382,6 +500,9 @@ const OrderModel = {
       // Default to newest first
       query += ` ORDER BY o.created_at DESC`;
     }
+    
+    console.log('Executing query:', query);
+    console.log('With params:', queryParams);
     
     const result = await db.query(query, queryParams);
     return result.rows;

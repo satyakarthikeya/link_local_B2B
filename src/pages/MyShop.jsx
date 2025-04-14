@@ -1142,7 +1142,7 @@ const MyShop = () => {
                         padding: '8px',
                         borderRadius: '6px',
                         border: 'none',
-                        background: '#3498dbHey, Cortana. Find 3. Hey, Cortana. Hey, Cortana. Hey, Cortana, play Gallery. Seriously. Hey, Cortana. Hey, Cortana. Play. Wow. This correcting ₹50 key. Please. Hey, Cortana. Why? 2175. Hey, Cortana. Black market? Prime fandom. Hey, Cortana. Hey, Cortana. Hey, Cortana. Game is running 52.52.98. 60. No. Please check new sheet with this. Hey, Cortana. Hey, Cortana. Add. A second. Hey, Cortana. The water off. Hey, Cortana. Hey, Cortana. ',
+                        background: '#3498db',
                         color: '#fff',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
@@ -1665,7 +1665,7 @@ const MyShop = () => {
                   }></i> {order.status}
                 </div>
                 <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
-                  Order #{order.order_id.slice(0,8)}
+                  Order #{String(order.order_id).slice(0,8)}
                 </div>
               </div>
               
@@ -2020,7 +2020,7 @@ const MyShop = () => {
                       </thead>
                       <tbody>
                         {showOrderDetailModal.order.items.map((item, index) => (
-                          <tr key={index}>
+                          <tr key={`order-item-${item.product_id || index}`}>
                             <td>{item.product_name}</td>
                             <td>{item.quantity}</td>
                             <td>{formatCurrency(item.price)}</td>

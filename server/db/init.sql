@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS Cart CASCADE;
 DROP TABLE IF EXISTS CartItems CASCADE;
 DROP TABLE IF EXISTS Reviews CASCADE;
 DROP TABLE IF EXISTS Delivery CASCADE;
+DROP TABLE IF EXISTS OrderNotifications CASCADE;
 DROP TABLE IF EXISTS OrderProducts CASCADE;
 DROP TABLE IF EXISTS Orders CASCADE;
 DROP TABLE IF EXISTS Product CASCADE;
@@ -189,6 +190,19 @@ CREATE TABLE IF NOT EXISTS Deals (
     )
 );
 
+-- Create OrderNotifications table for delivery agents
+CREATE TABLE IF NOT EXISTS OrderNotifications (
+    notification_id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES Orders(order_id) ON DELETE CASCADE,
+    agent_id INTEGER NOT NULL REFERENCES DeliveryAgent(agent_id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Accepted', 'Rejected', 'Expired')),
+    notification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    response_time TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_order_agent_notification UNIQUE (order_id, agent_id)
+);
+
 -- Create Reviews table
 CREATE TABLE IF NOT EXISTS Reviews (
   review_id SERIAL PRIMARY KEY,
@@ -291,4 +305,8 @@ FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 
 CREATE TRIGGER update_cart_items_modtime
 BEFORE UPDATE ON CartItems
+FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+CREATE TRIGGER update_order_notifications_modtime
+BEFORE UPDATE ON OrderNotifications
 FOR EACH ROW EXECUTE PROCEDURE update_modified_column();

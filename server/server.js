@@ -36,13 +36,28 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Security headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }  // Allow cross-origin resource sharing
+}));
 
 // Compress responses
 app.use(compression());
 
 // CORS configuration
 app.use(cors(config.cors));
+
+// Add specific CORS headers for auth routes to fix login issues
+app.use('/api/auth', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send();
+  }
+  next();
+});
 
 // Add specific CORS headers for troubled endpoints
 app.use('/api/products/:id/quantity', (req, res, next) => {
