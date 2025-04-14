@@ -2,7 +2,7 @@ import ProductModel from '../models/productModel.js';
 import { logger } from '../utils/logger.js';
 
 // Product controller for product-related operations
-const ProductController = {
+export class ProductController {
   // Create a new product
   async createProduct(req, res) {
     try {
@@ -57,7 +57,7 @@ const ProductController = {
         message: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
-  },
+  }
 
   // Get product by ID
   async getProduct(req, res) {
@@ -74,7 +74,7 @@ const ProductController = {
       console.error('Get product error:', error.message);
       res.status(500).json({ error: 'Server error fetching product' });
     }
-  },
+  }
 
   // Update product
   async updateProduct(req, res) {
@@ -103,7 +103,7 @@ const ProductController = {
       console.error('Update product error:', error.message);
       res.status(500).json({ error: 'Server error updating product' });
     }
-  },
+  }
 
   // Delete product
   async deleteProduct(req, res) {
@@ -130,7 +130,7 @@ const ProductController = {
       console.error('Delete product error:', error.message);
       res.status(500).json({ error: 'Server error deleting product' });
     }
-  },
+  }
 
   // Get all products with filtering
   async getAllProducts(req, res) {
@@ -219,7 +219,7 @@ const ProductController = {
         message: error.message 
       });
     }
-  },
+  }
 
   // Get business's low stock products
   async getLowStockProducts(req, res) {
@@ -232,7 +232,7 @@ const ProductController = {
       console.error('Get low stock products error:', error.message);
       res.status(500).json({ error: 'Server error fetching low stock products' });
     }
-  },
+  }
 
   // Update product quantity
   async updateProductQuantity(req, res) {
@@ -290,7 +290,7 @@ const ProductController = {
       console.error('Update quantity error:', error.message);
       res.status(500).json({ error: 'Server error updating quantity' });
     }
-  },
+  }
 
   // Search products
   async searchProducts(req, res) {
@@ -383,7 +383,7 @@ const ProductController = {
         message: error.message || 'Failed to search products' 
       });
     }
-  },
+  }
 
   // Get business's products
   async getBusinessProducts(req, res) {
@@ -409,6 +409,4 @@ const ProductController = {
       });
     }
   }
-};
-
-export default ProductController;
+}

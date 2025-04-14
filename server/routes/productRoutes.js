@@ -1,6 +1,6 @@
 import express from 'express';
 import { ProductController } from '../controllers/productController.js';
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/authMiddleware.js';
+import { authenticateToken as authMiddleware, authenticateToken as optionalAuthMiddleware } from '../middleware/auth.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -20,12 +20,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Products routes
-router.get('/', optionalAuthMiddleware, productController.getAllProducts);
-router.get('/search', optionalAuthMiddleware, productController.searchProducts);
-router.get('/:id', productController.getProductById);
-router.get('/business/:businessId', productController.getBusinessProducts);
-router.post('/', authMiddleware, upload.single('image'), productController.createProduct);
-router.put('/:id', authMiddleware, upload.single('image'), productController.updateProduct);
-router.delete('/:id', authMiddleware, productController.deleteProduct);
+router.get('/', optionalAuthMiddleware, productController.getAllProducts.bind(productController));
+router.get('/search', optionalAuthMiddleware, productController.searchProducts.bind(productController));
+router.get('/:id', productController.getProduct.bind(productController));
+router.get('/business/:businessId', productController.getBusinessProducts.bind(productController));
+router.post('/', authMiddleware, upload.single('image'), productController.createProduct.bind(productController));
+router.put('/:id', authMiddleware, upload.single('image'), productController.updateProduct.bind(productController));
+router.delete('/:id', authMiddleware, productController.deleteProduct.bind(productController));
 
 export default router;
