@@ -647,7 +647,7 @@
 
 .stock-btn.decrease:not(:disabled):hover {
   background-color: var(--secondary-light);
-  color: var(--secondary-color);
+  color: var(--dark-color);
   border-color: var(--secondary-color);
 }
 
