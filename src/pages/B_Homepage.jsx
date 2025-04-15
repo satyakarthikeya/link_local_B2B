@@ -366,8 +366,10 @@ const B_Homepage = () => {
                   <div className="featured-product-info">
                     <h3>{deal.name}</h3>
                     <div className="featured-product-price">
-                      <span className="current-price">{deal.price}</span>
-                      <span className="original-price">{deal.originalPrice}</span>
+                      <span className="current-price">{deal.discounted_price || deal.price}</span>
+                      {deal.discount_percentage > 0 && (
+                        <span className="original-price">{deal.originalPrice || deal.price}</span>
+                      )}
                     </div>
                     <div className="featured-product-seller">by {deal.seller}</div>
                     <button 

@@ -229,39 +229,54 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
           padding: '16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
-          flex: 1
+          gap: '10px'
         }}
       >
         <h3 style={{
-          fontSize: '1.1rem',
+          fontSize: '1.2rem',
           fontWeight: '600',
-          color: '#2d3436',
-          marginBottom: '4px'
+          marginBottom: '5px',
+          color: '#2c3e50'
         }}>{product_name}</h3>
         
-        <div className="product-meta" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span className="category" style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '4px 8px',
-            background: '#f1f2f6',
-            borderRadius: '4px',
-            fontSize: '0.85rem',
-            color: '#636e72'
-          }}>
-            <i className="fas fa-tag"></i> {category}
-          </span>
-          <span className="price" style={{
-            fontSize: '1.2rem',
-            fontWeight: '700',
-            color: '#2d3436'
-          }}>₹{price}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+          <span style={{ fontWeight: '600', color: '#636e72' }}>{category}</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {product.discounted_price ? (
+            <>
+              <span style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: '700', 
+                color: '#2ecc71'
+              }}>
+                ₹{product.discounted_price}
+              </span>
+              <span style={{ 
+                fontSize: '1rem', 
+                fontWeight: '400', 
+                textDecoration: 'line-through', 
+                color: '#95a5a6'
+              }}>
+                ₹{price}
+              </span>
+              {product.discount_percentage && (
+                <span style={{
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  color: '#fff',
+                  background: '#e74c3c',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}>
+                  {product.discount_percentage}% OFF
+                </span>
+              )}
+            </>
+          ) : (
+            <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#2c3e50' }}>₹{price}</span>
+          )}
         </div>
 
         {description && (
@@ -428,7 +443,9 @@ ProductCard.propTypes = {
     business_name: PropTypes.string,
     area: PropTypes.string,
     in_stock: PropTypes.bool,
-    description: PropTypes.string
+    description: PropTypes.string,
+    discounted_price: PropTypes.number,
+    discount_percentage: PropTypes.number
   }).isRequired,
   onAddToCart: PropTypes.func,
   isBusinessView: PropTypes.bool,

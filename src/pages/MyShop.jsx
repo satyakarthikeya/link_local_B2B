@@ -1414,6 +1414,33 @@ const MyShop = () => {
                         <span className="label"> OFF</span>
                       </p>
                     )}
+                    
+                    <div className="pricing-info" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      marginTop: '10px'
+                    }}>
+                      <span className="original-price" style={{
+                        textDecoration: 'line-through',
+                        color: '#95a5a6',
+                        fontSize: '1rem'
+                      }}>
+                        ₹{deal.original_price || deal.price}
+                      </span>
+                      <span className="discounted-price" style={{
+                        color: '#27ae60',
+                        fontSize: '1.2rem',
+                        fontWeight: '700'
+                      }}>
+                        ₹{deal.discounted_price || 
+                          (deal.discount_percentage 
+                            ? (deal.price - (deal.price * deal.discount_percentage / 100)).toFixed(2)
+                            : (deal.price - deal.discount_amount).toFixed(2)
+                          )}
+                      </span>
+                    </div>
                   </div>
                 )}
                 

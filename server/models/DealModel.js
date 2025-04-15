@@ -162,7 +162,13 @@ export const DealModel = {
     let query = `
       SELECT d.*, p.product_name, p.price, p.quantity_available, p.category, p.description,
         b.business_name, b.area, b.street, b.city,
-        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock
+        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
+        p.price as original_price,
+        CASE 
+          WHEN d.discount_percentage IS NOT NULL THEN ROUND(p.price - (p.price * d.discount_percentage / 100), 2)
+          WHEN d.discount_amount IS NOT NULL THEN GREATEST(0, p.price - d.discount_amount)
+          ELSE p.price
+        END as discounted_price
       FROM Deals d
       JOIN Product p ON d.product_id = p.product_id
       JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
@@ -232,7 +238,13 @@ export const DealModel = {
           WHEN p.quantity_available = 0 THEN 'Out of Stock'
           WHEN p.quantity_available <= p.reorder_point THEN 'Low Stock'
           ELSE 'In Stock'
-        END as stock_status
+        END as stock_status,
+        p.price as original_price,
+        CASE 
+          WHEN d.discount_percentage IS NOT NULL THEN ROUND(p.price - (p.price * d.discount_percentage / 100), 2)
+          WHEN d.discount_amount IS NOT NULL THEN GREATEST(0, p.price - d.discount_amount)
+          ELSE p.price
+        END as discounted_price
        FROM Deals d
        JOIN Product p ON d.product_id = p.product_id
        WHERE d.businessman_id = $1
@@ -249,7 +261,15 @@ export const DealModel = {
     const result = await db.query(
       `SELECT d.*, p.product_name, p.price, p.quantity_available, p.category, p.description,
          b.business_name, b.area, b.street, b.city,
-         CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock
+         CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
+         CASE 
+           WHEN d.deal_type = 'DISCOUNT' AND d.discount_percentage IS NOT NULL 
+             THEN ROUND(p.price - (p.price * d.discount_percentage / 100), 2)
+           WHEN d.deal_type = 'DISCOUNT' AND d.discount_amount IS NOT NULL 
+             THEN GREATEST(0, p.price - d.discount_amount)
+           ELSE p.price
+         END as discounted_price,
+         p.price as original_price
        FROM Deals d
        JOIN Product p ON d.product_id = p.product_id
        JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
@@ -295,7 +315,15 @@ export const DealModel = {
     let query = `
       SELECT d.*, p.product_name, p.price, p.quantity_available, p.category, p.description,
         b.business_name, b.area, b.street, b.city,
-        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock
+        CASE WHEN p.quantity_available > 0 THEN true ELSE false END as in_stock,
+        CASE 
+          WHEN d.deal_type = 'DISCOUNT' AND d.discount_percentage IS NOT NULL 
+            THEN ROUND(p.price - (p.price * d.discount_percentage / 100), 2)
+          WHEN d.deal_type = 'DISCOUNT' AND d.discount_amount IS NOT NULL 
+            THEN GREATEST(0, p.price - d.discount_amount)
+          ELSE p.price
+        END as discounted_price,
+        p.price as original_price
       FROM Deals d
       JOIN Product p ON d.product_id = p.product_id
       JOIN BusinessProfile b ON p.businessman_id = b.businessman_id
