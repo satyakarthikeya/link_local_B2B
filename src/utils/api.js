@@ -559,21 +559,21 @@ export const delivery = {
 
 // Auth API
 export const authAPI = {
-  // Business authentication
-  businessLogin: (credentials) => api.post('/auth/business/login', credentials),
-
-  businessRegister: (userData) => api.post('/auth/business/register', userData),
-
-  // Delivery agent authentication
-  deliveryLogin: (credentials) => api.post('/auth/delivery/login', credentials),
-
-  deliveryRegister: (userData) => api.post('/auth/delivery/register', userData),
-
-  // Get current user info
   getCurrentUser: () => api.get('/auth/me'),
-
-  // Update user profile
-  updateProfile: (userData) => api.put('/auth/update-profile', userData)
+  businessLogin: (credentials) => api.post('/auth/business/login', credentials),
+  deliveryLogin: (credentials) => api.post('/auth/delivery/login', credentials),
+  updateProfile: (userData) => api.put('/auth/update-profile', userData),
+  // Add proper method for document upload
+  uploadDocument: (documentData, type) => {
+    const formData = new FormData();
+    if (documentData.file) {
+      formData.append('document', documentData.file);
+    }
+    formData.append('documentType', type);
+    return api.post('/auth/upload-document', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
 };
 
 export const auth = {
@@ -627,8 +627,22 @@ export const dealAPI = {
   getFeaturedDeals: (limit = 4) => api.get(`/deals/featured?limit=${limit}`),
 
   // Toggle featured status of a deal
-  toggleFeaturedStatus: (productId, isFeatured) => 
-    api.put(`/deals/product/${productId}`, { is_featured: isFeatured })
+  toggleFeaturedStatus: (productId, isFeatured) => {
+    console.log(`Toggling featured status for product ID ${productId} to ${isFeatured}`);
+    // First get the deal ID for this product
+    return api.get(`/deals/product/${productId}`)
+      .then(response => {
+        if (response.data && response.data.data && response.data.data.id) {
+          const dealId = response.data.data.id;
+          // Now update the deal with the proper deal ID
+          return api.put(`/deals/${dealId}`, { 
+            is_featured: isFeatured 
+          });
+        } else {
+          throw new Error('No deal found for this product');
+        }
+      });
+  }
 };
 
 // Image Upload API

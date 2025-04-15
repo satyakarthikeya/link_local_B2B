@@ -244,16 +244,31 @@ export function AuthProvider({ children }) {
       }
       
       // Call the API to update the profile
-      const response = await api.auth.updateProfile(userData, token);
+      const response = await api.auth.updateProfile(userData);
       
-      // Update local storage with the updated user data
-      const updatedUser = response.user || response;
-      localStorage.setItem('userData', JSON.stringify(updatedUser));
+      // Get the updated user data - handle different response formats
+      let updatedUser;
+      if (response.data && response.data.user) {
+        updatedUser = response.data.user;
+      } else if (response.data) {
+        updatedUser = response.data;
+      } else {
+        updatedUser = response.user || response;
+      }
       
-      // Update the local state with the updated user data
-      setCurrentUser(updatedUser);
+      // Merge the updated user with existing user data to preserve other fields
+      const mergedUser = { ...currentUser, ...updatedUser };
       
-      return updatedUser;
+      // Log the updated user data for debugging
+      console.log('Updated user data to be saved:', mergedUser);
+      
+      // Save the updated user data to local storage
+      localStorage.setItem('userData', JSON.stringify(mergedUser));
+      
+      // Update the current user state
+      setCurrentUser(mergedUser);
+      
+      return mergedUser;
     } catch (error) {
       console.error("Profile update error:", error);
       throw error;

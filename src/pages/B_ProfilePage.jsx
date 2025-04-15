@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
+import api from '../utils/api'; // Import the API utility
 import "../styles/business_home.css";
 import "../styles/profile.css"; // We'll create this next
 
@@ -114,21 +115,27 @@ const B_ProfilePage = () => {
 
   const fetchBankDetails = async () => {
     try {
-      const bankDetails = currentUser.bank_details || {};
-
-      setBankData({
-        accountHolderName: bankDetails.account_holder_name || bankDetails.account_name || currentUser.account_holder_name || "",
+      console.log('Current user object data:', currentUser);
+      
+      // Check if banking details exist in currentUser structure
+      const bankDetails = currentUser.bankDetails || {};
+      
+      let bankingData = {
+        accountHolderName: bankDetails.account_holder_name || "",
         accountNumber: bankDetails.account_number ? 
-          ("••••••••" + bankDetails.account_number.slice(-4)) : 
-          currentUser.bank_account_number ?
-          ("••••••••" + currentUser.bank_account_number.slice(-4)) :
-          "••••••••0000",
-        ifscCode: bankDetails.ifsc_code || currentUser.bank_ifsc_code || "",
-        bankName: bankDetails.bank_name || currentUser.bank_name || "",
-        branchName: bankDetails.branch_name || currentUser.bank_branch || ""
-      });
+                      ("••••••••" + bankDetails.account_number.toString().slice(-4)) : 
+                      "••••••••0000",
+        ifscCode: bankDetails.ifsc_code || "",
+        bankName: bankDetails.bank_name || "",
+        branchName: bankDetails.branch_name || ""
+      };
+      
+      console.log('Bank data from database:', bankDetails);
+      
+      setBankData(bankingData);
+      
     } catch (error) {
-      console.error("Error fetching bank details:", error);
+      console.error("Error processing bank details:", error);
     }
   };
 
@@ -196,31 +203,43 @@ const B_ProfilePage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!profileData.businessName) newErrors.businessName = "Business name is required";
+    if (activeTab === 'personal') {
+      if (!profileData.businessName) newErrors.businessName = "Business name is required";
 
-    if (!profileData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
-      newErrors.email = "Email is invalid";
-    }
+      if (!profileData.email) {
+        newErrors.email = "Email is required";
+      } else if (!/^\S+@\S+\.\S+$/.test(profileData.email)) {
+        newErrors.email = "Email is invalid";
+      }
 
-    if (!profileData.phone) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^(\+\d{1,3})?[\s.-]?\d{10}$/.test(profileData.phone)) {
-      newErrors.phone = "Phone number is invalid";
-    }
+      if (!profileData.phone) {
+        newErrors.phone = "Phone number is required";
+      } else if (!/^(\+\d{1,3})?[\s.-]?\d{10}$/.test(profileData.phone)) {
+        newErrors.phone = "Phone number is invalid";
+      }
 
-    if (!profileData.gstNumber) {
-      newErrors.gstNumber = "GST number is required";
-    } else if (!/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(profileData.gstNumber)) {
-      newErrors.gstNumber = "GST number is invalid (format: 22AAAAA0000A1Z5)";
-    }
+      if (!profileData.gstNumber) {
+        newErrors.gstNumber = "GST number is required";
+      } else if (!/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(profileData.gstNumber)) {
+        newErrors.gstNumber = "GST number is invalid (format: 22AAAAA0000A1Z5)";
+      }
 
-    if (!profileData.address.city) newErrors.city = "City is required";
-    if (!profileData.address.pincode) {
-      newErrors.pincode = "PIN code is required";
-    } else if (!/^\d{6}$/.test(profileData.address.pincode)) {
-      newErrors.pincode = "PIN code should be 6 digits";
+      if (!profileData.address.city) newErrors.city = "City is required";
+      if (!profileData.address.pincode) {
+        newErrors.pincode = "PIN code is required";
+      } else if (!/^\d{6}$/.test(profileData.address.pincode)) {
+        newErrors.pincode = "PIN code should be 6 digits";
+      }
+    } else if (activeTab === 'banking') {
+      if (!bankData.accountHolderName) newErrors.accountHolderName = "Account holder name is required";
+      if (!bankData.bankName) newErrors.bankName = "Bank name is required";
+      if (!bankData.ifscCode) newErrors.ifscCode = "IFSC code is required";
+      
+      if (bankData.accountNumber && !bankData.accountNumber.includes('•')) {
+        if (bankData.accountNumber.length < 8) {
+          newErrors.accountNumber = "Account number is too short";
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -275,30 +294,83 @@ const B_ProfilePage = () => {
           updateData.business_hours = businessHoursArray;
         }
       } else if (activeTab === 'banking') {
+        // Fixed: This is the correct format for the backend
         updateData = {
-          bank_details: {
+          bankDetails: {
             account_holder_name: bankData.accountHolderName,
             bank_name: bankData.bankName,
             ifsc_code: bankData.ifscCode,
             branch_name: bankData.branchName
           }
         };
-
+        
+        // Only include account number if it's not masked
         if (bankData.accountNumber && !bankData.accountNumber.includes('•')) {
-          updateData.bank_details.account_number = bankData.accountNumber;
+          updateData.bankDetails.account_number = bankData.accountNumber;
         }
+        
+        console.log('Submitting banking data to database:', JSON.stringify(updateData));
       }
 
-      await updateProfile(updateData);
+      try {
+        const response = await api.auth.updateProfile(updateData);
+        console.log('Update response:', response);
+        
+        if (updateProfile && response.data) {
+          const userData = response.data.user || response.data;
+          // Make sure we merge the updated data with existing data
+          const updatedUserData = { 
+            ...currentUser,
+            ...userData
+          };
+          
+          // For banking data, we need to update specific fields directly
+          if (activeTab === 'banking') {
+            // Map backend field names to our user object fields
+            updatedUserData.account_holder_name = bankData.accountHolderName;
+            updatedUserData.bank_name = bankData.bankName;
+            updatedUserData.ifsc_code = bankData.ifscCode;
+            updatedUserData.branch_name = bankData.branchName;
+            
+            // Only update account number if it's been changed (not masked)
+            if (bankData.accountNumber && !bankData.accountNumber.includes('•')) {
+              updatedUserData.account_number = bankData.accountNumber;
+            }
+            
+            console.log('Updated user data with banking details:', updatedUserData);
+          }
+          
+          // Update context and localStorage with updated user data
+          await updateProfile(updatedUserData);
+          
+          // Refresh banking data display
+          if (activeTab === 'banking') {
+            fetchBankDetails();
+          }
+        }
+        
+        setSaveSuccess(true);
+        setFormChanged(false);
 
-      setSaveSuccess(true);
-      setFormChanged(false);
-
-      setTimeout(() => {
-        setSaveSuccess(false);
-        setIsEditing(false);
-      }, 3000);
-
+        setTimeout(() => {
+          setSaveSuccess(false);
+          setIsEditing(false);
+        }, 3000);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        let errorMessage = 'Failed to update profile. Please try again.';
+        
+        if (error.response && error.response.data && error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        setSaveError(errorMessage);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } finally {
+        setIsLoading(false);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       setSaveError(error.message || 'Failed to update profile. Please try again.');
@@ -716,7 +788,6 @@ const B_ProfilePage = () => {
                                       businessHours: {
                                         ...profileData.businessHours,
                                         [day]: {
-                                          ...profileData.businessHours[day],
                                           open: value
                                         }
                                       }
@@ -736,7 +807,6 @@ const B_ProfilePage = () => {
                                       businessHours: {
                                         ...profileData.businessHours,
                                         [day]: {
-                                          ...profileData.businessHours[day],
                                           close: value
                                         }
                                       }
@@ -851,7 +921,6 @@ const B_ProfilePage = () => {
                               name="accountNumber"
                               value={isEditing ? bankData.accountNumber.replace(/•/g, '') : bankData.accountNumber}
                               onChange={(e) => {
-                                // Only allow numbers in account number
                                 const value = e.target.value.replace(/[^\d]/g, '');
                                 setBankData({
                                   ...bankData,
@@ -999,8 +1068,6 @@ const B_ProfilePage = () => {
                               onChange={(e) => {
                                 if (e.target.files[0]) {
                                   alert("Document uploaded successfully! It will be verified soon.");
-                                  // In a real implementation, you would upload the file to your server
-                                  // and then add it to the documents list
                                   const newDoc = {
                                     id: Date.now(),
                                     name: "GST Certificate",
@@ -1238,6 +1305,7 @@ const B_ProfilePage = () => {
                             <span className="value">••••••••1234 (Visa)</span>
                           </div>
                         </div>
+                      
                       </div>
                       
                       <div className="plan-features">

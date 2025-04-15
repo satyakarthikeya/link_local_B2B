@@ -48,26 +48,72 @@ const BusinessModel = {
   // Find business user by email
   async findByEmail(email) {
     const result = await db.query(
-      `SELECT b.*, bp.* 
+      `SELECT b.*, bp.*, bb.account_holder_name, bb.account_number, bb.ifsc_code, bb.bank_name, bb.branch_name 
        FROM Businessman b
        LEFT JOIN BusinessProfile bp ON b.businessman_id = bp.businessman_id 
+       LEFT JOIN Business_Banking bb ON b.businessman_id = bb.businessman_id
        WHERE b.email = $1`,
       [email]
     );
-    return result.rows[0];
+    if (result.rows.length === 0) {
+      return null;
+    }
+    const userData = result.rows[0];
+    userData.bankDetails = {
+      account_holder_name: userData.account_holder_name || null,
+      account_number: userData.account_number || null,
+      ifsc_code: userData.ifsc_code || null,
+      bank_name: userData.bank_name || null,
+      branch_name: userData.branch_name || null
+    };
+    delete userData.account_holder_name;
+    delete userData.account_number;
+    delete userData.ifsc_code;
+    delete userData.bank_name;
+    delete userData.branch_name;
+    return userData;
   },
 
   // Find business user by ID
   async findById(id) {
     const result = await db.query(
-      `SELECT b.*, bp.*, bb.*
+      `SELECT 
+        b.businessman_id, b.email, b.created_at, b.updated_at,
+        bp.profile_id, bp.business_name, bp.owner_name, bp.area, bp.street, 
+        bp.city, bp.state, bp.pincode, bp.phone_no, bp.website, 
+        bp.established_year, bp.business_description, bp.category, bp.gst_number,
+        bb.account_holder_name, bb.account_number, bb.ifsc_code, 
+        bb.bank_name, bb.branch_name
        FROM Businessman b
        LEFT JOIN BusinessProfile bp ON b.businessman_id = bp.businessman_id
        LEFT JOIN Business_Banking bb ON b.businessman_id = bb.businessman_id
        WHERE b.businessman_id = $1`,
       [id]
     );
-    return result.rows[0];
+
+    if (result.rows.length === 0) {
+      return null; // Return null if no user is found
+    }
+
+    const userData = result.rows[0];
+
+    // Add a structured bankDetails object
+    userData.bankDetails = {
+      account_holder_name: userData.account_holder_name || null,
+      account_number: userData.account_number || null,
+      ifsc_code: userData.ifsc_code || null,
+      bank_name: userData.bank_name || null,
+      branch_name: userData.branch_name || null
+    };
+
+    // Remove raw banking fields from the main object
+    delete userData.account_holder_name;
+    delete userData.account_number;
+    delete userData.ifsc_code;
+    delete userData.bank_name;
+    delete userData.branch_name;
+
+    return userData;
   },
 
   // Update business user
@@ -121,44 +167,81 @@ const BusinessModel = {
 
       // Handle banking information update
       if (updateData.bankDetails) {
-        const bankResult = await client.query(
-          `SELECT * FROM Business_Banking WHERE businessman_id = $1`,
-          [id]
-        );
-        
-        if (bankResult.rows.length === 0) {
-          await client.query(
-            `INSERT INTO Business_Banking (
-              businessman_id, account_holder_name, account_number, 
-              ifsc_code, bank_name, branch_name
-            ) VALUES ($1, $2, $3, $4, $5, $6)`,
-            [
-              id,
-              updateData.bankDetails.account_holder_name,
-              updateData.bankDetails.account_number,
-              updateData.bankDetails.ifsc_code,
-              updateData.bankDetails.bank_name,
-              updateData.bankDetails.branch_name
-            ]
+        try {
+          const bankResult = await client.query(
+            `SELECT * FROM Business_Banking WHERE businessman_id = $1`,
+            [id]
           );
-        } else {
-          await client.query(
-            `UPDATE Business_Banking 
-             SET account_holder_name = COALESCE($1, account_holder_name),
-                 account_number = COALESCE($2, account_number),
-                 ifsc_code = COALESCE($3, ifsc_code),
-                 bank_name = COALESCE($4, bank_name),
-                 branch_name = COALESCE($5, branch_name)
-             WHERE businessman_id = $6`,
-            [
-              updateData.bankDetails.account_holder_name,
-              updateData.bankDetails.account_number,
-              updateData.bankDetails.ifsc_code,
-              updateData.bankDetails.bank_name,
-              updateData.bankDetails.branch_name,
-              id
-            ]
-          );
+          
+          // Extract and validate bank details, safely handle missing fields
+          const bankDetails = updateData.bankDetails || {};
+          const accountHolderName = bankDetails.account_holder_name !== undefined ? bankDetails.account_holder_name : null;
+          const accountNumber = bankDetails.account_number !== undefined ? bankDetails.account_number : null;
+          const ifscCode = bankDetails.ifsc_code !== undefined ? bankDetails.ifsc_code : null;
+          const bankName = bankDetails.bank_name !== undefined ? bankDetails.bank_name : null;
+          const branchName = bankDetails.branch_name !== undefined ? bankDetails.branch_name : null;
+          
+          if (bankResult.rows.length === 0) {
+            // Insert new banking record
+            await client.query(
+              `INSERT INTO Business_Banking (
+                businessman_id, account_holder_name, account_number, 
+                ifsc_code, bank_name, branch_name
+              ) VALUES ($1, $2, $3, $4, $5, $6)`,
+              [
+                id,
+                accountHolderName,
+                accountNumber,
+                ifscCode,
+                bankName,
+                branchName
+              ]
+            );
+          } else {
+            // Update existing banking record - only update fields that are provided
+            const fieldsToUpdate = [];
+            const params = [];
+            
+            if (bankDetails.account_holder_name !== undefined) {
+              fieldsToUpdate.push(`account_holder_name = $${params.length + 1}`);
+              params.push(accountHolderName);
+            }
+            
+            if (bankDetails.account_number !== undefined) {
+              fieldsToUpdate.push(`account_number = $${params.length + 1}`);
+              params.push(accountNumber);
+            }
+            
+            if (bankDetails.ifsc_code !== undefined) {
+              fieldsToUpdate.push(`ifsc_code = $${params.length + 1}`);
+              params.push(ifscCode);
+            }
+            
+            if (bankDetails.bank_name !== undefined) {
+              fieldsToUpdate.push(`bank_name = $${params.length + 1}`);
+              params.push(bankName);
+            }
+            
+            if (bankDetails.branch_name !== undefined) {
+              fieldsToUpdate.push(`branch_name = $${params.length + 1}`);
+              params.push(branchName);
+            }
+            
+            // Only proceed with update if there are fields to update
+            if (fieldsToUpdate.length > 0) {
+              params.push(id);
+              await client.query(
+                `UPDATE Business_Banking 
+                 SET ${fieldsToUpdate.join(', ')}
+                 WHERE businessman_id = $${params.length}`,
+                params
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error updating banking details:', error);
+          // Don't swallow the error, propagate it up
+          throw new Error(`Failed to update banking details: ${error.message}`);
         }
       }
       

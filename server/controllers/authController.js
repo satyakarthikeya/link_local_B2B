@@ -184,22 +184,22 @@ const AuthController = {
     try {
       const { id, type } = req.user;
       let userData;
-      
+
       if (type === 'business') {
         userData = await BusinessModel.findById(id);
         if (!userData) {
           return res.status(404).json({ error: 'Business user not found' });
         }
-        
-        // Remove password from response
-        const { password, ...businessData } = userData;
-        return res.json(businessData);
+
+        // Include bankDetails in the response
+        const { password, bankDetails, ...businessData } = userData;
+        return res.json({ ...businessData, bankDetails });
       } else if (type === 'delivery') {
         userData = await DeliveryModel.findById(id);
         if (!userData) {
           return res.status(404).json({ error: 'Delivery agent not found' });
         }
-        
+
         // Remove password from response
         const { password, ...agentData } = userData;
         return res.json(agentData);
@@ -208,7 +208,7 @@ const AuthController = {
       }
     } catch (error) {
       console.error('Auth error:', error.message);
-      res.status(500).json({ error: 'Server error fetching user data' });
+      return res.status(500).json({ error: 'Server error' });
     }
   },
   
@@ -220,18 +220,26 @@ const AuthController = {
       let updatedUser;
       
       if (type === 'business') {
-        // Update business user profile
-        updatedUser = await BusinessModel.update(id, profileData);
-        if (!updatedUser) {
-          return res.status(404).json({ error: 'Business user not found' });
+        try {
+          // Update business user profile
+          updatedUser = await BusinessModel.update(id, profileData);
+          if (!updatedUser) {
+            return res.status(404).json({ error: 'Business user not found' });
+          }
+          
+          // Remove password from response
+          const { password, ...businessData } = updatedUser;
+          return res.json({
+            message: 'Business profile updated successfully',
+            user: businessData
+          });
+        } catch (error) {
+          console.error('Business profile update error:', error.message, error.stack);
+          return res.status(500).json({ 
+            error: 'Server error updating business profile',
+            details: error.message
+          });
         }
-        
-        // Remove password from response
-        const { password, ...businessData } = updatedUser;
-        return res.json({
-          message: 'Business profile updated successfully',
-          user: businessData
-        });
       } else if (type === 'delivery') {
         // Update delivery agent profile
         updatedUser = await DeliveryModel.update(id, profileData);
@@ -249,8 +257,8 @@ const AuthController = {
         return res.status(400).json({ error: 'Invalid user type' });
       }
     } catch (error) {
-      console.error('Profile update error:', error.message);
-      res.status(500).json({ error: 'Server error updating profile' });
+      console.error('Profile update error:', error.message, error.stack);
+      res.status(500).json({ error: 'Server error updating profile', details: error.message });
     }
   }
 };

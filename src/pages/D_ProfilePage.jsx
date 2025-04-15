@@ -551,35 +551,45 @@ const D_ProfilePage = () => {
       }
       
       // Call the update profile method from API
-      const response = await api.delivery.updateProfile(currentUser.agent_id, updateData);
-      
-      // Make sure we don't lose authentication during profile update
-      if (!localStorage.getItem('authToken') && currentToken) {
-        localStorage.setItem('authToken', currentToken);
-      }
-      
-      // Only update the context if response was successful and we have proper data
-      if (updateProfile && response.data) {
-        // Preserve user authentication data when updating profile data
-        const userData = response.data.profile || response.data;
-        const updatedUserData = { 
-          ...currentUser,
-          ...userData
-        };
+      try {
+        const response = await api.auth.updateProfile(updateData);
         
-        // Only update essential profile information, keep authentication intact
-        await updateProfile(updatedUserData, false);
+        // Make sure we don't lose authentication during profile update
+        if (!localStorage.getItem('authToken') && currentToken) {
+          localStorage.setItem('authToken', currentToken);
+        }
+        
+        // Only update the context if response was successful and we have proper data
+        if (updateProfile && response.data) {
+          // Preserve user authentication data when updating profile data
+          const userData = response.data.user || response.data;
+          const updatedUserData = { 
+            ...currentUser,
+            ...userData
+          };
+          
+          // Update the auth context with the new user data
+          await updateProfile(updatedUserData);
+        }
+        
+        // Show success message
+        setSaveSuccess(true);
+        setFormChanged(false);
+        
+        // Hide success message after 3 seconds and exit editing mode
+        setTimeout(() => {
+          setSaveSuccess(false);
+          setIsEditing(false);
+        }, 3000);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        setSaveError(error.message || 'Failed to update profile. Please try again.');
+        
+        // Scroll to error message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } finally {
+        setIsLoading(false); // Hide loading indicator
       }
-      
-      // Show success message
-      setSaveSuccess(true);
-      setFormChanged(false);
-      
-      // Hide success message after 3 seconds and exit editing mode
-      setTimeout(() => {
-        setSaveSuccess(false);
-        setIsEditing(false);
-      }, 3000);
     } catch (error) {
       console.error('Error updating profile:', error);
       setSaveError(error.message || 'Failed to update profile. Please try again.');
