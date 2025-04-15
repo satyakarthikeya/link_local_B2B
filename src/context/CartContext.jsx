@@ -33,7 +33,7 @@ export const CartProvider = ({ children }) => {
             seller: item.business_name || 'Local Vendor',
             price: item.price,
             quantity: item.quantity,
-            image: item.image_url || './src/assests/guddu.jpeg',
+            image: item.image_url || null,
             product_id: item.product_id
           }));
           setCartItems(formattedItems);
@@ -97,8 +97,13 @@ export const CartProvider = ({ children }) => {
       price: typeof item.price === 'string' ? parseFloat(item.price.replace('₹', '')) : item.price,
       image: item.image_url || item.image || './src/assests/guddu.jpeg',
       product_id: item.product_id || item.id,
-      quantity: 1
+      quantity: 1,
+      deal_type: item.deal_type || null
     };
+
+    // Check if it's a BOGO deal - for Buy One Get One deals, set quantity to 2
+    const quantityToAdd = formattedItem.deal_type === 'BUY_ONE_GET_ONE' ? 2 : 1;
+    formattedItem.quantity = quantityToAdd;
 
     // First, update local state for immediate UI feedback
     setCartItems(prev => {
@@ -109,7 +114,7 @@ export const CartProvider = ({ children }) => {
         newCart = [...prev];
         newCart[existingItemIndex] = {
           ...newCart[existingItemIndex],
-          quantity: newCart[existingItemIndex].quantity + 1
+          quantity: newCart[existingItemIndex].quantity + quantityToAdd
         };
       } else {
         newCart = [...prev, formattedItem];
@@ -126,7 +131,7 @@ export const CartProvider = ({ children }) => {
     if (currentUser && localStorage.getItem('authToken')) {
       try {
         const productId = formattedItem.product_id;
-        await api.cart.addToCart(productId, 1);
+        await api.cart.addToCart(productId, quantityToAdd);
       } catch (error) {
         console.error('Error adding item to cart in database:', error);
         // Here you could add error handling or retry logic

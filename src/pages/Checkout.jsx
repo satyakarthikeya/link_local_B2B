@@ -325,7 +325,25 @@ const Checkout = () => {
                 {cartItems.map((item) => (
                   <div className="summary-item" key={item.id}>
                     <div className="item-image">
-                      <img src={item.image} alt={item.name} />
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} />
+                      ) : (
+                        <div 
+                          className="no-image"
+                          style={{
+                            width: '60px',
+                            height: '60px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#f5f5f5',
+                            color: '#aaa',
+                            borderRadius: '6px'
+                          }}
+                        >
+                          <i className="fas fa-image"></i>
+                        </div>
+                      )}
                       <span className="item-quantity">{item.quantity}</span>
                     </div>
                     <div className="item-info">

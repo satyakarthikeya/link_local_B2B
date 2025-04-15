@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
 import { useCart } from '../context/CartContext';
@@ -56,6 +56,7 @@ const B_Homepage = () => {
     };
   }, []);
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, getProfileName } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('coimbatore');
@@ -128,6 +129,7 @@ const B_Homepage = () => {
           
           const transformedDeals = Array.isArray(dealsData) ? dealsData.map(deal => ({
             id: deal.deal_id || deal.product_id,
+            product_id: deal.product_id, // Add this to make product lookup easier
             name: deal.product_name,
             price: `₹${deal.discounted_price || deal.price}`,
             originalPrice: deal.original_price ? `₹${deal.original_price}` : undefined,
@@ -146,7 +148,8 @@ const B_Homepage = () => {
             popularity: Math.floor(Math.random() * (100 - 70) + 70),
             description: deal.description || 'No description available',
             quantity_available: deal.quantity_available,
-            isDeal: true
+            isDeal: true,
+            deal_type: deal.deal_type || null
           })) : [];
           
           setDeals(transformedDeals);
@@ -163,7 +166,7 @@ const B_Homepage = () => {
     };
     
     fetchData();
-  }, [currentUser?.city]);
+  }, [currentUser?.city, location.key]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 80);
@@ -173,6 +176,7 @@ const B_Homepage = () => {
 
   const handleAddToCart = (product) => {
     addToCart(product);
+    // Show BOGO specific notification for Buy One Get One deals
     setShowCartNotification(true);
     setTimeout(() => setShowCartNotification(false), 2000);
   };
@@ -189,7 +193,7 @@ const B_Homepage = () => {
     console.log('Search query:', searchQuery);
     
     // Get IDs of products that are already in deals to filter them out
-    const dealProductIds = deals.map(deal => deal.id);
+    const dealProductIds = deals.map(deal => deal.product_id);
     console.log('Deal product IDs to exclude:', dealProductIds);
     
     // Filter products: exclude own products and products already in deals (unless they're the user's own deals)
@@ -202,28 +206,16 @@ const B_Homepage = () => {
         return false;
       }
       
-      // Find if this product has a deal
-      const productDeal = deals.find(deal => deal.id === product.id);
+      // Check if this product has a deal by searching for the product ID in the deals array
+      const productHasDeal = deals.some(deal => deal.product_id === product.id);
       
-      // If there's a deal for this product, check ownership
-      if (productDeal) {
-        // Extract business ID from the deal if available
-        const dealBusinessId = productDeal.business_id || 
-                              (productDeal.seller_id ? parseInt(productDeal.seller_id) : null);
-                              
-        // If the deal belongs to the current user, keep the product
-        if (currentUser && 
-            (currentUser.businessman_id === dealBusinessId || 
-             currentUser.business_id === dealBusinessId)) {
-          console.log(`Keeping product with user's own deal: ${product.name} (ID: ${product.id})`);
-          return true;
-        }
-        
-        // Otherwise, filter out products with deals from other users
-        console.log(`Filtering out product with other user's deal: ${product.name} (ID: ${product.id})`);
+      if (productHasDeal) {
+        // If the product has a deal, filter it out from regular products
+        console.log(`Filtering out product with deal: ${product.name} (ID: ${product.id})`);
         return false;
       }
       
+      // If no deal found for this product, include it in regular products
       return true;
     });
     
@@ -361,22 +353,51 @@ const B_Homepage = () => {
                     ) : (
                       <img src={deal.image} alt={deal.name} />
                     )}
-                    <div className="featured-badge">Save {deal.discount}%</div>
+                    <div className="featured-badge">
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? (
+                        <span style={{ background: '#e67e22' }}>BUY 1 GET 1 FREE</span>
+                      ) : (
+                        <span>Save {deal.discount}%</span>
+                      )}
+                    </div>
                   </div>
                   <div className="featured-product-info">
                     <h3>{deal.name}</h3>
                     <div className="featured-product-price">
-                      <span className="current-price">{deal.discounted_price || deal.price}</span>
-                      {deal.discount_percentage > 0 && (
-                        <span className="original-price">{deal.originalPrice || deal.price}</span>
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <span className="current-price" style={{ color: '#e67e22', fontWeight: 'bold' }}>{deal.price}</span>
+                          <span style={{ 
+                            fontSize: '0.85rem', 
+                            backgroundColor: '#fff8e1', 
+                            color: '#e67e22', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            marginTop: '4px',
+                            border: '1px dashed #e67e22'
+                          }}>
+                            <i className="fas fa-gift" style={{ marginRight: '4px' }}></i>
+                            Get 2nd item FREE
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="current-price">{deal.discounted_price || deal.price}</span>
+                          {deal.discount_percentage > 0 && (
+                            <span className="original-price">{deal.originalPrice || deal.price}</span>
+                          )}
+                        </>
                       )}
                     </div>
                     <div className="featured-product-seller">by {deal.seller}</div>
                     <button 
                       className="featured-add-to-cart"
                       onClick={() => handleAddToCart(deal)}
+                      style={{
+                        background: deal.deal_type === 'BUY_ONE_GET_ONE' ? '#e67e22' : undefined
+                      }}
                     >
-                      Add to Cart
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? 'Add BOGO Deal to Cart' : 'Add to Cart'}
                     </button>
                   </div>
                 </div>

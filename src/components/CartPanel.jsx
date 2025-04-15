@@ -76,11 +76,29 @@ const CartPanel = ({ isOpen, onClose }) => {
         ) : (
           cart.map(item => (
             <div key={item.id} className="cart-item">
-              <img 
-                className="cart-item-img" 
-                src={item.imageUrl || '/assets/product-placeholder.png'} 
-                alt={item.name} 
-              />
+              {item.imageUrl ? (
+                <img 
+                  className="cart-item-img" 
+                  src={item.imageUrl} 
+                  alt={item.name} 
+                />
+              ) : (
+                <div 
+                  className="no-image"
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f5f5f5',
+                    color: '#aaa',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <i className="fas fa-image fa-2x"></i>
+                </div>
+              )}
               
               <div className="cart-item-details">
                 <h3 className="cart-item-name">{item.name}</h3>

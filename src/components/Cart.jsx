@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext';
 const CartItem = ({ item, updateQuantity, removeFromCart }) => {
   const [isRemoving, setIsRemoving] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { id, image, name, seller, quantity, price } = item;
+  const { id, image, name, seller, quantity, price, deal_type } = item;
   
   const handleQuantityUpdate = (newQty) => {
     setIsUpdating(true);
@@ -25,25 +25,58 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
     const numPrice = Number(price) || 0;  // Convert to number, default to 0 if NaN
     return numPrice;
   };
+  
+  // Determine if this is a BOGO item
+  const isBogo = deal_type === 'BUY_ONE_GET_ONE';
 
   return (
-    <div className={`cart-item ${isRemoving ? 'removing' : ''} ${isUpdating ? 'updating' : ''}`}>
-      <img src={image} alt={name} className="cart-item-img" />
+    <div className={`cart-item ${isRemoving ? 'removing' : ''} ${isUpdating ? 'updating' : ''} ${isBogo ? 'bogo-item' : ''}`}>
+      {image ? (
+        <img src={image} alt={name} className="cart-item-img" />
+      ) : (
+        <div 
+          className="no-image"
+          style={{
+            width: '80px',
+            height: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f5f5f5',
+            color: '#aaa',
+            borderRadius: '8px'
+          }}
+        >
+          <i className="fas fa-image fa-2x"></i>
+        </div>
+      )}
       <div className="cart-item-details">
-        <h3 className="cart-item-name">{name}</h3>
+        <div className="cart-item-header">
+          <h3 className="cart-item-name">{name}</h3>
+          {isBogo && (
+            <span className="bogo-badge">
+              <i className="fas fa-gift"></i> BOGO
+            </span>
+          )}
+        </div>
         <p className="cart-item-seller">by {seller}</p>
+        {isBogo && (
+          <p className="bogo-info">
+            <i className="fas fa-info-circle"></i> Buy one get one free deal
+          </p>
+        )}
         <div className="cart-qty-controls">
           <button
-            onClick={() => handleQuantityUpdate(quantity - 1)}
+            onClick={() => handleQuantityUpdate(quantity - (isBogo ? 2 : 1))}
             className="cart-qty-btn"
-            disabled={quantity <= 1}
+            disabled={isBogo ? quantity <= 2 : quantity <= 1}
             aria-label="Decrease quantity"
           >
             <i className="fas fa-minus"></i>
           </button>
           <span className="cart-qty">{quantity}</span>
           <button
-            onClick={() => handleQuantityUpdate(quantity + 1)}
+            onClick={() => handleQuantityUpdate(quantity + (isBogo ? 2 : 1))}
             className="cart-qty-btn"
             aria-label="Increase quantity"
           >
@@ -51,7 +84,14 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
           </button>
         </div>
       </div>
-      <span className="cart-item-price">₹{(formatPrice(price) * quantity).toFixed(2)}</span>
+      <div className="cart-item-price-container">
+        <span className="cart-item-price">₹{(formatPrice(price) * quantity).toFixed(2)}</span>
+        {isBogo && (
+          <span className="cart-item-unit-price">
+            ₹{formatPrice(price).toFixed(2)} each
+          </span>
+        )}
+      </div>
       <button
         onClick={handleRemove}
         className="cart-item-remove"
@@ -301,7 +341,8 @@ CartItem.propTypes = {
     name: PropTypes.string.isRequired,
     seller: PropTypes.string.isRequired,
     quantity: PropTypes.number.isRequired,
-    price: PropTypes.number.isRequired
+    price: PropTypes.number.isRequired,
+    deal_type: PropTypes.string
   }).isRequired,
   updateQuantity: PropTypes.func.isRequired,
   removeFromCart: PropTypes.func.isRequired

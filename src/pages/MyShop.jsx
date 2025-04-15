@@ -727,9 +727,13 @@ const MyShop = () => {
     }
 
     try {
-      await api.deals.removeDeal(dealId);
+      const response = await api.deals.removeDeal(dealId);
       showNotification('Deal deleted successfully!', 'success');
       await fetchDeals();
+      // Trigger a manual refresh of products to ensure the previously deal-excluded 
+      // product gets included when the user navigates back to B_Homepage
+      await fetchProducts();
+      calculateStats();
     } catch (error) {
       console.error('Error deleting deal:', error);
       const errorMessage = error.response?.data?.message || 'Failed to delete the deal.';
