@@ -608,8 +608,8 @@ export const dealAPI = {
   // Update a deal for a product
   updateDeal: (productId, dealData) => api.put(`/deals/product/${productId}`, dealData),
 
-  // Remove a deal from a product
-  removeDeal: (productId) => api.delete(`/deals/product/${productId}`),
+  // Remove a deal from a product - fixed the endpoint URL
+  removeDeal: (dealId) => api.delete(`/deals/${dealId}`),
 
   // Get deal information for a product
   getDealByProductId: (productId) => api.get(`/deals/product/${productId}`),

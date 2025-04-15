@@ -103,7 +103,8 @@ const B_Homepage = () => {
           area: product.area || 'Local Area',
           rating: 4.5,
           deliveryTime: "1-3 days",
-          image: product.image_url || "./src/assests/guddu.jpeg",
+          image: product.image_url || null,
+          hasNoImage: !product.image_url,
           inStock: product.quantity_available > 0,
           popularity: Math.floor(Math.random() * (100 - 70) + 70),
           description: product.description || 'No description available',
@@ -139,7 +140,8 @@ const B_Homepage = () => {
             area: deal.street || 'Local Area',
             rating: 4.5,
             deliveryTime: "1-3 days",
-            image: deal.image_url || "./src/assests/guddu.jpeg",
+            image: deal.image_url || null,
+            hasNoImage: !deal.image_url,
             inStock: deal.quantity_available > 0,
             popularity: Math.floor(Math.random() * (100 - 70) + 70),
             description: deal.description || 'No description available',
@@ -342,7 +344,23 @@ const B_Homepage = () => {
               {!loading && filteredDeals.slice(0, 2).map((deal) => (
                 <div key={deal.id} className="featured-product-card">
                   <div className="featured-product-image">
-                    <img src={deal.image} alt={deal.name} />
+                    {deal.hasNoImage ? (
+                      <div className="no-image"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f5f5f5',
+                        color: '#aaa'
+                      }}
+                    >
+                      <i className="fas fa-image fa-3x"></i>
+                    </div>
+                    ) : (
+                      <img src={deal.image} alt={deal.name} />
+                    )}
                     <div className="featured-badge">Save {deal.discount}%</div>
                   </div>
                   <div className="featured-product-info">

@@ -86,16 +86,33 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
       }}
     >
       <div className="product-image" style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
-        <img 
-          src={image_url} 
-          alt={product_name} 
-          style={{ 
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.3s ease'
-          }}
-        />
+        {image_url ? (
+          <img 
+            src={image_url} 
+            alt={product_name} 
+            style={{ 
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 0.3s ease'
+            }}
+          />
+        ) : (
+          <div 
+            className="no-image"
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#f5f5f5',
+              color: '#aaa'
+            }}
+          >
+            <i className="fas fa-image fa-3x"></i>
+          </div>
+        )}
         
         <div 
           className="stock-badge"
