@@ -108,9 +108,49 @@ export function AuthProvider({ children }) {
   // Function to register a delivery agent
   const registerDelivery = async (userData) => {
     try {
-      const response = await api.auth.deliveryRegister(userData);
-      storeUserData(response.user, 'delivery', response.token);
-      return response;
+      // Log what we're sending to help debug
+      console.log("Sending delivery registration data:", userData);
+      
+      // Use a direct API call without auth token
+      const response = await fetch('/api/auth/delivery/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+      
+      // Check if response is OK before trying to parse JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        try {
+          // Try to parse as JSON if possible
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
+        } catch (e) {
+          // If not JSON, use text or status
+          errorMessage = errorText || `Server error: ${response.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      
+      // Store user data and token
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        setToken(data.token);
+      }
+      
+      if (data.user) {
+        setCurrentUser(data.user);
+        setUserType('delivery');
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('userType', 'delivery');
+      }
+      
+      return data;
     } catch (error) {
       console.error("Delivery registration error:", error);
       throw error;

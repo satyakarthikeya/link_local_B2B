@@ -306,6 +306,8 @@ export class ProductController {
         city
       } = req.query;
       
+      console.log('Search API received request with query params:', req.query);
+      
       // Add current user ID to exclude their products
       let currentUserBusinessId = null;
       if (req.user && (req.user.id || req.user.businessman_id)) {
@@ -324,7 +326,7 @@ export class ProductController {
         city: city || null,
         // New filter parameters
         exclude_businessman_id: currentUserBusinessId, // Filter out current user's products
-        exclude_deals: true  // Filter out products that are already part of deals
+        exclude_deals: false  // Changed to false to include products that are part of deals
       };
 
       // Log the filters being applied for debugging
@@ -334,6 +336,11 @@ export class ProductController {
       const products = search_query 
         ? await ProductModel.search(search_query, filters)
         : await ProductModel.getAll(filters);
+      
+      console.log('Search result count:', products.length);
+      if (products.length > 0) {
+        console.log('First product found:', products[0]);
+      }
       
       const total = products.length > 0 ? products[0].total_count : 0;
       
@@ -367,6 +374,8 @@ export class ProductController {
         image_url: product.image_url,
         description: product.description
       }));
+
+      console.log('Transformed products count:', transformedProducts.length);
 
       res.json({
         products: transformedProducts,

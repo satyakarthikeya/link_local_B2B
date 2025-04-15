@@ -37,10 +37,10 @@ const OrderHistory = () => {
         queryParams.append('role', 'ordering');
 
         // Log the request for debugging
-        console.log(`Fetching orders from: ${API_URL}/api/orders/history?${queryParams}`);
+        console.log(`Fetching orders from: ${API_URL}/orders/history?${queryParams}`);
         console.log(`Using auth token: ${localStorage.getItem('authToken')}`);
 
-        const response = await axios.get(`${API_URL}/api/orders/history?${queryParams}`, {
+        const response = await axios.get(`${API_URL}/orders/history?${queryParams}`, {
           headers: { 
             Authorization: `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json'
@@ -195,7 +195,7 @@ const OrderHistory = () => {
   const handleCancelOrder = async (orderId) => {
     if (window.confirm('Are you sure you want to cancel this order?')) {
       try {
-        await axios.patch(`${API_URL}/api/orders/${orderId}/cancel`, {}, {
+        await axios.patch(`${API_URL}/orders/${orderId}/cancel`, {}, {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
         });
         
@@ -213,7 +213,7 @@ const OrderHistory = () => {
 
   const handleReorder = async (orderId) => {
     try {
-      const response = await axios.post(`${API_URL}/api/orders/${orderId}/reorder`, {}, {
+      const response = await axios.post(`${API_URL}/orders/${orderId}/reorder`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
       });
       
@@ -235,7 +235,7 @@ const OrderHistory = () => {
 
   const handleReviewSubmit = async (reviewData) => {
     try {
-      await axios.post(`${API_URL}/api/orders/${reviewData.orderId}/review`, {
+      await axios.post(`${API_URL}/orders/${reviewData.orderId}/review`, {
         rating: reviewData.ratingValue,
         comment: reviewData.comment
       }, {

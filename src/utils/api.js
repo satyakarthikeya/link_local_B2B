@@ -64,8 +64,37 @@ export const productAPI = {
     }
   },
 
-  // Get business's products
-  getBusinessProducts: () => api.get('/products/business/myproducts'),
+  // Get business's products with improved error handling
+  getBusinessProducts: async () => {
+    try {
+      const response = await api.get('/products/business/myproducts');
+      return response;
+    } catch (error) {
+      console.error('Error fetching business products:', error);
+      
+      // Create a friendly error response that won't crash the application
+      const errorResponse = {
+        data: [],
+        status: error.response?.status || 500,
+        error: {
+          message: 'Failed to fetch business products. Using empty product list as fallback.',
+          originalError: error.message,
+          serverMessage: error.response?.data?.message || 'Unknown server error'
+        }
+      };
+      
+      // Return a mock successful response with empty data
+      return { 
+        data: [],
+        status: 200,
+        statusText: 'OK (Fallback)', 
+        headers: {},
+        config: {},
+        // Include error info for debugging
+        originalError: errorResponse
+      };
+    }
+  },
 
   // Get low stock products
   getLowStockProducts: () => api.get('/products/business/low-stock'),
@@ -132,11 +161,12 @@ export const productAPI = {
         }
       });
       
-      const response = await axios.get(
-        `${api.defaults.baseURL}/products/search?${queryParams.toString()}`,
-        { headers: api.defaults.headers.common }
+      // Use api instance to maintain headers and baseURL
+      const response = await api.get(
+        `/products/search?${queryParams.toString()}`
       );
       
+      console.log('Search API response:', response.data);
       return response;
     } catch (error) {
       console.error('Failed to search products:', error);

@@ -235,7 +235,7 @@ const ProductModel = {
     
     if (category) {
       params.push(category);
-      query += ` AND b.category = $${params.length}`;
+      query += ` AND p.category = $${params.length}`;
     }
     
     if (businessman_id) {
@@ -318,8 +318,11 @@ const ProductModel = {
       limit = 12,
       city,
       exclude_businessman_id,
-      exclude_deals
+      exclude_deals = false  // Changed default to false so it includes products with deals
     } = filters;
+    
+    console.log('Search function called with searchQuery:', searchQuery);
+    console.log('Search function filters:', filters);
     
     let query = `
       SELECT p.*, b.business_name, b.area, b.street, b.city,
@@ -354,12 +357,20 @@ const ProductModel = {
       query += ` WHERE 1=1`;
     }
     
-    const params = [searchQuery ? `%${searchQuery}%` : ''];
+    const params = [];
     let paramIndex = 1;
     
-    // Add search term filter
+    // Improved search term filter - search in multiple columns
     if (searchQuery) {
-      query += ` AND (p.product_name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex} OR p.category ILIKE $${paramIndex} OR b.business_name ILIKE $${paramIndex})`;
+      // Search in both product_name and description
+      params.push(`%${searchQuery}%`);
+      params.push(`%${searchQuery}%`);
+      query += ` AND (p.product_name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex + 1})`;
+      paramIndex += 2;
+      
+      // Also add a fallback search in business name
+      params.push(`%${searchQuery}%`);
+      query += ` OR b.business_name ILIKE $${paramIndex}`;
       paramIndex++;
     }
     
@@ -416,10 +427,12 @@ const ProductModel = {
     params.push(limit, offset);
     query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     
-    console.log('Executing search query:', query);
-    console.log('With params:', params);
+    console.log('Final SQL query:', query);
+    console.log('SQL params:', params);
     
     const result = await db.query(query, params);
+    console.log('Query result row count:', result.rows.length);
+    
     return result.rows;
   }
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import "../styles/Cart.css";
+import { useCart } from '../context/CartContext';
 
 const CartItem = ({ item, updateQuantity, removeFromCart }) => {
   const [isRemoving, setIsRemoving] = useState(false);
@@ -111,8 +112,9 @@ const EmptyCart = ({ onContinueShopping }) => (
   </div>
 );
 
-const Cart = ({ isOpen, onClose }) => {
+const Cart = ({ isOpen, onClose, items: propItems, updateQuantity: propUpdateQuantity, removeFromCart: propRemoveFromCart, asOverlay = false }) => {
   const navigate = useNavigate();
+  const { cartItems, removeFromCart: contextRemoveFromCart, updateQuantity: contextUpdateQuantity } = useCart();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState({ show: false, item: null });
@@ -152,19 +154,13 @@ const Cart = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      const loadCart = async () => {
-        try {
-          const savedCart = localStorage.getItem("cart");
-          if (savedCart) {
-            setItems(JSON.parse(savedCart));
-          }
-        } catch (error) {
-          console.error("Error loading cart:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadCart();
+      // Use the items provided via props if available, otherwise use cartItems from context
+      if (propItems) {
+        setItems(propItems);
+      } else {
+        setItems(cartItems);
+      }
+      setIsLoading(false);
     } else {
       document.body.style.overflow = '';
     }
@@ -172,22 +168,15 @@ const Cart = ({ isOpen, onClose }) => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, propItems, cartItems]);
 
-  const updateCart = useCallback((newItems) => {
-    try {
-      setItems(newItems);
-      localStorage.setItem("cart", JSON.stringify(newItems));
-    } catch (error) {
-      console.error("Error updating cart:", error);
-    }
-  }, []);
-
-  const removeFromCart = useCallback((itemId) => {
+  // Use the provided function or fall back to context functions
+  const handleRemoveFromCart = useCallback((itemId) => {
     const itemToRemove = items.find(item => item.id === itemId);
-    const newItems = items.filter((item) => item.id !== itemId);
     
-    updateCart(newItems);
+    // Use the removeFromCart from props if provided, otherwise use the one from context
+    const removeFunction = propRemoveFromCart || contextRemoveFromCart;
+    removeFunction(itemId);
     
     if (itemToRemove) {
       setNotification({
@@ -199,16 +188,15 @@ const Cart = ({ isOpen, onClose }) => {
         setNotification({ show: false, item: null });
       }, 3000);
     }
-  }, [items, updateCart]);
+  }, [items, propRemoveFromCart, contextRemoveFromCart]);
 
-  const updateQuantity = useCallback((itemId, newQuantity) => {
+  const handleUpdateQuantity = useCallback((itemId, newQuantity) => {
     if (newQuantity < 1) return;
-
-    const newItems = items.map((item) =>
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
-    );
-    updateCart(newItems);
-  }, [items, updateCart]);
+    
+    // Use the updateQuantity from props if provided, otherwise use the one from context
+    const updateFunction = propUpdateQuantity || contextUpdateQuantity;
+    updateFunction(itemId, newQuantity);
+  }, [propUpdateQuantity, contextUpdateQuantity]);
 
   const handleCheckout = useCallback(() => {
     console.log("Proceeding to checkout...");
@@ -271,8 +259,8 @@ const Cart = ({ isOpen, onClose }) => {
                 <CartItem
                   key={item.id}
                   item={item}
-                  updateQuantity={updateQuantity}
-                  removeFromCart={removeFromCart}
+                  updateQuantity={handleUpdateQuantity}
+                  removeFromCart={handleRemoveFromCart}
                 />
               ))
             )}
@@ -331,7 +319,11 @@ EmptyCart.propTypes = {
 
 Cart.propTypes = {
   isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired
+  onClose: PropTypes.func.isRequired,
+  items: PropTypes.array,
+  updateQuantity: PropTypes.func,
+  removeFromCart: PropTypes.func,
+  asOverlay: PropTypes.bool
 };
 
 export default Cart;

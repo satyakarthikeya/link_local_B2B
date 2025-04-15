@@ -205,13 +205,17 @@ const MyShop = () => {
     }
   };
 
+  // Check if we have the correct endpoint
   const fetchProducts = async () => {
     try {
       setLoading(true);
       console.log('Starting to fetch products...');
-      const response = await api.products.getBusinessProducts();
+      // Modify the endpoint to match the server's expected path
+      const response = await api.get('/products/business/products');
       console.log('Products fetched successfully:', response.data);
-      setProducts(response.data || []);
+      // Make sure we're getting the actual products array from the response
+      const productsData = response.data.products || response.data || [];
+      setProducts(productsData);
       // Call calculateStats after updating products
       setTimeout(() => calculateStats(), 0);
     } catch (error) {

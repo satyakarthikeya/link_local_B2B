@@ -21,15 +21,19 @@ const app = express();
 
 // Middleware
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }  // Allow cross-origin resource sharing
+  crossOriginResourcePolicy: { policy: 'cross-origin' },  // Allow cross-origin resource sharing
+  contentSecurityPolicy: false  // Disable CSP for development
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

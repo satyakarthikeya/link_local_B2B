@@ -89,9 +89,20 @@ export const CartProvider = ({ children }) => {
   const toggleCart = () => setIsCartOpen(prev => !prev);
 
   const addToCart = useCallback(async (item) => {
+    // Format the item to have a consistent structure regardless of source
+    const formattedItem = {
+      id: item.product_id || item.id,
+      name: item.product_name || item.name,
+      seller: item.business_name || item.seller || 'Local Vendor',
+      price: typeof item.price === 'string' ? parseFloat(item.price.replace('₹', '')) : item.price,
+      image: item.image_url || item.image || './src/assests/guddu.jpeg',
+      product_id: item.product_id || item.id,
+      quantity: 1
+    };
+
     // First, update local state for immediate UI feedback
     setCartItems(prev => {
-      const existingItemIndex = prev.findIndex(i => i.id === item.id);
+      const existingItemIndex = prev.findIndex(i => i.id === formattedItem.id);
       let newCart;
 
       if (existingItemIndex >= 0) {
@@ -101,12 +112,12 @@ export const CartProvider = ({ children }) => {
           quantity: newCart[existingItemIndex].quantity + 1
         };
       } else {
-        newCart = [...prev, { ...item, quantity: 1 }];
+        newCart = [...prev, formattedItem];
       }
 
       localStorage.setItem('cart', JSON.stringify(newCart));
       setCartCount(newCart.reduce((sum, item) => sum + item.quantity, 0));
-      setLastAddedItem(item);
+      setLastAddedItem(formattedItem);
 
       return newCart;
     });
@@ -114,7 +125,7 @@ export const CartProvider = ({ children }) => {
     // Then, sync with backend if user is logged in
     if (currentUser && localStorage.getItem('authToken')) {
       try {
-        const productId = item.product_id || item.id;
+        const productId = formattedItem.product_id;
         await api.cart.addToCart(productId, 1);
       } catch (error) {
         console.error('Error adding item to cart in database:', error);
@@ -139,9 +150,14 @@ export const CartProvider = ({ children }) => {
     if (currentUser && localStorage.getItem('authToken')) {
       try {
         const productId = itemToRemove?.product_id || itemId;
+        console.log('Removing item from cart, product_id:', productId);
         await api.cart.removeFromCart(productId);
+        console.log('Successfully removed item from cart');
       } catch (error) {
         console.error('Error removing item from cart in database:', error);
+        console.error('Error details:', error.response?.data);
+        // Don't revert UI state as it creates a confusing experience
+        // Instead, we'll try to ensure the backend operation succeeds
       }
     }
     
