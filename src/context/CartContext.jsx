@@ -95,7 +95,7 @@ export const CartProvider = ({ children }) => {
       name: item.product_name || item.name,
       seller: item.business_name || item.seller || 'Local Vendor',
       price: typeof item.price === 'string' ? parseFloat(item.price.replace('₹', '')) : item.price,
-      image: item.image_url || item.image || './src/assests/guddu.jpeg',
+      image: item.image_url || item.image || null,
       product_id: item.product_id || item.id,
       quantity: 1,
       deal_type: item.deal_type || null

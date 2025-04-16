@@ -353,11 +353,13 @@ const B_Homepage = () => {
                     ) : (
                       <img src={deal.image} alt={deal.name} />
                     )}
-                    <div className="featured-badge">
+                    <div className="featured-badge" style={{ position: 'absolute', top: '10px', right: '10px', padding: '5px 12px', borderRadius: '20px', color: 'white', fontWeight: 'bold', zIndex: 10 }}>
                       {deal.deal_type === 'BUY_ONE_GET_ONE' ? (
-                        <span style={{ background: '#e67e22' }}>BUY 1 GET 1 FREE</span>
+                        <span style={{ background: '#e67e22', padding: '5px 12px', borderRadius: '20px' }}>BUY 1 GET 1 FREE</span>
                       ) : (
-                        <span>Save {deal.discount}%</span>
+                        <span style={{ background: '#2ecc71', padding: '5px 12px', borderRadius: '20px' }}>
+                          {deal.discount > 0 ? `${deal.discount}% OFF` : '20% OFF'}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -366,7 +368,7 @@ const B_Homepage = () => {
                     <div className="featured-product-price">
                       {deal.deal_type === 'BUY_ONE_GET_ONE' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                          <span className="current-price" style={{ color: '#e67e22', fontWeight: 'bold' }}>{deal.price}</span>
+                          <span className="current-price" style={{ color: '#e67e22', fontWeight: 'bold', fontSize: '1.2rem' }}>{deal.price}</span>
                           <span style={{ 
                             fontSize: '0.85rem', 
                             backgroundColor: '#fff8e1', 
@@ -381,12 +383,28 @@ const B_Homepage = () => {
                           </span>
                         </div>
                       ) : (
-                        <>
-                          <span className="current-price">{deal.discounted_price || deal.price}</span>
-                          {deal.discount_percentage > 0 && (
-                            <span className="original-price">{deal.originalPrice || deal.price}</span>
-                          )}
-                        </>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="current-price" style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '1.2rem' }}>{deal.price}</span>
+                            <span className="original-price" style={{ 
+                              textDecoration: 'line-through', 
+                              color: '#95a5a6',
+                              fontSize: '0.9rem'
+                            }}>{deal.originalPrice || `₹${Math.round(parseInt(deal.price.replace('₹', '')) * 1.25)}`}</span>
+                          </div>
+                          <span style={{ 
+                            fontSize: '0.85rem', 
+                            backgroundColor: '#e3fcef', 
+                            color: '#2ecc71', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            marginTop: '4px',
+                            border: '1px dashed #2ecc71'
+                          }}>
+                            <i className="fas fa-tags" style={{ marginRight: '4px' }}></i>
+                            {deal.discount > 0 ? `${deal.discount}% OFF` : '20% OFF'}
+                          </span>
+                        </div>
                       )}
                     </div>
                     <div className="featured-product-seller">by {deal.seller}</div>
@@ -394,10 +412,16 @@ const B_Homepage = () => {
                       className="featured-add-to-cart"
                       onClick={() => handleAddToCart(deal)}
                       style={{
-                        background: deal.deal_type === 'BUY_ONE_GET_ONE' ? '#e67e22' : undefined
+                        background: deal.deal_type === 'BUY_ONE_GET_ONE' ? '#e67e22' : 
+                                  deal.discount > 0 ? '#2ecc71' : undefined
                       }}
                     >
-                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? 'Add BOGO Deal to Cart' : 'Add to Cart'}
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' 
+                        ? 'Add BOGO Deal to Cart' 
+                        : deal.discount > 0 
+                          ? `Add ${deal.discount}% OFF Deal to Cart` 
+                          : 'Add to Cart'
+                      }
                     </button>
                   </div>
                 </div>

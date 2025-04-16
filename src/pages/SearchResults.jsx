@@ -111,6 +111,7 @@ const SearchResults = () => {
       
       // Call API with filters
       const response = await productAPI.searchProducts(filters);
+      console.log('Search API response:', response.data);
       
       // If no response or empty products, show a message
       if (!response || !response.data || 
@@ -143,11 +144,19 @@ const SearchResults = () => {
           city: product.city || selectedCity,
           inStock: product.inStock !== undefined ? product.inStock : (product.quantity_available > 0),
           in_stock: product.inStock !== undefined ? product.inStock : (product.quantity_available > 0),
-          image: product.image_url || "../assests/guddu.jpeg",
-          image_url: product.image_url || "../assests/guddu.jpeg",
+          image: product.image_url ||null,
+          image_url: product.image_url ||null,
           description: product.description || 'No description available',
           reorder_point: product.reorder_point || 5,
-          rating: product.rating || (Math.random() * 2 + 3).toFixed(1) // Random rating between 3-5 if not provided
+          rating: product.rating || (Math.random() * 2 + 3).toFixed(1), // Random rating between 3-5 if not provided
+          
+          // Deal information for consistent styling with B_Homepage
+          isDeal: product.is_deal || product.isDeal || false,
+          deal_type: product.deal_type || null,
+          discount: product.discount_percentage || 0,
+          discount_percentage: product.discount_percentage || 0,
+          originalPrice: product.original_price ? `₹${product.original_price}` : undefined,
+          discounted_price: product.discounted_price || product.price
         };
       });
       

@@ -7,6 +7,24 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
 
+  // Check if a product is a deal and has a deal type, using a more robust check
+  const isDealProduct = Boolean(
+    product.isDeal || 
+    product.is_deal || 
+    product.deal_type === 'BUY_ONE_GET_ONE' || 
+    product.deal_type === 'DISCOUNT' ||
+    product.discount_percentage > 0
+  );
+  
+  // Ensure deal type is properly detected, with fallbacks
+  const dealType = product.deal_type || 
+                   (product.discount_percentage > 0 ? 'DISCOUNT' : null);
+                   
+  // Ensure numeric discount value exists
+  const discountValue = product.discount || 
+                        product.discount_percentage || 
+                        (product.originalPrice ? 20 : 0); // Default 20% if original price exists
+
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -114,27 +132,60 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
           </div>
         )}
         
-        <div 
-          className="stock-badge"
-          style={{ 
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            padding: '4px 12px',
-            borderRadius: '20px',
-            fontSize: '0.8rem',
-            fontWeight: '600',
-            backgroundColor: stockStatusColor[stockStatus],
-            color: '#fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <i className={`fas fa-${stockStatus === 'In Stock' ? 'check-circle' : stockStatus === 'Low Stock' ? 'exclamation-circle' : 'times-circle'}`}></i>
-          {stockStatus}
-        </div>
+        {/* Show Deal Badge if product is a deal */}
+        {isDealProduct && (
+          <div className="featured-badge" style={{ 
+            position: 'absolute', 
+            top: '10px', 
+            right: '10px', 
+            padding: '5px 12px', 
+            borderRadius: '20px', 
+            color: 'white', 
+            fontWeight: 'bold', 
+            zIndex: 10 
+          }}>
+            {dealType === 'BUY_ONE_GET_ONE' ? (
+              <span style={{ 
+                background: '#e67e22', 
+                padding: '5px 12px', 
+                borderRadius: '20px' 
+              }}>BUY 1 GET 1 FREE</span>
+            ) : (
+              <span style={{ 
+                background: '#2ecc71', 
+                padding: '5px 12px', 
+                borderRadius: '20px' 
+              }}>
+                {discountValue > 0 ? `${discountValue}% OFF` : '20% OFF'}
+              </span>
+            )}
+          </div>
+        )}
+        
+        {/* Show standard stock badge if not a deal */}
+        {!isDealProduct && (
+          <div 
+            className="stock-badge"
+            style={{ 
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              padding: '4px 12px',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              backgroundColor: stockStatusColor[stockStatus],
+              color: '#fff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <i className={`fas fa-${stockStatus === 'In Stock' ? 'check-circle' : stockStatus === 'Low Stock' ? 'exclamation-circle' : 'times-circle'}`}></i>
+            {stockStatus}
+          </div>
+        )}
 
         {isBusinessView && (
           <div 
@@ -244,7 +295,61 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {product.discounted_price ? (
+          {product.isDeal && product.deal_type === 'BUY_ONE_GET_ONE' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: '700', 
+                color: '#e67e22' 
+              }}>
+                ₹{price}
+              </span>
+              <span style={{ 
+                fontSize: '0.85rem', 
+                backgroundColor: '#fff8e1', 
+                color: '#e67e22', 
+                padding: '2px 6px', 
+                borderRadius: '4px',
+                marginTop: '4px',
+                border: '1px dashed #e67e22'
+              }}>
+                <i className="fas fa-gift" style={{ marginRight: '4px' }}></i>
+                Get 2nd item FREE
+              </span>
+            </div>
+          ) : product.isDeal && product.discount > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ 
+                  fontSize: '1.2rem', 
+                  fontWeight: '700', 
+                  color: '#2ecc71' 
+                }}>
+                  ₹{product.discounted_price || price}
+                </span>
+                <span style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: '400', 
+                  textDecoration: 'line-through', 
+                  color: '#95a5a6'
+                }}>
+                  {product.originalPrice || `₹${Math.round(price * 1.25)}`}
+                </span>
+              </div>
+              <span style={{ 
+                fontSize: '0.85rem', 
+                backgroundColor: '#e3fcef', 
+                color: '#2ecc71', 
+                padding: '2px 6px', 
+                borderRadius: '4px',
+                marginTop: '4px',
+                border: '1px dashed #2ecc71'
+              }}>
+                <i className="fas fa-tags" style={{ marginRight: '4px' }}></i>
+                {product.discount}% OFF
+              </span>
+            </div>
+          ) : product.discounted_price ? (
             <>
               <span style={{ 
                 fontSize: '1.2rem', 
@@ -396,7 +501,9 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
               padding: '10px',
               borderRadius: '6px',
               border: 'none',
-              background: product.in_stock ? '#3498db' : '#636e72',
+              background: !product.in_stock ? '#636e72' :
+                          product.isDeal && product.deal_type === 'BUY_ONE_GET_ONE' ? '#e67e22' :
+                          product.isDeal && product.discount > 0 ? '#2ecc71' : '#3498db',
               color: '#fff',
               cursor: product.in_stock ? 'pointer' : 'not-allowed',
               display: 'flex',
@@ -419,8 +526,14 @@ const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateSto
               </>
             ) : (
               <>
-                <i className="fas fa-shopping-cart"></i>
-                <span>{product.in_stock ? 'Add to Cart' : 'Out of Stock'}</span>
+                <i className={product.isDeal && product.deal_type === 'BUY_ONE_GET_ONE' ? "fas fa-gift" : 
+                              product.isDeal && product.discount > 0 ? "fas fa-tags" : "fas fa-shopping-cart"}></i>
+                <span>
+                  {!product.in_stock ? 'Out of Stock' : 
+                   product.isDeal && product.deal_type === 'BUY_ONE_GET_ONE' ? 'Add BOGO Deal to Cart' :
+                   product.isDeal && product.discount > 0 ? `Add ${product.discount || 20}% OFF Deal to Cart` :
+                   'Add to Cart'}
+                </span>
               </>
             )}
           </button>
@@ -445,7 +558,10 @@ ProductCard.propTypes = {
     in_stock: PropTypes.bool,
     description: PropTypes.string,
     discounted_price: PropTypes.number,
-    discount_percentage: PropTypes.number
+    discount_percentage: PropTypes.number,
+    isDeal: PropTypes.bool,
+    deal_type: PropTypes.string,
+    discount: PropTypes.number
   }).isRequired,
   onAddToCart: PropTypes.func,
   isBusinessView: PropTypes.bool,

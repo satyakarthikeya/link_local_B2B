@@ -606,7 +606,7 @@ export const dealAPI = {
   createDeal: (productId, dealData) => api.post(`/deals/product/${productId}`, dealData),
 
   // Update a deal for a product
-  updateDeal: (productId, dealData) => api.put(`/deals/product/${productId}`, dealData),
+  updateDeal: (dealId, dealData) => api.put(`/deals/product/${dealId}`, dealData),
 
   // Remove a deal from a product - fixed the endpoint URL
   removeDeal: (dealId) => api.delete(`/deals/${dealId}`),
@@ -626,16 +626,16 @@ export const dealAPI = {
   // Get featured deals
   getFeaturedDeals: (limit = 4) => api.get(`/deals/featured?limit=${limit}`),
 
-  // Toggle featured status of a deal
+  // Toggle featured status of a deal - fixed to use correct endpoint
   toggleFeaturedStatus: (productId, isFeatured) => {
     console.log(`Toggling featured status for product ID ${productId} to ${isFeatured}`);
     // First get the deal ID for this product
     return api.get(`/deals/product/${productId}`)
       .then(response => {
-        if (response.data && response.data.data && response.data.data.id) {
-          const dealId = response.data.data.id;
-          // Now update the deal with the proper deal ID
-          return api.put(`/deals/${dealId}`, { 
+        if (response.data && response.data.data) {
+          const dealId = response.data.data.deal_id || response.data.data.id;
+          // Now update the deal with the proper deal ID using the correct endpoint
+          return api.put(`/deals/product/${dealId}`, { 
             is_featured: isFeatured 
           });
         } else {
