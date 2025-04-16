@@ -230,7 +230,22 @@ h2 {
     font-size: 0.9rem;
     margin-top: 5px;
     display: block;
+    background-color: #ffd1d1;
+    color: #d63031;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: fadeIn 0.3s ease;
 }
+
+.error-message i {
+    color: #d63031;
+}
+
 /* Scoped styling for password field to avoid affecting other inputs */
 .password-container {
     position: relative;
@@ -250,6 +265,28 @@ h2 {
 .password-toggle i {
     pointer-events: none;
 }
+
+/* Password Toggle Button */
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-toggle-btn:hover {
+    color: #4a6fff;
+}
+
 /* Style for the select dropdown */
 .input-container select {
     width: 100%;
@@ -307,7 +344,26 @@ h2 {
     padding-left: 40px;
   }
   
-  
+/* Form Error Styling */
+.input-group.error input,
+.input-group.error select {
+    border-color: #ff5a5f;
+    background-color: #fff8f8;
+}
+
+.field-error {
+    color: #ff5a5f;
+    font-size: 0.8rem;
+    margin-top: 5px;
+    padding-left: 32px;
+    font-weight: 500;
+}
+
+.terms-container .field-error {
+    padding-left: 25px;
+    margin-top: 5px;
+}
+
 /* Animation */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }

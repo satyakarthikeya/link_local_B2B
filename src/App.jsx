@@ -16,6 +16,7 @@ import B_Homepage from "./pages/B_Homepage";
 import B_ProfilePage from "./pages/B_ProfilePage";
 import SearchResults from "./pages/SearchResults";
 import OrderHistory from "./pages/OrderHistory";
+import Checkout from "./pages/Checkout";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
             <Route path="/search" element={<SearchResults />} />
             <Route path="/order-history" element={<OrderHistory />} />
             <Route path="/business-home/notifications" element={<div>Notifications Page</div>} />
+            <Route path="/checkout" element={<Checkout />} />
           </Routes>
         </CartProvider>
       </AuthProvider>

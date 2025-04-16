@@ -28,9 +28,7 @@ const ReviewForm = ({ order, onClose, onSubmit }) => {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulating API call
       
       onSubmit({
-        orderId: order.id,
-        productId: order.productInfo.id,
-        businessmanId: order.supplierInfo.id,
+        orderId: order.order_id,
         ratingValue: rating,
         comment,
         createdAt: new Date().toISOString()
@@ -54,15 +52,15 @@ const ReviewForm = ({ order, onClose, onSubmit }) => {
         
         <div className="review-header">
           <h2>Review Your Order</h2>
-          <p>Share your experience with {order.supplierInfo.name}</p>
+          <p>Share your experience with {order.supplying_business_name}</p>
         </div>
         
         <div className="order-summary">
           <div className="review-order-id">
-            <strong>Order ID:</strong> {order.id}
+            <strong>Order ID:</strong> {order.order_id}
           </div>
           <div className="review-product">
-            <strong>Product:</strong> {order.productInfo.name}
+            <strong>Product:</strong> {order.product_name}
           </div>
         </div>
         
@@ -126,15 +124,9 @@ const ReviewForm = ({ order, onClose, onSubmit }) => {
 
 ReviewForm.propTypes = {
   order: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    productInfo: PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      name: PropTypes.string.isRequired
-    }).isRequired,
-    supplierInfo: PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      name: PropTypes.string.isRequired
-    }).isRequired
+    order_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    product_name: PropTypes.string.isRequired,
+    supplying_business_name: PropTypes.string.isRequired
   }).isRequired,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired

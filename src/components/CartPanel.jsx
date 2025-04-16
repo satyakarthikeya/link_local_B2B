@@ -38,6 +38,13 @@ const CartPanel = ({ isOpen, onClose }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
   
+  // Format price to handle NaN values
+  const formatPrice = (price, quantity = 1) => {
+    const numPrice = Number(price) || 0;  // Convert to number, default to 0 if NaN
+    const totalPrice = numPrice * quantity;
+    return `₹${totalPrice.toFixed(2)}`;
+  };
+  
   return (
     <div 
       ref={panelRef}
@@ -69,11 +76,29 @@ const CartPanel = ({ isOpen, onClose }) => {
         ) : (
           cart.map(item => (
             <div key={item.id} className="cart-item">
-              <img 
-                className="cart-item-img" 
-                src={item.imageUrl || '/assets/product-placeholder.png'} 
-                alt={item.name} 
-              />
+              {item.imageUrl ? (
+                <img 
+                  className="cart-item-img" 
+                  src={item.imageUrl} 
+                  alt={item.name} 
+                />
+              ) : (
+                <div 
+                  className="no-image"
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f5f5f5',
+                    color: '#aaa',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <i className="fas fa-image fa-2x"></i>
+                </div>
+              )}
               
               <div className="cart-item-details">
                 <h3 className="cart-item-name">{item.name}</h3>
@@ -100,7 +125,7 @@ const CartPanel = ({ isOpen, onClose }) => {
               </div>
               
               <div className="cart-item-price">
-                ${(item.price * item.quantity).toFixed(2)}
+                {formatPrice(item.price, item.quantity)}
               </div>
               
               <button 
@@ -120,12 +145,12 @@ const CartPanel = ({ isOpen, onClose }) => {
         <div className="cart-panel-footer">
           <div className="cart-subtotal">
             <span>Subtotal ({getCartItemsCount()} items)</span>
-            <span>${getCartTotal().toFixed(2)}</span>
+            <span>₹{(getCartTotal() || 0).toFixed(2)}</span>
           </div>
           
           <div className="cart-total">
             <span>Total</span>
-            <span>${getCartTotal().toFixed(2)}</span>
+            <span>₹{(getCartTotal() || 0).toFixed(2)}</span>
           </div>
           
           <button className="checkout-btn">

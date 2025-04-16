@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 import "../styles/Cart.css";
+import { useCart } from '../context/CartContext';
 
 const CartItem = ({ item, updateQuantity, removeFromCart }) => {
   const [isRemoving, setIsRemoving] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { id, image, name, seller, quantity, price } = item;
+  const { id, image, name, seller, quantity, price, deal_type } = item;
   
   const handleQuantityUpdate = (newQty) => {
     setIsUpdating(true);
@@ -18,24 +20,63 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
     setTimeout(() => removeFromCart(id), 300);
   }, [id, removeFromCart]);
 
+  // Format price to handle NaN
+  const formatPrice = (price) => {
+    const numPrice = Number(price) || 0;  // Convert to number, default to 0 if NaN
+    return numPrice;
+  };
+  
+  // Determine if this is a BOGO item
+  const isBogo = deal_type === 'BUY_ONE_GET_ONE';
+
   return (
-    <div className={`cart-item ${isRemoving ? 'removing' : ''} ${isUpdating ? 'updating' : ''}`}>
-      <img src={image} alt={name} className="cart-item-img" />
+    <div className={`cart-item ${isRemoving ? 'removing' : ''} ${isUpdating ? 'updating' : ''} ${isBogo ? 'bogo-item' : ''}`}>
+      {image ? (
+        <img src={image} alt={name} className="cart-item-img" />
+      ) : (
+        <div 
+          className="no-image"
+          style={{
+            width: '80px',
+            height: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f5f5f5',
+            color: '#aaa',
+            borderRadius: '8px'
+          }}
+        >
+          <i className="fas fa-image fa-2x"></i>
+        </div>
+      )}
       <div className="cart-item-details">
-        <h3 className="cart-item-name">{name}</h3>
+        <div className="cart-item-header">
+          <h3 className="cart-item-name">{name}</h3>
+          {isBogo && (
+            <span className="bogo-badge">
+              <i className="fas fa-gift"></i> BOGO
+            </span>
+          )}
+        </div>
         <p className="cart-item-seller">by {seller}</p>
+        {isBogo && (
+          <p className="bogo-info">
+            <i className="fas fa-info-circle"></i> Buy one get one free deal
+          </p>
+        )}
         <div className="cart-qty-controls">
           <button
-            onClick={() => handleQuantityUpdate(quantity - 1)}
+            onClick={() => handleQuantityUpdate(quantity - (isBogo ? 2 : 1))}
             className="cart-qty-btn"
-            disabled={quantity <= 1}
+            disabled={isBogo ? quantity <= 2 : quantity <= 1}
             aria-label="Decrease quantity"
           >
             <i className="fas fa-minus"></i>
           </button>
           <span className="cart-qty">{quantity}</span>
           <button
-            onClick={() => handleQuantityUpdate(quantity + 1)}
+            onClick={() => handleQuantityUpdate(quantity + (isBogo ? 2 : 1))}
             className="cart-qty-btn"
             aria-label="Increase quantity"
           >
@@ -43,7 +84,14 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
           </button>
         </div>
       </div>
-      <span className="cart-item-price">₹{price * quantity}</span>
+      <div className="cart-item-price-container">
+        <span className="cart-item-price">₹{(formatPrice(price) * quantity).toFixed(2)}</span>
+        {isBogo && (
+          <span className="cart-item-unit-price">
+            ₹{formatPrice(price).toFixed(2)} each
+          </span>
+        )}
+      </div>
       <button
         onClick={handleRemove}
         className="cart-item-remove"
@@ -56,13 +104,15 @@ const CartItem = ({ item, updateQuantity, removeFromCart }) => {
 };
 
 const CartSummary = ({ total, deliveryFee = 50, onCheckout }) => {
-  const finalTotal = total + deliveryFee;
+  // Ensure total is a valid number
+  const validTotal = isNaN(total) ? 0 : total;
+  const finalTotal = validTotal + deliveryFee;
   
   return (
     <div className="cart-panel-footer">
       <div className="cart-subtotal">
         <span>Subtotal</span>
-        <span>₹{total.toFixed(2)}</span>
+        <span>₹{validTotal.toFixed(2)}</span>
       </div>
       <div className="cart-subtotal">
         <span>Delivery Fee</span>
@@ -75,7 +125,7 @@ const CartSummary = ({ total, deliveryFee = 50, onCheckout }) => {
       <button 
         className="checkout-btn" 
         onClick={onCheckout}
-        disabled={total === 0}
+        disabled={validTotal === 0}
       >
         Proceed to Checkout <i className="fas fa-arrow-right"></i>
       </button>
@@ -102,7 +152,9 @@ const EmptyCart = ({ onContinueShopping }) => (
   </div>
 );
 
-const Cart = ({ isOpen, onClose }) => {
+const Cart = ({ isOpen, onClose, items: propItems, updateQuantity: propUpdateQuantity, removeFromCart: propRemoveFromCart, asOverlay = false }) => {
+  const navigate = useNavigate();
+  const { cartItems, removeFromCart: contextRemoveFromCart, updateQuantity: contextUpdateQuantity } = useCart();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState({ show: false, item: null });
@@ -142,19 +194,13 @@ const Cart = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      const loadCart = async () => {
-        try {
-          const savedCart = localStorage.getItem("cart");
-          if (savedCart) {
-            setItems(JSON.parse(savedCart));
-          }
-        } catch (error) {
-          console.error("Error loading cart:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadCart();
+      // Use the items provided via props if available, otherwise use cartItems from context
+      if (propItems) {
+        setItems(propItems);
+      } else {
+        setItems(cartItems);
+      }
+      setIsLoading(false);
     } else {
       document.body.style.overflow = '';
     }
@@ -162,22 +208,15 @@ const Cart = ({ isOpen, onClose }) => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, propItems, cartItems]);
 
-  const updateCart = useCallback((newItems) => {
-    try {
-      setItems(newItems);
-      localStorage.setItem("cart", JSON.stringify(newItems));
-    } catch (error) {
-      console.error("Error updating cart:", error);
-    }
-  }, []);
-
-  const removeFromCart = useCallback((itemId) => {
+  // Use the provided function or fall back to context functions
+  const handleRemoveFromCart = useCallback((itemId) => {
     const itemToRemove = items.find(item => item.id === itemId);
-    const newItems = items.filter((item) => item.id !== itemId);
     
-    updateCart(newItems);
+    // Use the removeFromCart from props if provided, otherwise use the one from context
+    const removeFunction = propRemoveFromCart || contextRemoveFromCart;
+    removeFunction(itemId);
     
     if (itemToRemove) {
       setNotification({
@@ -189,30 +228,36 @@ const Cart = ({ isOpen, onClose }) => {
         setNotification({ show: false, item: null });
       }, 3000);
     }
-  }, [items, updateCart]);
+  }, [items, propRemoveFromCart, contextRemoveFromCart]);
 
-  const updateQuantity = useCallback((itemId, newQuantity) => {
+  const handleUpdateQuantity = useCallback((itemId, newQuantity) => {
     if (newQuantity < 1) return;
-
-    const newItems = items.map((item) =>
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
-    );
-    updateCart(newItems);
-  }, [items, updateCart]);
+    
+    // Use the updateQuantity from props if provided, otherwise use the one from context
+    const updateFunction = propUpdateQuantity || contextUpdateQuantity;
+    updateFunction(itemId, newQuantity);
+  }, [propUpdateQuantity, contextUpdateQuantity]);
 
   const handleCheckout = useCallback(() => {
     console.log("Proceeding to checkout...");
-    window.location.href = '/business-home/checkout';
-  }, []);
+    handleClose();
+    setTimeout(() => {
+      navigate('/checkout');
+    }, 300);
+  }, [navigate, handleClose]);
 
   const handleContinueShopping = useCallback(() => {
     handleClose();
     setTimeout(() => {
-      window.location.href = '/business-home';
+      navigate('/business-home');
     }, 300);
-  }, [handleClose]);
+  }, [handleClose, navigate]);
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = items.reduce((sum, item) => {
+    // Convert price to number or default to 0 if NaN
+    const price = Number(item.price) || 0;
+    return sum + price * item.quantity;
+  }, 0);
 
   if (!isOpen) return null;
 
@@ -254,8 +299,8 @@ const Cart = ({ isOpen, onClose }) => {
                 <CartItem
                   key={item.id}
                   item={item}
-                  updateQuantity={updateQuantity}
-                  removeFromCart={removeFromCart}
+                  updateQuantity={handleUpdateQuantity}
+                  removeFromCart={handleRemoveFromCart}
                 />
               ))
             )}
@@ -296,7 +341,8 @@ CartItem.propTypes = {
     name: PropTypes.string.isRequired,
     seller: PropTypes.string.isRequired,
     quantity: PropTypes.number.isRequired,
-    price: PropTypes.number.isRequired
+    price: PropTypes.number.isRequired,
+    deal_type: PropTypes.string
   }).isRequired,
   updateQuantity: PropTypes.func.isRequired,
   removeFromCart: PropTypes.func.isRequired
@@ -314,7 +360,11 @@ EmptyCart.propTypes = {
 
 Cart.propTypes = {
   isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired
+  onClose: PropTypes.func.isRequired,
+  items: PropTypes.array,
+  updateQuantity: PropTypes.func,
+  removeFromCart: PropTypes.func,
+  asOverlay: PropTypes.bool
 };
 
 export default Cart;

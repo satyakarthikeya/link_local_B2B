@@ -7,7 +7,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 const D_MapView = () => {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState({
-    lat: 11.0168, // Default to Coimbatore coordinates
+    lat: 11.0168, // Default to coimbatore coordinates
     lng: 76.9558
   });
   
@@ -16,7 +16,7 @@ const D_MapView = () => {
     {
       id: "OD12345",
       name: "Sunrise Stationers",
-      address: "RS Puram, Coimbatore",
+      address: "RS Puram, coimbatore",
       lat: 11.0132,
       lng: 76.9462,
       status: "pickup"
@@ -24,7 +24,7 @@ const D_MapView = () => {
     {
       id: "OD12345-D",
       name: "Chennai Silks",
-      address: "Gandhipuram, Coimbatore",
+      address: "Gandhipuram, coimbatore",
       lat: 11.0187,
       lng: 76.9675,
       status: "dropoff"
@@ -32,7 +32,7 @@ const D_MapView = () => {
     {
       id: "OD12346",
       name: "Lulu Market",
-      address: "Avinashi Road, Coimbatore",
+      address: "Avinashi Road, coimbatore",
       lat: 11.0319,
       lng: 77.0298,
       status: "pickup"
@@ -40,7 +40,7 @@ const D_MapView = () => {
     {
       id: "OD12346-D",
       name: "SS Hypermarket",
-      address: "Peelamedu, Coimbatore",
+      address: "Peelamedu, coimbatore",
       lat: 11.0235,
       lng: 77.0026,
       status: "dropoff"

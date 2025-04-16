@@ -1,128 +1,344 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/delivery_home.css"; // Correct path to delivery_home.css
+import "../styles/delivery_home.css";
 import D_Navbar from "../components/D_Navbar";
 import D_Footer from "../components/D_Footer";
+import { useAuth } from "../context/AuthContext";
+import api from "../utils/api";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_Homepage = () => {
   const navigate = useNavigate();
+  const { currentUser, getProfileName } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState("Coimbatore, Tamil Nadu");
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState("coimbatore, tamil nadu");
   const [activeTab, setActiveTab] = useState("all");
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [earnings, setEarnings] = useState({
-    today: "₹850",
-    weekly: "₹5,200",
-    monthly: "₹22,400"
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Sample orders data
-  const [orders, setOrders] = useState([
-    {
-      id: "OD12345",
-      pickup: "Sunrise Stationers, RS Puram",
-      dropoff: "Chennai Silks, Gandhipuram",
-      status: "pending",
-      distance: "3.5 km",
-      amount: "₹120",
-      time: "15 min",
-      items: "Bulk A4 sheets (5 packs)",
-      timestamp: "11:30 AM",
-      customerName: "Rahul Sharma",
-      customerPhone: "+91 98765 43210",
-      notes: "Please handle with care. Call before delivery."
-    },
-    {
-      id: "OD12346",
-      pickup: "Lulu Market, Avinashi Road",
-      dropoff: "SS Hypermarket, Peelamedu",
-      status: "transit",
-      distance: "5.2 km",
-      amount: "₹180",
-      time: "25 min",
-      items: "Fresh Vegetables, Rice Bags",
-      timestamp: "12:45 PM",
-      customerName: "Priya Patel",
-      customerPhone: "+91 87654 32109",
-      notes: "Keep vegetables separate from other items."
-    },
-    {
-      id: "OD12347",
-      pickup: "Sunrise Electronics, RS Puram",
-      dropoff: "Amrita University",
-      status: "delivered",
-      distance: "8.7 km",
-      amount: "₹250",
-      time: "40 min",
-      items: "Jumper Wires, Headphones",
-      timestamp: "09:15 AM",
-      customerName: "Arjun Kumar",
-      customerPhone: "+91 76543 21098",
-      notes: "Deliver to Engineering Block, Room 204."
+  const [earnings, setEarnings] = useState({
+    today: "₹0",
+    weekly: "₹0",
+    monthly: "₹0"
+  });
+  const [orders, setOrders] = useState([]);
+  const [nearbyOrders, setNearbyOrders] = useState([]);
+  const [showOrderRequestsSection, setShowOrderRequestsSection] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState({
+    orders: { active: 0, completed: 0, total: 0 },
+    earnings: { today: "₹0", weekly: "₹0", monthly: "₹0" },
+    rating: 5.0,
+    total_deliveries: 0
+  });
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setIsLoading(true);
+        await fetchOrders();
+        await fetchDashboardStats();
+        
+        const profileResponse = await api.delivery.getProfile();
+        if (profileResponse && profileResponse.data) {
+          setIsOnline(profileResponse.data.availability_status === "Available");
+          await fetchDashboardStats();
+          getUserLocation();
+          if (profileResponse.data.availability_status === "Available") {
+            await fetchNearbyOrders();
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching initial data:", err);
+        setError("Failed to load data. Please refresh the page.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialData();
+
+    const orderRequestsInterval = setInterval(() => {
+      if (isOnline) {
+        fetchNearbyOrders();
+      }
+    }, 30000);
+    
+    return () => {
+      clearInterval(orderRequestsInterval);
+    };
+  }, [currentUser, isOnline]);
+
+  useEffect(() => {
+    setShowOrderRequestsSection(isOnline && nearbyOrders.length > 0);
+  }, [isOnline, nearbyOrders]);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await api.delivery.getCurrentOrders();
+      const formattedOrders = response.data.map(order => ({
+        id: order.order_id,
+        status: mapDeliveryStatusToUiStatus(order.delivery_status),
+        pickup: `${order.supplying_business_name}, ${order.supplying_area}`,
+        dropoff: `${order.ordering_business_name}, ${order.ordering_area}`,
+        customerName: order.ordering_business_name,
+        customerPhone: order.ordering_phone || "9876543210",
+        timestamp: formatDateForDisplay(order.created_at),
+        items: `${order.product_name} x ${order.quantity_requested}`,
+        amount: formatCurrency(order.total_amount),
+        distance: calculateDistance(order.supplying_area, order.ordering_area),
+        time: estimateDeliveryTime(order.supplying_area, order.ordering_area),
+        notes: order.notes || ""
+      }));
+      setOrders(formattedOrders);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setOrders([]);
     }
-  ]);
+  };
 
-  // Toggle online/offline status
-  const toggleStatus = () => setIsOnline(!isOnline);
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await api.delivery.getDashboardStats();
+      setDashboardStats(response.data);
+      setEarnings(response.data.earnings);
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
+    }
+  };
 
-  // Update order status
-  const updateOrderStatus = (id, newStatus) => {
-    setOrders(orders.map(order => 
-      order.id === id ? {...order, status: newStatus} : order
-    ));
+  const fetchNearbyOrders = async () => {
+    if (!isOnline) return;
+    
+    try {
+      const response = await api.delivery.getNearbyOrders();
+      
+      if (response && response.data) {
+        const formattedNearbyOrders = response.data.map(order => ({
+          id: order.order_id,
+          pickup: `${order.supplying_business_name}, ${order.supplying_area}`,
+          dropoff: `${order.ordering_business_name}, ${order.ordering_area}`,
+          customerName: order.ordering_business_name,
+          customerPhone: order.ordering_phone || "9876543210",
+          timestamp: formatDateForDisplay(order.created_at),
+          items: `${order.product_name} x ${order.quantity_requested}`,
+          amount: formatCurrency(order.total_amount),
+          distance: calculateDistance(order.supplying_area, order.ordering_area),
+          time: estimateDeliveryTime(order.supplying_area, order.ordering_area),
+          notes: order.notes || ""
+        }));
+        
+        const previousOrderIds = nearbyOrders.map(o => o.id);
+        const newOrders = formattedNearbyOrders.filter(o => !previousOrderIds.includes(o.id));
+        
+        setNearbyOrders(formattedNearbyOrders);
+        
+        if (!isLoading && newOrders.length > 0) {
+          try {
+            console.log("New order requests available!");
+          } catch (err) {
+            console.error("Audio notification failed:", err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching nearby orders:", err);
+    }
+  };
+
+  const toggleStatus = async () => {
+    try {
+      setIsStatusUpdating(true);
+      await api.delivery.updateStatus(!isOnline);
+      setIsOnline(!isOnline);
+      if (!isOnline) {
+        await fetchNearbyOrders();
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update status. Please try again.");
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  };
+
+  const updateOrderStatus = async (id, newStatus) => {
+    try {
+      let apiStatus;
+      switch(newStatus) {
+        case "transit":
+          apiStatus = "InTransit";
+          break;
+        case "delivered":
+          apiStatus = "Delivered";
+          break;
+        default:
+          apiStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+      }
+      await api.delivery.updateOrderStatus(id, { status: apiStatus });
+      setOrders(orders.map(order => 
+        order.id === id ? {...order, status: newStatus} : order
+      ));
+      if (newStatus === "delivered") {
+        await fetchDashboardStats();
+      }
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      alert("Failed to update order status. Please try again.");
+    }
   };
   
-  // Filter orders based on active tab
-  const getFilteredOrders = () => {
+  const acceptOrder = async (orderId) => {
+    try {
+      setIsStatusUpdating(true);
+      await api.delivery.acceptOrder(orderId);
+      
+      setNearbyOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+      
+      await fetchOrders();
+      
+      await fetchDashboardStats();
+      
+      alert("Order accepted successfully!");
+    } catch (err) {
+      console.error("Error accepting order:", err);
+      alert("Failed to accept order. Please try again.");
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  };
+
+  const getFilteredOrders = useCallback(() => {
     if (activeTab === 'all') return orders;
     return orders.filter(order => order.status === activeTab);
-  };
+  }, [activeTab, orders]);
   
-  // Show order details
   const viewOrderDetails = (order) => {
     setSelectedOrder(order);
     setShowOrderDetail(true);
   };
   
-  // Navigate to earnings page
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {},
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+  };
+  
+  const showSuccessToast = (message) => {
+    alert(message);
+  };
+  
+  const showErrorToast = (message) => {
+    alert(message);
+  };
+
   const goToEarningsPage = () => {
-    navigate('/delivery/earnings');
-    // For demo, show alert
-    alert("Navigating to Earnings Dashboard");
+    navigate('/delivery-profile?tab=earnings');
   };
   
-  // Navigate to active orders page
   const goToActiveOrdersPage = () => {
-    navigate('/delivery/active-orders');
-    // For demo, show alert
-    alert("Navigating to Active Orders Page");
+    setActiveTab('pending');
   };
   
-  // Navigate to completed orders page
   const goToCompletedOrdersPage = () => {
-    navigate('/delivery/completed');
-    // For demo, show alert
-    alert("Navigating to Completed Orders Page");
+    setActiveTab('delivered');
   };
   
-  // Change location
   const openLocationModal = () => {
     setShowLocationModal(true);
   };
   
-  // Update location
-  const updateLocation = (newLocation) => {
+  const updateLocation = async (newLocation) => {
     setCurrentLocation(newLocation);
     setShowLocationModal(false);
+    try {
+      const locationData = {
+        address: newLocation,
+        latitude: 0,
+        longitude: 0
+      };
+      await api.delivery.updateLocation(locationData);
+    } catch (err) {
+      console.error("Error updating location:", err);
+    }
   };
   
-  // Call customer
   const callCustomer = (phone) => {
-    alert(`Calling customer at ${phone}`);
+    window.location.href = `tel:${phone}`;
   };
+
+  const mapDeliveryStatusToUiStatus = (apiStatus) => {
+    switch(apiStatus) {
+      case "Pending": return "pending";
+      case "Assigned": return "pending";
+      case "PickedUp": return "transit";
+      case "InTransit": return "transit";
+      case "Delivered": return "delivered";
+      default: return "pending";
+    }
+  };
+  
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount || 0);
+  };
+  
+  const calculateDistance = (from, to) => {
+    return `${Math.floor(Math.random() * 5) + 1} km`;
+  };
+  
+  const estimateDeliveryTime = (from, to) => {
+    return `${Math.floor(Math.random() * 20) + 10} min`;
+  };
+
+  if (isLoading) {
+    return (
+      <>
+        <D_Navbar isOnlineGlobal={isOnline} setIsOnlineGlobal={setIsOnline} />
+        <div className="loading-container">
+          <i className="fas fa-spinner fa-spin fa-3x"></i>
+          <p>Loading your dashboard...</p>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <D_Navbar isOnlineGlobal={isOnline} setIsOnlineGlobal={setIsOnline} />
+        <div className="error-container">
+          <i className="fas fa-exclamation-triangle fa-3x"></i>
+          <h3>Something went wrong</h3>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()} className="retry-btn">
+            <i className="fas fa-redo"></i> Try Again
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -130,10 +346,9 @@ const D_Homepage = () => {
 
       <main className="delivery-dashboard">
         <div className="container">
-          {/* Enhanced Welcome Section with Location Picker */}
           <div className="welcome-bar">
             <div className="welcome-status">
-              <h2>Delivery Dashboard</h2>
+              <h2>Welcome, {getProfileName() || 'Delivery Partner'}! 👋</h2>
               <div className="location-picker" onClick={openLocationModal}>
                 <i className="fas fa-map-marker-alt"></i>
                 <p>{currentLocation}</p>
@@ -143,16 +358,20 @@ const D_Homepage = () => {
             <div className="status-toggle">
               <span>Status:</span>
               <label className="switch">
-                <input type="checkbox" checked={isOnline} onChange={toggleStatus} />
+                <input 
+                  type="checkbox" 
+                  checked={isOnline} 
+                  onChange={toggleStatus}
+                  disabled={isStatusUpdating} 
+                />
                 <span className="slider"></span>
               </label>
               <span className={`status-text ${isOnline ? 'status-online' : 'status-offline'}`}>
-                {isOnline ? 'Online' : 'Offline'}
+                {isStatusUpdating ? 'Updating...' : isOnline ? 'Online' : 'Offline'}
               </span>
             </div>
           </div>
 
-          {/* Interactive Stats Cards */}
           <div className="quick-stats">
             <div className="stat-card clickable" onClick={goToEarningsPage}>
               <i className="fas fa-wallet"></i>
@@ -166,7 +385,7 @@ const D_Homepage = () => {
               <i className="fas fa-route"></i>
               <div className="stat-details">
                 <h3>Active Orders</h3>
-                <p>{orders.filter(o => o.status === "pending" || o.status === "transit").length}</p>
+                <p>{dashboardStats.orders.active || 0}</p>
                 <span className="view-more">Manage All <i className="fas fa-chevron-right"></i></span>
               </div>
             </div>
@@ -174,15 +393,13 @@ const D_Homepage = () => {
               <i className="fas fa-check-circle"></i>
               <div className="stat-details">
                 <h3>Completed</h3>
-                <p>{orders.filter(o => o.status === "delivered").length}</p>
+                <p>{dashboardStats.orders.completed || 0}</p>
                 <span className="view-more">View History <i className="fas fa-chevron-right"></i></span>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="action-buttons">
-            
             <button className="action-button" onClick={() => navigate('/delivery-profile')}>
               <i className="fas fa-user"></i>
               <span>Profile</span>
@@ -197,7 +414,94 @@ const D_Homepage = () => {
             </button>
           </div>
 
-          {/* Streamlined Orders Section */}
+          {showOrderRequestsSection && (
+            <div className="orders-section order-requests-section">
+              <div className="orders-header">
+                <h2>New Order Requests</h2>
+                <div className="refresh-icon" onClick={fetchNearbyOrders}>
+                  <i className="fas fa-sync-alt"></i>
+                </div>
+                <div className="order-count">
+                  {nearbyOrders.length} request{nearbyOrders.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div className="orders-grid nearby-orders-grid">
+                {nearbyOrders.map(order => (
+                  <div className="order-card order-nearby" key={order.id}>
+                    <div className="order-header">
+                      <span className="status-badge status-new">
+                        New Request
+                      </span>
+                      <span className="order-time">{order.timestamp}</span>
+                    </div>
+                    
+                    <div className="order-content">
+                      <div className="order-locations">
+                        <div className="pickup-point">
+                          <i className="fas fa-store"></i>
+                          <p>{order.pickup}</p>
+                        </div>
+                        <div className="delivery-point">
+                          <i className="fas fa-map-marker-alt"></i>
+                          <p>{order.dropoff}</p>
+                        </div>
+                      </div>
+
+                      <div className="order-info">
+                        <span><i className="fas fa-box"></i> {order.items}</span>
+                        <span><i className="fas fa-rupee-sign"></i> {order.amount}</span>
+                        <span><i className="fas fa-route"></i> {order.distance}</span>
+                      </div>
+
+                      <div className="order-actions">
+                        <button 
+                          className="action-btn accept-btn"
+                          onClick={() => acceptOrder(order.id)}
+                          disabled={isStatusUpdating}
+                        >
+                          {isStatusUpdating ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin"></i> Processing...
+                            </>
+                          ) : (
+                            <>Accept Request</>
+                          )}
+                        </button>
+                        <button 
+                          className="action-btn details-btn"
+                          onClick={() => viewOrderDetails(order)}
+                        >View Details</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isOnline && (
+            <div className="offline-notification">
+              <div className="offline-icon">
+                <i className="fas fa-power-off"></i>
+              </div>
+              <h3>You are currently offline</h3>
+              <p>Go online to receive new order requests</p>
+              <button className="go-online-btn" onClick={toggleStatus}>
+                Go Online
+              </button>
+            </div>
+          )}
+
+          {isOnline && nearbyOrders.length === 0 && !isLoading && (
+            <div className="no-orders-notification">
+              <div className="orders-icon">
+                <i className="fas fa-clipboard-list"></i>
+              </div>
+              <h3>No new order requests</h3>
+              <p>New orders will appear here as they come in</p>
+            </div>
+          )}
+
           <div className="orders-section">
             <div className="orders-header">
               <h2>Current Orders</h2>
@@ -222,85 +526,94 @@ const D_Homepage = () => {
             </div>
 
             <div className="orders-grid">
-              {getFilteredOrders().map(order => (
-                <div className={`order-card order-${order.status}`} key={order.id}>
-                  <div className="order-header">
-                    <span className={`status-badge status-${order.status}`}>
-                      {order.status === "pending" ? "New Order" :
-                       order.status === "transit" ? "In Progress" :
-                       "Delivered"}
-                    </span>
-                    <span className="order-time">{order.timestamp}</span>
-                  </div>
-                  
-                  <div className="order-content">
-                    <div className="order-locations">
-                      <div className="pickup-point">
-                        <i className="fas fa-store"></i>
-                        <p>{order.pickup}</p>
+              {getFilteredOrders().length > 0 ? (
+                getFilteredOrders().map(order => (
+                  <div className={`order-card order-${order.status}`} key={order.id}>
+                    <div className="order-header">
+                      <span className={`status-badge status-${order.status}`}>
+                        {order.status === "pending" ? "New Order" :
+                         order.status === "transit" ? "In Progress" :
+                         "Delivered"}
+                      </span>
+                      <span className="order-time">{order.timestamp}</span>
+                    </div>
+                    
+                    <div className="order-content">
+                      <div className="order-locations">
+                        <div className="pickup-point">
+                          <i className="fas fa-store"></i>
+                          <p>{order.pickup}</p>
+                        </div>
+                        <div className="delivery-point">
+                          <i className="fas fa-map-marker-alt"></i>
+                          <p>{order.dropoff}</p>
+                        </div>
                       </div>
-                      <div className="delivery-point">
-                        <i className="fas fa-map-marker-alt"></i>
-                        <p>{order.dropoff}</p>
+
+                      <div className="order-info">
+                        <span><i className="fas fa-box"></i> {order.items}</span>
+                        <span><i className="fas fa-rupee-sign"></i> {order.amount}</span>
+                        <span><i className="fas fa-route"></i> {order.distance}</span>
+                      </div>
+
+                      <div className="order-actions">
+                        {order.status === "pending" && (
+                          <>
+                            <button 
+                              className="action-btn transit-btn"
+                              onClick={() => updateOrderStatus(order.id, "transit")}
+                            >Start Delivery</button>
+                            <button 
+                              className="action-btn details-btn"
+                              onClick={() => viewOrderDetails(order)}
+                            >View Details</button>
+                          </>
+                        )}
+                        {order.status === "transit" && (
+                          <>
+                            <button 
+                              className="action-btn complete-btn"
+                              onClick={() => updateOrderStatus(order.id, "delivered")}
+                            >Mark as Delivered</button>
+                            <button 
+                              className="action-btn nav-btn"
+                              onClick={() => navigate('/map-view')}
+                            >Navigate</button>
+                            <button 
+                              className="action-btn call-btn"
+                              onClick={() => callCustomer(order.customerPhone)}
+                            >Call</button>
+                          </>
+                        )}
+                        {order.status === "delivered" && (
+                          <>
+                            <button 
+                              className="action-btn receipt-btn"
+                              onClick={() => viewOrderDetails(order)}
+                            >View Receipt</button>
+                            <button 
+                              className="action-btn details-btn"
+                              onClick={() => viewOrderDetails(order)}
+                            >Details</button>
+                          </>
+                        )}
                       </div>
                     </div>
-
-                    <div className="order-info">
-                      <span><i className="fas fa-box"></i> {order.items}</span>
-                      <span><i className="fas fa-rupee-sign"></i> {order.amount}</span>
-                      <span><i className="fas fa-route"></i> {order.distance}</span>
-                    </div>
-
-                    <div className="order-actions">
-                      {order.status === "pending" && (
-                        <>
-                          <button 
-                            className="action-btn accept-btn"
-                            onClick={() => updateOrderStatus(order.id, "transit")}
-                          >Accept Order</button>
-                          <button 
-                            className="action-btn details-btn"
-                            onClick={() => viewOrderDetails(order)}
-                          >View Details</button>
-                        </>
-                      )}
-                      {order.status === "transit" && (
-                        <>
-                          <button 
-                            className="action-btn complete-btn"
-                            onClick={() => updateOrderStatus(order.id, "delivered")}
-                          >Mark as Delivered</button>
-                          <button 
-                            className="action-btn nav-btn"
-                            onClick={() => navigate('/map-view')}
-                          >Navigate</button>
-                          <button 
-                            className="action-btn call-btn"
-                            onClick={() => callCustomer(order.customerPhone)}
-                          >Call</button>
-                        </>
-                      )}
-                      {order.status === "delivered" && (
-                        <>
-                          <button 
-                            className="action-btn receipt-btn"
-                            onClick={() => viewOrderDetails(order)}
-                          >View Receipt</button>
-                          <button 
-                            className="action-btn details-btn"
-                            onClick={() => alert("Generating PDF receipt...")}
-                          >Download</button>
-                        </>
-                      )}
-                    </div>
                   </div>
-                </div>
-              ))}
-
-              {getFilteredOrders().length === 0 && (
+                ))
+              ) : (
                 <div className="no-orders">
                   <i className="fas fa-inbox"></i>
                   <p>No {activeTab !== 'all' ? activeTab : ''} orders available</p>
+                  {!isOnline && (
+                    <div className="offline-message">
+                      <i className="fas fa-exclamation-circle"></i>
+                      <p>You are currently offline. Go online to receive new orders.</p>
+                      <button className="go-online-btn" onClick={toggleStatus}>
+                        <i className="fas fa-power-off"></i> Go Online
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -308,7 +621,6 @@ const D_Homepage = () => {
         </div>
       </main>
 
-      {/* Order Details Modal */}
       {showOrderDetail && selectedOrder && (
         <div className="modal-overlay" onClick={() => setShowOrderDetail(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -318,6 +630,7 @@ const D_Homepage = () => {
                 <i className="fas fa-times"></i>
               </button>
             </div>
+            
             <div className="modal-body">
               <div className="order-status">
                 <h4>Status: <span className={`status-text-${selectedOrder.status}`}>
@@ -368,7 +681,7 @@ const D_Homepage = () => {
                 </div>
                 <div className="detail-item">
                   <span className="detail-label">Notes:</span>
-                  <span className="detail-value">{selectedOrder.notes}</span>
+                  <span className="detail-value">{selectedOrder.notes || "No special instructions"}</span>
                 </div>
               </div>
               
@@ -380,7 +693,7 @@ const D_Homepage = () => {
                       updateOrderStatus(selectedOrder.id, "transit");
                       setShowOrderDetail(false);
                     }}
-                  >Accept Order</button>
+                  >Start Delivery</button>
                 )}
                 {selectedOrder.status === "transit" && (
                   <>
@@ -407,46 +720,34 @@ const D_Homepage = () => {
         </div>
       )}
 
-      {/* Location Modal */}
       {showLocationModal && (
         <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
-          <div className="modal-content location-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="location-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Select Your Location</h3>
+              <h3>Update Your Location</h3>
               <button className="close-btn" onClick={() => setShowLocationModal(false)}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            <div className="modal-body">
-              <div className="location-search">
-                <i className="fas fa-search"></i>
-                <input type="text" placeholder="Search location..." />
-              </div>
-              <div className="location-list">
-                <div className="location-option" onClick={() => updateLocation("Coimbatore, Tamil Nadu")}>
-                  <i className="fas fa-map-marker-alt"></i>
-                  <span>Coimbatore, Tamil Nadu</span>
-                </div>
-                <div className="location-option" onClick={() => updateLocation("Chennai, Tamil Nadu")}>
-                  <i className="fas fa-map-marker-alt"></i>
-                  <span>Chennai, Tamil Nadu</span>
-                </div>
-                <div className="location-option" onClick={() => updateLocation("Bengaluru, Karnataka")}>
-                  <i className="fas fa-map-marker-alt"></i>
-                  <span>Bengaluru, Karnataka</span>
-                </div>
-                <div className="location-option" onClick={() => updateLocation("Madurai, Tamil Nadu")}>
-                  <i className="fas fa-map-marker-alt"></i>
-                  <span>Madurai, Tamil Nadu</span>
-                </div>
-                <div className="location-option" onClick={() => updateLocation("Salem, Tamil Nadu")}>
-                  <i className="fas fa-map-marker-alt"></i>
-                  <span>Salem, Tamil Nadu</span>
-                </div>
-              </div>
-              <button className="use-current-location" onClick={() => updateLocation("Coimbatore, Tamil Nadu")}>
-                <i className="fas fa-location-arrow"></i>
-                Use My Current Location
+            
+            <div className="location-form">
+              <select 
+                className="location-select"
+                defaultValue={currentLocation}
+                onChange={(e) => updateLocation(e.target.value)}
+              >
+                <option value="coimbatore, tamil nadu">Coimbatore, Tamil Nadu</option>
+                <option value="chennai, tamil nadu">Chennai, Tamil Nadu</option>
+                <option value="madurai, tamil nadu">Madurai, Tamil Nadu</option>
+                <option value="trichy, tamil nadu">Trichy, Tamil Nadu</option>
+                <option value="salem, tamil nadu">Salem, Tamil Nadu</option>
+              </select>
+              
+              <button 
+                className="update-location-btn"
+                onClick={() => setShowLocationModal(false)}
+              >
+                <i className="fas fa-check"></i> Confirm
               </button>
             </div>
           </div>

@@ -1,38 +1,23 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { useCart } from '../context/CartContext';
-import '../styles/business_home.css';
+import '../styles/Cart.css';
 
-const ProductCard = ({ product, onViewDetails }) => {
+const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateStock, onEdit, onDelete, onCreateDeal }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const { addToCart } = useCart();
-  
-  const calculateDiscount = () => {
-    if (product.originalPrice) {
-      const discount = ((product.originalPrice - product.price) / product.originalPrice) * 100;
-      return Math.round(discount);
-    }
-    return null;
-  };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!product.inStock || isAddingToCart) return;
-    
+
+    if (!product.in_stock || isAddingToCart) return;
+
     try {
       setIsAddingToCart(true);
-      
-      // Use the context's addToCart function
-      addToCart(product);
-      
-      // Show success feedback
+      await onAddToCart(product);
       setAddedToCart(true);
       
-      // Reset the success state after a delay
       setTimeout(() => {
         setAddedToCart(false);
       }, 2000);
@@ -43,116 +28,403 @@ const ProductCard = ({ product, onViewDetails }) => {
     }
   };
 
-  const handleViewDetails = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onViewDetails(product);
+  const handleStockUpdate = async (newQuantity) => {
+    if (newQuantity < 0) return;
+    try {
+      await onUpdateStock(product.product_id, newQuantity);
+    } catch (error) {
+      console.error("Failed to update stock:", error);
+    }
   };
 
-  const discount = calculateDiscount();
+  const handleCreateDeal = (e) => {
+    e.stopPropagation();
+    if (onCreateDeal) {
+      onCreateDeal(product);
+    }
+  };
+
   const {
-    image,
-    name,
-    inStock,
-    rating,
-    reviews = [],
-    area,
-    location,
-    deliveryTime,
-    moq,
+    product_name,
     price,
-    originalPrice
+    quantity_available,
+    image_url,
+    category,
+    moq = 1,
+    reorder_point = 10,
+    business_name,
+    area,
+    description
   } = product;
+
+  const stockStatus = quantity_available === 0 ? 'Out of Stock' : 
+                     quantity_available <= reorder_point ? 'Low Stock' : 
+                     'In Stock';
+
+  const stockStatusColor = {
+    'Out of Stock': '#ff4757',
+    'Low Stock': '#ffa502',
+    'In Stock': '#2ed573'
+  };
 
   return (
     <div 
-      className="product-card fade-in" 
+      className="product-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      style={{
+        transform: isHovered ? 'translateY(-8px)' : 'none',
+        border: '1px solid #eee',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease',
+        background: '#fff',
+        position: 'relative',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
     >
-      <div className="product-img-wrapper">
-        {discount && (
-          <span className="discount-badge">-{discount}%</span>
-        )}
-        <img src={image} alt={name} className="product-img" />
-        {inStock ? (
-          <span className="stock-badge in-stock">
-            <i className="fas fa-check-circle"></i> In Stock
-          </span>
+      <div className="product-image" style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
+        {image_url ? (
+          <img 
+            src={image_url} 
+            alt={product_name} 
+            style={{ 
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 0.3s ease'
+            }}
+          />
         ) : (
-          <span className="stock-badge out-of-stock">
-            <i className="fas fa-times-circle"></i> Out of Stock
-          </span>
-        )}
-        <div className={`product-overlay ${isHovered ? 'visible' : ''}`}>
-          <button 
-            className="quick-view-btn" 
-            onClick={handleViewDetails}
-            aria-label="Quick view"
+          <div 
+            className="no-image"
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#f5f5f5',
+              color: '#aaa'
+            }}
           >
-            <i className="fas fa-eye"></i>
-          </button>
+            <i className="fas fa-image fa-3x"></i>
+          </div>
+        )}
+        
+        <div 
+          className="stock-badge"
+          style={{ 
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            backgroundColor: stockStatusColor[stockStatus],
+            color: '#fff',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <i className={`fas fa-${stockStatus === 'In Stock' ? 'check-circle' : stockStatus === 'Low Stock' ? 'exclamation-circle' : 'times-circle'}`}></i>
+          {stockStatus}
         </div>
+
+        {isBusinessView && (
+          <div 
+            className={`product-actions ${isHovered ? 'visible' : ''}`}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              display: 'flex',
+              gap: '8px',
+              opacity: isHovered ? 1 : 0,
+              transform: isHovered ? 'translateY(0)' : 'translateY(-10px)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <button
+              className="action-btn edit"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(product);
+              }}
+              aria-label="Edit product"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                background: '#fff',
+                color: '#3498db',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <i className="fas fa-edit"></i>
+            </button>
+            <button
+              className="action-btn deal"
+              onClick={handleCreateDeal}
+              aria-label="Create deal for product"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                background: '#fff',
+                color: '#e74c3c',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <i className="fas fa-percentage"></i>
+            </button>
+            <button
+              className="action-btn delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(product.product_id);
+              }}
+              aria-label="Delete product"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                background: '#fff',
+                color: '#e74c3c',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <i className="fas fa-trash"></i>
+            </button>
+          </div>
+        )}
       </div>
-      
-      <div className="product-content">
-        <div className="product-header">
-          <h3 className="product-title">{name}</h3>
-          <div className="product-rating">
-            <i className="fas fa-star"></i>
-            <span>{rating}</span>
-            <small>({reviews.length || 0})</small>
-          </div>
+
+      <div 
+        className="product-content"
+        style={{
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}
+      >
+        <h3 style={{
+          fontSize: '1.2rem',
+          fontWeight: '600',
+          marginBottom: '5px',
+          color: '#2c3e50'
+        }}>{product_name}</h3>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+          <span style={{ fontWeight: '600', color: '#636e72' }}>{category}</span>
         </div>
 
-        <div className="product-location">
-          <i className="fas fa-map-marker-alt"></i>
-          <span>{area}, {location}</span>
-        </div>
-
-        <div className="product-details">
-          <div className="delivery-info">
-            <i className="fas fa-truck"></i>
-            <span>{deliveryTime}</span>
-          </div>
-          <div className="moq-info">
-            <i className="fas fa-box"></i>
-            <span>MOQ: {moq}</span>
-          </div>
-        </div>
-
-        <div className="product-price">
-          <span className="price-amount">₹{price}</span>
-          {originalPrice && (
-            <span className="original-price">₹{originalPrice}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {product.discounted_price ? (
+            <>
+              <span style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: '700', 
+                color: '#2ecc71'
+              }}>
+                ₹{product.discounted_price}
+              </span>
+              <span style={{ 
+                fontSize: '1rem', 
+                fontWeight: '400', 
+                textDecoration: 'line-through', 
+                color: '#95a5a6'
+              }}>
+                ₹{price}
+              </span>
+              {product.discount_percentage && (
+                <span style={{
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  color: '#fff',
+                  background: '#e74c3c',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}>
+                  {product.discount_percentage}% OFF
+                </span>
+              )}
+            </>
+          ) : (
+            <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#2c3e50' }}>₹{price}</span>
           )}
         </div>
 
-        <div className="product-actions">
-          <button 
+        {description && (
+          <p style={{
+            fontSize: '0.9rem',
+            color: '#636e72',
+            marginTop: '4px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>{description}</p>
+        )}
+
+        {!isBusinessView && (
+          <div className="seller-info" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            marginTop: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: '#636e72' }}>
+              <i className="fas fa-store"></i>
+              <span>{business_name}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', color: '#636e72' }}>
+              <i className="fas fa-map-marker-alt"></i>
+              <span>{area}</span>
+            </div>
+          </div>
+        )}
+
+        {isBusinessView ? (
+          <div className="inventory-management" style={{
+            marginTop: 'auto',
+            borderTop: '1px solid #eee',
+            paddingTop: '12px'
+          }}>
+            <div className="stock-control" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <label style={{ fontSize: '0.9rem', color: '#636e72' }}>Current Stock:</label>
+              <div className="stock-actions" style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <button
+                  onClick={() => handleStockUpdate(quantity_available - 1)}
+                  disabled={quantity_available <= 0}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: '1px solid #dfe6e9',
+                    background: '#fff',
+                    color: '#636e72',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <i className="fas fa-minus"></i>
+                </button>
+                <input
+                  type="number"
+                  value={quantity_available}
+                  onChange={(e) => handleStockUpdate(parseInt(e.target.value) || 0)}
+                  min="0"
+                  style={{
+                    width: '60px',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    border: '1px solid #dfe6e9',
+                    textAlign: 'center'
+                  }}
+                />
+                <button
+                  onClick={() => handleStockUpdate(quantity_available + 1)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: '1px solid #dfe6e9',
+                    background: '#fff',
+                    color: '#636e72',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <i className="fas fa-plus"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div className="inventory-details" style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '12px',
+              fontSize: '0.85rem',
+              color: '#636e72'
+            }}>
+              <div className="moq">
+                <span>Min. Order:</span> {moq} units
+              </div>
+              <div className="reorder-point">
+                <span>Reorder at:</span> {reorder_point} units
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button
             className={`add-cart-btn ${isAddingToCart ? 'loading' : ''} ${addedToCart ? 'added' : ''}`}
             onClick={handleAddToCart}
-            disabled={!inStock || isAddingToCart}
-            aria-label="Add to cart"
+            disabled={!product.in_stock || isAddingToCart}
+            style={{
+              marginTop: 'auto',
+              padding: '10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: product.in_stock ? '#3498db' : '#636e72',
+              color: '#fff',
+              cursor: product.in_stock ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              fontWeight: '500'
+            }}
           >
             {isAddingToCart ? (
               <>
-                <span className="cart-spinner"></span>
+                <span className="spinner"></span>
                 <span>Adding...</span>
               </>
             ) : addedToCart ? (
               <>
                 <i className="fas fa-check"></i>
-                <span>Added!</span>
+                <span>Added to Cart</span>
               </>
             ) : (
               <>
                 <i className="fas fa-shopping-cart"></i>
-                <span>Add to Cart</span>
+                <span>{product.in_stock ? 'Add to Cart' : 'Out of Stock'}</span>
               </>
             )}
           </button>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -160,20 +432,27 @@ const ProductCard = ({ product, onViewDetails }) => {
 
 ProductCard.propTypes = {
   product: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-    image: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    inStock: PropTypes.bool.isRequired,
-    rating: PropTypes.number.isRequired,
-    reviews: PropTypes.array,
-    area: PropTypes.string.isRequired,
-    location: PropTypes.string.isRequired,
-    deliveryTime: PropTypes.string.isRequired,
-    moq: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    product_id: PropTypes.number.isRequired,
+    product_name: PropTypes.string.isRequired,
     price: PropTypes.number.isRequired,
-    originalPrice: PropTypes.number
+    quantity_available: PropTypes.number.isRequired,
+    image_url: PropTypes.string,
+    category: PropTypes.string.isRequired,
+    moq: PropTypes.number,
+    reorder_point: PropTypes.number,
+    business_name: PropTypes.string,
+    area: PropTypes.string,
+    in_stock: PropTypes.bool,
+    description: PropTypes.string,
+    discounted_price: PropTypes.number,
+    discount_percentage: PropTypes.number
   }).isRequired,
-  onViewDetails: PropTypes.func.isRequired
+  onAddToCart: PropTypes.func,
+  isBusinessView: PropTypes.bool,
+  onUpdateStock: PropTypes.func,
+  onEdit: PropTypes.func,
+  onDelete: PropTypes.func,
+  onCreateDeal: PropTypes.func
 };
 
 export default ProductCard;

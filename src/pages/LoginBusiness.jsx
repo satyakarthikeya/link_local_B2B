@@ -1,11 +1,16 @@
 import React, { useState } from "react";
-import "../styles/auth.css"; // Only import the auth styles
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "../styles/auth.css";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const LoginBusiness = () => {
+  const navigate = useNavigate();
+  const { loginBusiness } = useAuth();
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -22,25 +27,32 @@ const LoginBusiness = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
     // Basic validation
-    if (!formData.username || !formData.password) {
-      setError('Please enter both username and password');
+    if (!formData.email || !formData.password) {
+      setError('Please enter both email and password');
       return;
     }
     
-    // Here you would typically make an API call to verify credentials
-    // For now, we'll simulate a successful login
-    console.log('Login attempt with:', formData);
-    
-    // Redirect to business home page after successful login
-    window.location.href = "/business-home";
-    
-    // If using React Router, you would use:
-    // navigate('/business-home');
+    try {
+      setLoading(true);
+      // Call the login function from AuthContext
+      await loginBusiness({
+        email: formData.email,
+        password: formData.password
+      });
+      
+      // Redirect to business home page after successful login
+      navigate('/business-home');
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(typeof err === 'string' ? err : 'Failed to login. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,18 +63,19 @@ const LoginBusiness = () => {
       {error && <div className="error-message">{error}</div>}
 
       <form id="loginForm" onSubmit={handleSubmit}>
-        {/* Username / Email Input */}
+        {/* Email Input */}
         <div className="input-group">
-          <label htmlFor="username">Username or Email</label>
+          <label htmlFor="email">Email</label>
           <div className="input-container">
-            <i className="fas fa-user"></i>
+            <i className="fas fa-envelope"></i>
             <input 
-              type="text" 
-              id="username" 
+              type="email" 
+              id="email" 
               required 
-              placeholder="Enter your username or email"
-              value={formData.username}
+              placeholder="Enter your email address"
+              value={formData.email}
               onChange={handleInputChange}
+              disabled={loading}
             />
           </div>
         </div>
@@ -79,6 +92,7 @@ const LoginBusiness = () => {
               placeholder="Enter your password"
               value={formData.password}
               onChange={handleInputChange}
+              disabled={loading}
             />
             <button 
               type="button" 
@@ -93,20 +107,36 @@ const LoginBusiness = () => {
         <a href="#" className="forgot-password">Forgot password?</a>
 
         {/* Login Button */}
-        <button type="submit" className="btn">
-          <i className="fas fa-sign-in-alt"></i> Login
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? (
+            <>
+              <i className="fas fa-spinner fa-spin"></i> Logging in...
+            </>
+          ) : (
+            <>
+              <i className="fas fa-sign-in-alt"></i> Login
+            </>
+          )}
         </button>
       </form>
 
       <div className="auth-divider"><span>OR</span></div>
 
       {/* Create New Account Button */}
-      <button className="btn secondary" onClick={() => (window.location.href = "/register-business")}>
+      <button 
+        className="btn secondary" 
+        onClick={() => navigate("/register-business")}
+        disabled={loading}
+      >
         <i className="fas fa-user-plus"></i> Create New Account
       </button>
 
       {/* Back Button */}
-      <button className="btn back-btn" onClick={() => (window.location.href = "/login")}>
+      <button 
+        className="btn back-btn" 
+        onClick={() => navigate("/login")}
+        disabled={loading}
+      >
         <i className="fas fa-arrow-left"></i> Back to Options
       </button>
 

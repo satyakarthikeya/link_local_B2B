@@ -1,7 +1,7 @@
-import React, { useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PropTypes from 'prop-types';
-import { AuthContext } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
 import ReviewForm from './ReviewForm';
 import "../styles/navbar.css";
@@ -48,13 +48,13 @@ NotificationItem.propTypes = {
 
 const B_Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useContext(AuthContext);
-  const { cartCount, toggleCart } = useContext(CartContext);
+  const { currentUser, getProfileName, logout } = useAuth();
+  const { cartCount, toggleCart } = React.useContext(CartContext);
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [selectedCity, setSelectedCity] = useState('Coimbatore');
+  const [selectedCity, setSelectedCity] = useState('coimbatore');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([
@@ -66,6 +66,14 @@ const B_Navbar = () => {
   const userDropdownRef = useRef(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Get business owner name
+  const getBusinessOwnerName = () => {
+    if (currentUser && currentUser.owner_name) {
+      return currentUser.owner_name;
+    }
+    return 'Business Owner';
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -151,6 +159,9 @@ const B_Navbar = () => {
     handleCloseReview();
   };
 
+  const businessName = currentUser?.business_name || 'Business User';
+  const businessInitial = businessName.charAt(0).toUpperCase();
+
   return (
     <nav className={`business-navbar ${isScrolled ? 'scrolled' : ''}`}>
       <div className="container wide-container">
@@ -174,7 +185,7 @@ const B_Navbar = () => {
               
               {showLocationDropdown && (
                 <div className="location-dropdown">
-                  {['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad'].map(city => (
+                  {['coimbatore', 'chennai', 'bangalore', 'mumbai', 'delhi', 'hyderabad'].map(city => (
                     <div 
                       key={city} 
                       className={`location-option ${selectedCity === city ? 'active' : ''}`}
@@ -314,9 +325,9 @@ const B_Navbar = () => {
                 aria-label="My Account"
               >
                 <div className="user-avatar">
-                  {user?.name?.[0] || 'U'}
+                  {businessInitial}
                 </div>
-                <span className="user-name">{user?.name || 'User'}</span>
+                <span className="user-name">{getBusinessOwnerName()}</span>
               </button>
               {showUserDropdown && (
                 <div className="dropdown-menu user-dropdown-content" ref={userDropdownRef}>

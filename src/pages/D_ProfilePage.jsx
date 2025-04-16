@@ -1,38 +1,43 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import D_Navbar from '../components/D_Navbar';
 import D_Footer from '../components/D_Footer';
+import api from '../utils/api';
 import "../styles/delivery_home.css";
 import "../styles/profile.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const location = useLocation();
+  const { currentUser, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [formChanged, setFormChanged] = useState(false);
   
   // Profile form state
   const [profileData, setProfileData] = useState({
-    fullName: "kenny",
-    email: "kenny@example.com",
-    phone: "+91 98765 43210",
+    fullName: "",
+    email: "",
+    phone: "",
     gender: "Male",
-    dateOfBirth: "2005-06-15",
+    dateOfBirth: "",
     address: {
-      street: "42 MG Road",
-      area: "Saibaba Colony",
-      city: "Coimbatore",
-      state: "Tamil Nadu",
-      pincode: "641011"
+      street: "",
+      area: "",
+      city: "",
+      state: "",
+      pincode: ""
     },
-    profilePicture: "./src/assests/kenny.jpg",
+    profilePicture: "./src/assests/kenny.jpg", // Default image
     vehicleType: "Two Wheeler",
-    vehicleNumber: "TN 66 AB 1234",
-    licenseNumber: "TN5520220012345",
+    vehicleNumber: "",
+    licenseNumber: "",
     preferredWorkingHours: {
       monday: { working: true, start: "09:00", end: "18:00" },
       tuesday: { working: true, start: "09:00", end: "18:00" },
@@ -42,47 +47,247 @@ const D_ProfilePage = () => {
       saturday: { working: true, start: "10:00", end: "16:00" },
       sunday: { working: false, start: "", end: "" }
     },
-    about: "Experienced delivery partner with 3+ years in food and package delivery. Known for timely deliveries and excellent customer service.",
+    about: "",
+    availability_status: true
   });
 
   // Bank account information
   const [bankData, setBankData] = useState({
-    accountHolderName: "KENNY",
-    accountNumber: "••••••••4567",
-    ifscCode: "SBIN0001235",
-    bankName: "State Bank of India",
-    branchName: "Saibaba Colony Branch"
+    accountHolderName: "",
+    accountNumber: "••••••••0000",
+    ifscCode: "",
+    bankName: "",
+    branchName: ""
   });
+
+  // Extract tab from URL params if provided
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    if (tab && ['personal', 'banking', 'documents', 'earnings', 'stats'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location]);
+
+  // Fetch delivery agent data
+  useEffect(() => {
+    const fetchAgentData = async () => {
+      setIsLoading(true);
+      try {
+        if (currentUser?.agent_id) {
+          const response = await api.delivery.getProfile();
+          const agentData = response.data;
+          
+          // Update online status
+          setIsOnline(agentData.availability_status === "Available");
+          
+          // Update profile data
+          setProfileData(prevData => ({
+            ...prevData,
+            fullName: agentData.name || agentData.full_name || agentData.agent_name || "",
+            email: agentData.email || "",
+            phone: agentData.contact_number || agentData.phone_number || agentData.phone || "",
+            gender: agentData.gender || "Male",
+            dateOfBirth: agentData.date_of_birth || agentData.dob || "",
+            address: {
+              street: agentData.street || agentData.address_line1 || "",
+              area: agentData.area || agentData.locality || "",
+              city: agentData.city || "",
+              state: agentData.state || "",
+              pincode: agentData.pincode || agentData.zip_code || ""
+            },
+            vehicleType: agentData.vehicle_type || "Two Wheeler",
+            vehicleNumber: agentData.vehicle_number || agentData.vehicle_reg_no || "",
+            licenseNumber: agentData.license_no || agentData.license_number || "",
+            about: agentData.about || agentData.bio || "",
+            availability_status: agentData.availability_status === "Available"
+          }));
+          
+          // Fetch bank details
+          if (agentData.bank_details) {
+            setBankData({
+              accountHolderName: agentData.bank_details.account_name || agentData.bank_details.account_holder_name || "",
+              accountNumber: agentData.bank_details.account_number ? 
+                ("••••••••" + agentData.bank_details.account_number.slice(-4)) : "••••••••0000",
+              ifscCode: agentData.bank_details.ifsc_code || "",
+              bankName: agentData.bank_details.bank_name || "",
+              branchName: agentData.bank_details.branch_name || ""
+            });
+          }
+          
+          // Fetch earnings data
+          await fetchEarningsData();
+          
+          // Fetch documents
+          await fetchDocuments();
+        }
+      } catch (error) {
+        console.error("Error fetching delivery agent profile:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAgentData();
+  }, [currentUser]);
 
   // Form validation state
   const [errors, setErrors] = useState({});
 
   // Documents state
-  const [documents, setDocuments] = useState([
-    { id: 1, name: "Driving License", type: "license", status: "verified", uploadDate: "15/01/2025" },
-    { id: 2, name: "Aadhar Card", type: "idproof", status: "verified", uploadDate: "15/01/2025" },
-    { id: 3, name: "Vehicle Registration", type: "vehicle", status: "verified", uploadDate: "15/01/2025" }
-  ]);
+  const [documents, setDocuments] = useState([]);
+  
+  // Fetch documents
+  const fetchDocuments = async () => {
+    try {
+      const response = await api.delivery.getDocuments();
+      if (response.data && Array.isArray(response.data)) {
+        const formattedDocs = response.data.map(doc => ({
+          id: doc.id || doc.document_id,
+          name: doc.name || doc.document_name,
+          type: doc.type || doc.document_type,
+          status: doc.status || 'pending',
+          uploadDate: formatDate(doc.upload_date || doc.created_at || new Date())
+        }));
+        setDocuments(formattedDocs);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      // If API fails, use default documents
+      setDocuments([
+        { id: 1, name: "Driving License", type: "license", status: "verified", uploadDate: "15/01/2025" },
+        { id: 2, name: "Aadhar Card", type: "idproof", status: "verified", uploadDate: "15/01/2025" },
+        { id: 3, name: "Vehicle Registration", type: "vehicle", status: "verified", uploadDate: "15/01/2025" }
+      ]);
+    }
+  };
 
-  // Earnings history mock data
-  const [earningsHistory, setEarningsHistory] = useState([
-    { id: "TXN001", date: "15/03/2025", amount: "₹650", orders: 8, bonus: "₹50", status: "Completed" },
-    { id: "TXN002", date: "14/03/2025", amount: "₹520", orders: 6, bonus: "₹0", status: "Completed" },
-    { id: "TXN003", date: "13/03/2025", amount: "₹720", orders: 9, bonus: "₹100", status: "Completed" },
-    { id: "TXN004", date: "12/03/2025", amount: "₹490", orders: 5, bonus: "₹0", status: "Completed" }
-  ]);
+  // Format date 
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Format date for input field (yyyy-MM-dd format)
+  const formatDateForInput = (dateString) => {
+    try {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    } catch (error) {
+      console.error('Error formatting date for input:', error);
+      return '';
+    }
+  };
+
+  // Earnings history
+  const [earningsHistory, setEarningsHistory] = useState([]);
+  
+  // Fetch earnings data
+  const fetchEarningsData = async () => {
+    try {
+      const response = await api.delivery.getEarningsHistory();
+      if (response.data && Array.isArray(response.data)) {
+        const formattedEarnings = response.data.map((earning, index) => ({
+          id: earning.id || earning.transaction_id || `TXN${(index + 1).toString().padStart(3, '0')}`,
+          date: formatDate(earning.date || earning.created_at),
+          amount: `₹${earning.amount}`,
+          orders: earning.orders_count || earning.deliveries_count || 0,
+          bonus: `₹${earning.bonus || 0}`,
+          status: earning.status || 'Completed'
+        }));
+        setEarningsHistory(formattedEarnings);
+      }
+    } catch (error) {
+      console.error("Error fetching earnings history:", error);
+      // If API fails, use default earnings data
+      setEarningsHistory([
+        { id: "TXN001", date: "15/03/2025", amount: "₹650", orders: 8, bonus: "₹50", status: "Completed" },
+        { id: "TXN002", date: "14/03/2025", amount: "₹520", orders: 6, bonus: "₹0", status: "Completed" },
+        { id: "TXN003", date: "13/03/2025", amount: "₹720", orders: 9, bonus: "₹100", status: "Completed" },
+        { id: "TXN004", date: "12/03/2025", amount: "₹490", orders: 5, bonus: "₹0", status: "Completed" }
+      ]);
+    }
+  };
 
   // Stats data
   const [statsData, setStatsData] = useState({
-    totalDeliveries: 847,
-    totalEarnings: "₹68,950",
-    avgDeliveryTime: "28 mins",
-    acceptanceRate: "96%",
-    customerRating: 4.8,
-    onTimeDelivery: "97%",
-    totalDistance: "3,245 km",
-    bonusEarned: "₹5,400"
+    totalDeliveries: 0,
+    totalEarnings: "₹0",
+    avgDeliveryTime: "0 mins",
+    acceptanceRate: "0%",
+    customerRating: 0,
+    onTimeDelivery: "0%",
+    totalDistance: "0 km",
+    bonusEarned: "₹0"
   });
+
+  // Fetch stats data
+  useEffect(() => {
+    const fetchStatsData = async () => {
+      try {
+        const response = await api.delivery.getPerformanceStats();
+        if (response.data) {
+          setStatsData({
+            totalDeliveries: response.data.total_deliveries || 0,
+            totalEarnings: `₹${response.data.total_earnings || 0}`,
+            avgDeliveryTime: `${response.data.avg_delivery_time || 0} mins`,
+            acceptanceRate: `${response.data.acceptance_rate || 0}%`,
+            customerRating: response.data.customer_rating || 0,
+            onTimeDelivery: `${response.data.on_time_rate || 0}%`,
+            totalDistance: `${response.data.total_distance || 0} km`,
+            bonusEarned: `₹${response.data.total_bonus || 0}`
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching performance stats:", error);
+        // If API fails, use default stats
+        setStatsData({
+          totalDeliveries: 847,
+          totalEarnings: "₹68,950",
+          avgDeliveryTime: "28 mins",
+          acceptanceRate: "96%",
+          customerRating: 4.8,
+          onTimeDelivery: "97%",
+          totalDistance: "3,245 km",
+          bonusEarned: "₹5,400"
+        });
+      }
+    };
+    
+    fetchStatsData();
+  }, []);
+
+  // Handle offline status when browser is closed or component unmounts
+  useEffect(() => {
+    // Function to handle before the page is unloaded (browser closed, refreshed, etc.)
+    const handleBeforeUnload = () => {
+      if (isOnline && currentUser?.agent_id) {
+        // Using navigator.sendBeacon for reliable delivery even during page unload
+        const blob = new Blob([JSON.stringify({ status: false })], { type: 'application/json' });
+        navigator.sendBeacon(`/api/delivery/availability/${currentUser.agent_id}/offline`, blob);
+        console.log('Setting status to offline on page unload');
+      }
+    };
+
+    // Add event listener for when the page is about to be unloaded
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Cleanup function that runs when component unmounts
+    return () => {
+      // Set status to offline when component unmounts if user is online
+      if (isOnline && currentUser?.agent_id) {
+        api.delivery.updateAvailabilityStatus(currentUser.agent_id, false)
+          .then(() => console.log('Set availability to offline on unmount'))
+          .catch(err => console.error('Failed to set offline status on unmount', err));
+      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isOnline, currentUser]);
 
   // Handle form changes
   const handleInputChange = (e) => {
@@ -100,6 +305,30 @@ const D_ProfilePage = () => {
       });
     } else {
       setProfileData({ ...profileData, [name]: value });
+    }
+    
+    // Clear errors when field is modified
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: null
+      });
+    }
+    
+    // Mark form as changed
+    setFormChanged(true);
+  };
+
+  // Handle availability status change
+  const handleAvailabilityChange = async (status) => {
+    try {
+      if (currentUser?.agent_id) {
+        await api.delivery.updateAvailabilityStatus(currentUser.agent_id, status);
+        setIsOnline(status);
+      }
+    } catch (error) {
+      console.error("Error updating availability status:", error);
+      alert("Failed to update availability status. Please try again.");
     }
   };
 
@@ -138,10 +367,46 @@ const D_ProfilePage = () => {
       ...bankData,
       [name]: value
     });
+    
+    // Clear errors when field is modified
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: null
+      });
+    }
   };
 
-  // Handle file upload
-  const handleFileUpload = (e, type) => {
+  // Handle file upload for profile picture
+  const handleProfilePictureUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // File size validation (5MB limit)
+    const maxSizeInMB = 5;
+    const fileSizeInMB = file.size / (1024 * 1024);
+    
+    if (fileSizeInMB > maxSizeInMB) {
+      alert(`File size exceeds ${maxSizeInMB}MB limit. Please choose a smaller file.`);
+      return;
+    }
+
+    // Create a preview URL for immediate display
+    const fileReader = new FileReader();
+    fileReader.onload = (event) => {
+      setProfileData({
+        ...profileData,
+        profilePicture: event.target.result
+      });
+    };
+    fileReader.readAsDataURL(file);
+
+    // In a real app, you would upload the file to your server here
+    // and then update the profilePicture URL with the response
+  };
+
+  // Handle document file upload
+  const handleFileUpload = (e, documentType) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -155,22 +420,32 @@ const D_ProfilePage = () => {
     }
 
     // In a real app, you would upload the file to your server here
-    // For demo, we'll just add it to the documents list
+    alert("Document uploaded successfully! It will be verified soon.");
+    
+    // Add the new document to the local state
+    const documentNames = {
+      'license': 'Driving License',
+      'idproof': 'Aadhar Card',
+      'vehicle': 'Vehicle Registration',
+      'insurance': 'Vehicle Insurance'
+    };
+    
     const newDocument = {
-      id: documents.length + 1,
-      name: file.name,
-      type: type,
-      status: "pending",
+      id: Date.now(),
+      name: documentNames[documentType] || 'Document',
+      type: documentType,
+      status: 'pending',
       uploadDate: new Date().toLocaleDateString()
     };
-
-    setDocuments([...documents, newDocument]);
+    
+    setDocuments(prevDocuments => [...prevDocuments, newDocument]);
   };
 
   // Form validation
   const validateForm = () => {
     const newErrors = {};
     
+    // Personal info validation
     if (!profileData.fullName) newErrors.fullName = "Full name is required";
     
     if (!profileData.email) {
@@ -185,19 +460,33 @@ const D_ProfilePage = () => {
       newErrors.phone = "Phone number is invalid";
     }
     
-    if (!profileData.vehicleNumber) {
-      newErrors.vehicleNumber = "Vehicle number is required";
-    }
+    // Address validation
+    if (!profileData.address.street) newErrors['address.street'] = "Street address is required";
+    if (!profileData.address.city) newErrors['address.city'] = "City is required";
+    if (!profileData.address.state) newErrors['address.state'] = "State is required";
     
-    if (!profileData.licenseNumber) {
-      newErrors.licenseNumber = "License number is required";
-    }
-    
-    if (!profileData.address.city) newErrors.city = "City is required";
     if (!profileData.address.pincode) {
-      newErrors.pincode = "PIN code is required";
+      newErrors['address.pincode'] = "PIN code is required";
     } else if (!/^\d{6}$/.test(profileData.address.pincode)) {
-      newErrors.pincode = "PIN code should be 6 digits";
+      newErrors['address.pincode'] = "PIN code should be 6 digits";
+    }
+    
+    // Vehicle info validation
+    if (!profileData.vehicleNumber) newErrors.vehicleNumber = "Vehicle number is required";
+    if (!profileData.licenseNumber) newErrors.licenseNumber = "License number is required";
+
+    // Banking validation (if on banking tab)
+    if (activeTab === 'banking') {
+      if (!bankData.accountHolderName) newErrors.accountHolderName = "Account holder name is required";
+      if (!bankData.bankName) newErrors.bankName = "Bank name is required";
+      if (!bankData.ifscCode) newErrors.ifscCode = "IFSC code is required";
+      
+      // Validate account number only if it has been changed (not masked)
+      if (bankData.accountNumber && !bankData.accountNumber.includes('•')) {
+        if (bankData.accountNumber.length < 8) {
+          newErrors.accountNumber = "Account number is too short";
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -205,45 +494,148 @@ const D_ProfilePage = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Reset previous errors and messages
+    setErrors({});
+    setSaveError(null);
     
     if (!validateForm()) {
       return;
     }
     
-    // In a real app, you would save the profile data to your backend
-    console.log("Saving profile data:", profileData);
-    console.log("Saving bank data:", bankData);
-    
-    // Show success message
-    setSaveSuccess(true);
-    
-    // Hide success message after 3 seconds
-    setTimeout(() => {
-      setSaveSuccess(false);
-      setIsEditing(false);
-    }, 3000);
+    try {
+      setIsLoading(true); // Show loading indicator while saving
+      
+      // Store current authentication token to preserve it
+      const currentToken = localStorage.getItem('authToken');
+      
+      // Prepare the data for API submission based on current tab
+      let updateData = {};
+      
+      if (activeTab === 'personal') {
+        updateData = {
+          name: profileData.fullName,
+          email: profileData.email,
+          phone_number: profileData.phone,
+          gender: profileData.gender,
+          date_of_birth: profileData.dateOfBirth,
+          address: {
+            street: profileData.address.street,
+            area: profileData.address.area,
+            city: profileData.address.city,
+            state: profileData.address.state,
+            pincode: profileData.address.pincode
+          },
+          vehicle_type: profileData.vehicleType,
+          vehicle_number: profileData.vehicleNumber,
+          license_number: profileData.licenseNumber,
+          about: profileData.about,
+          availability_status: profileData.availability_status ? "Available" : "Unavailable",
+          preferred_working_hours: profileData.preferredWorkingHours
+        };
+      } else if (activeTab === 'banking') {
+        updateData = {
+          bankDetails: {
+            account_holder_name: bankData.accountHolderName,
+            // Only include account number if it was changed (not masked)
+            ...(bankData.accountNumber && !bankData.accountNumber.includes('•') && {
+              account_number: bankData.accountNumber
+            }),
+            ifsc_code: bankData.ifscCode,
+            bank_name: bankData.bankName,
+            branch_name: bankData.branchName
+          }
+        };
+      }
+      
+      // Call the update profile method from API
+      try {
+        const response = await api.auth.updateProfile(updateData);
+        
+        // Make sure we don't lose authentication during profile update
+        if (!localStorage.getItem('authToken') && currentToken) {
+          localStorage.setItem('authToken', currentToken);
+        }
+        
+        // Only update the context if response was successful and we have proper data
+        if (updateProfile && response.data) {
+          // Preserve user authentication data when updating profile data
+          const userData = response.data.user || response.data;
+          const updatedUserData = { 
+            ...currentUser,
+            ...userData
+          };
+          
+          // Update the auth context with the new user data
+          await updateProfile(updatedUserData);
+        }
+        
+        // Show success message
+        setSaveSuccess(true);
+        setFormChanged(false);
+        
+        // Hide success message after 3 seconds and exit editing mode
+        setTimeout(() => {
+          setSaveSuccess(false);
+          setIsEditing(false);
+        }, 3000);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        setSaveError(error.message || 'Failed to update profile. Please try again.');
+        
+        // Scroll to error message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } finally {
+        setIsLoading(false); // Hide loading indicator
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setSaveError(error.message || 'Failed to update profile. Please try again.');
+      
+      // Scroll to error message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setIsLoading(false); // Hide loading indicator
+    }
   };
 
   // Handle tab click
   const handleTabClick = (tab) => {
-    // If switching tabs while editing, ask for confirmation
-    if (isEditing) {
+    // If switching tabs while editing and form has changed, ask for confirmation
+    if (isEditing && formChanged) {
       if (window.confirm("You have unsaved changes. Are you sure you want to leave this tab?")) {
         setIsEditing(false);
-      } else {
-        return;
+        setFormChanged(false);
+        setActiveTab(tab);
       }
+    } else {
+      setActiveTab(tab);
     }
-    
-    setActiveTab(tab);
   };
 
   // Go back function
   const handleGoBack = () => {
     navigate('/delivery-home');
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <D_Navbar isOnlineGlobal={isOnline} setIsOnlineGlobal={setIsOnline} />
+        <main className="profile-page">
+          <div className="container">
+            <div className="loading-container">
+              <i className="fas fa-spinner fa-spin fa-3x"></i>
+              <p>Loading profile data...</p>
+            </div>
+          </div>
+        </main>
+        <D_Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -258,6 +650,23 @@ const D_ProfilePage = () => {
             </button>
             <h1>My Profile</h1>
           </div>
+
+          {/* Alert Messages */}
+          {saveSuccess && (
+            <div className="alert success">
+              <i className="fas fa-check-circle"></i>
+              <span>Profile updated successfully!</span>
+              <button className="close-btn" onClick={() => setSaveSuccess(false)}>×</button>
+            </div>
+          )}
+          
+          {saveError && (
+            <div className="alert error">
+              <i className="fas fa-exclamation-circle"></i>
+              <span>{saveError}</span>
+              <button className="close-btn" onClick={() => setSaveError(null)}>×</button>
+            </div>
+          )}
 
           {/* Profile Content */}
           <div className="profile-container">
@@ -274,15 +683,36 @@ const D_ProfilePage = () => {
                   {isEditing && (
                     <label className="image-upload-btn">
                       <i className="fas fa-camera"></i>
-                      <input type="file" accept="image/*" hidden />
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        hidden 
+                        onChange={handleProfilePictureUpload}
+                      />
                     </label>
                   )}
                 </div>
                 <h3>{profileData.fullName}</h3>
                 <p className="business-type">Delivery Partner</p>
                 <p className="business-location">
-                  <i className="fas fa-map-marker-alt"></i> {profileData.address.city}, {profileData.address.state}
+                  <i className="fas fa-map-marker-alt"></i> {profileData.address.city || 'Not set'}, {profileData.address.state || ''}
                 </p>
+                <div className="status-indicator">
+                  <span>Status: </span>
+                  <div className={`status-toggle profile-status`}>
+                    <label className="switch">
+                      <input 
+                        type="checkbox" 
+                        checked={isOnline} 
+                        onChange={() => handleAvailabilityChange(!isOnline)} 
+                      />
+                      <span className="slider"></span>
+                    </label>
+                    <span className={`status-text ${isOnline ? 'status-online' : 'status-offline'}`}>
+                      {isOnline ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="profile-menu">
@@ -329,13 +759,6 @@ const D_ProfilePage = () => {
 
             {/* Profile Content */}
             <div className="profile-content">
-              {/* Success message */}
-              {saveSuccess && (
-                <div className="success-message">
-                  <i className="fas fa-check-circle"></i> Profile updated successfully!
-                </div>
-              )}
-
               {/* Personal Information Tab */}
               {activeTab === 'personal' && (
                 <div className="profile-section">
@@ -425,7 +848,7 @@ const D_ProfilePage = () => {
                             type="date" 
                             id="dateOfBirth" 
                             name="dateOfBirth" 
-                            value={profileData.dateOfBirth} 
+                            value={formatDateForInput(profileData.dateOfBirth)} 
                             onChange={handleInputChange}
                             disabled={!isEditing}
                           />
@@ -433,6 +856,7 @@ const D_ProfilePage = () => {
                       </div>
                     </div>
 
+                    {/* Rest of the form remains unchanged */}
                     {/* Address Information */}
                     <div className="form-section">
                       <h3>Your Address</h3>
@@ -744,6 +1168,7 @@ const D_ProfilePage = () => {
                 </div>
               )}
 
+              {/* Rest of the tabs remain unchanged */}
               {/* Documents Tab */}
               {activeTab === 'documents' && (
                 <div className="profile-section">

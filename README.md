@@ -1,108 +1,170 @@
-# Link Local B2B
+# Link Local B2B Application
 
-Welcome to the Link Local B2B repository! This project is currently in development.
+A business-to-business e-commerce platform that connects local businesses for product sourcing and delivery.
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Database Setup](#database-setup)
-- [Backend](#backend)
-- [Login Credentials](#login-credentials)
-- [Contributing](#contributing)
+## Features
 
-## Prerequisites
+- **Business User Management**: Register, login, and profile management for business users
+- **Delivery Agent Management**: Register, login, and profile management for delivery agents
+- **Product Catalog**: Create, update, search, and browse products
+- **Order Processing**: Place orders, track status, and manage fulfillment
+- **Delivery Management**: Assign and track delivery agents for orders
 
-- [Git](https://git-scm.com/)
-- [NVM (Node Version Manager)](https://github.com/nvm-sh/nvm)
-- [PostgreSQL](https://www.postgresql.org/) (psql command-line tool)
+## Tech Stack
 
-## Installation
+### Frontend
+- React.js with hooks
+- React Router for navigation
+- Context API for state management
+- CSS for styling
 
-1. **Install Node.js using NVM**
+### Backend
+- Node.js with Express
+- PostgreSQL database
+- JWT for authentication
+- Winston for logging
+- Joi for request validation
 
-   If you haven't installed Node.js using NVM yet, follow these steps:
-   - First, install NVM by following the instructions on the [nvm-sh/nvm repository](https://github.com/nvm-sh/nvm).
-   - Then, install the latest Node.js 20 version with:
+## Getting Started
 
-   ```bash
-   nvm install 20
-   nvm use 20
-   ```
+### Prerequisites
 
-2. **Clone the repository**
+- Node.js (v16+)
+- PostgreSQL (v12+)
+- npm or yarn
 
-   Open your terminal and run the command:
+### Installation
 
-   ```bash
-   git clone https://github.com/satyakarthikeya/link_local_B2B.git
-   ```
+1. **Clone the repository**
 
-3. **Navigate to the project directory**
+```bash
+git clone <repository-url>
+cd link-local
+```
 
-   ```bash
-   cd link_local_B2B
-   ```
+2. **Set up environment variables**
 
-4. **Install project dependencies**
+Copy the example environment file and update the values:
 
-   Once Node.js is set up, install the dependencies:
+```bash
+cp server/.env.example server/.env
+```
 
-   ```bash
-   npm install
-   ```
+Edit the `.env` file with your database credentials and other configuration.
 
-*Note:* There is no need to configure an environment file.
+3. **Install dependencies**
 
-## Running the Application
+```bash
+npm install
+```
 
-Since the project is still in development, use the following command to run the application:
+4. **Initialize the database**
+
+Make sure PostgreSQL is running, then run:
+
+```bash
+npm run db:init
+```
+
+5. **Start the development servers**
+
+In one terminal, start the backend:
+
+```bash
+npm run server:dev
+```
+
+In another terminal, start the frontend:
 
 ```bash
 npm run dev
 ```
 
-Once the server is running, visit [http://localhost:5173/](http://localhost:5173/) in your browser to view the application.
+6. **Access the application**
 
-## Database Setup
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:5000/api
 
-This project uses PostgreSQL (psql) for the database. However, the database integration is not yet ready.  
-Stay tuned for further updates on how to set up and initialize the database.
+## API Documentation
 
-## Backend
+API documentation is available in the server/docs/api.md file.
 
-The backend for this project is being developed using Express.js. As of now, it is not fully implemented.  
-Additional documentation regarding API endpoints and middleware will be provided once the backend is ready.
+## Project Structure
 
-## Login Credentials
+```
+├── public/              # Static public assets
+├── server/              # Backend code
+│   ├── config/          # Configuration files
+│   ├── controllers/     # Request handlers
+│   ├── db/              # Database scripts
+│   ├── docs/            # API documentation
+│   ├── middleware/      # Express middleware
+│   ├── models/          # Database models
+│   ├── routes/          # API routes
+│   ├── utils/           # Utility functions
+│   └── server.js        # Server entry point
+└── src/                 # Frontend code
+    ├── assets/          # Images and static resources
+    ├── components/      # Reusable React components
+    ├── context/         # React context providers
+    ├── pages/           # Page components
+    ├── styles/          # CSS files
+    ├── utils/           # Utility functions
+    ├── App.jsx          # Main React component
+    └── main.jsx         # React entry point
+```
 
-For testing the UI application, use the following credentials:
+## Development
 
-- **Bussiman Login**
-  - Username: `test1`
-  - Password: `test`
+### Running Tests
 
-- **Delivery Man Login**
-  - Username: `test2`
-  - Password: `test`
+```bash
+npm run test
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+### Starting Production Server
+
+```bash
+npm start
+```
+
+## Deployment
+
+### Backend
+
+1. Set up environment variables for production
+2. Build the application
+3. Start the server with PM2 or similar process manager
+
+### Frontend
+
+1. Build the frontend using `npm run build`
+2. Deploy the contents of the `dist` folder to your hosting provider
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Make your changes and commit them:
-   ```bash
-   git commit -m "Add your feature or fix description"
-   ```
-4. Push your branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. Open a pull request.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
----
-For any issues or questions, please open an issue on the repository or contact the repository maintainer.
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+Your Name - your.email@example.com

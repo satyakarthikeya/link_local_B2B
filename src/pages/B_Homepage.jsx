@@ -1,121 +1,24 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
-import { useCart } from '../context/CartContext'; // <-- New import
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
 
 const ProductCard = lazy(() => import('../components/ProductCard'));
 const Cart = lazy(() => import('../components/Cart'));
 
-const CITIES = ['Coimbatore', 'Chennai', 'Bangalore', 'Mumbai', 'Delhi'];
+const CITIES = ['coimbatore', 'chennai', 'bangalore', 'mumbai', 'delhi'];
 const CATEGORIES = [
   { id: 'all', name: 'All Categories', icon: 'fa-th-large' },
-  { id: 'stationery', name: 'Stationery', icon: 'fa-pencil-alt' },
-  { id: 'electronics', name: 'Electronics', icon: 'fa-laptop' },
-  { id: 'textiles', name: 'Textiles', icon: 'fa-tshirt' },
-  { id: 'food', name: 'Food & Beverages', icon: 'fa-utensils' },
+  { id: 'SuperMarket', name: 'Supermarket', icon: 'fa-shopping-basket' },
+  { id: 'Electronics', name: 'Electronics', icon: 'fa-laptop' },
+  { id: 'Wholesale', name: 'Wholesale', icon: 'fa-warehouse' },
+  { id: 'Restaurant', name: 'Food & Beverages', icon: 'fa-utensils' },
   { id: 'furniture', name: 'Furniture', icon: 'fa-chair' },
   { id: 'tools', name: 'Tools & Hardware', icon: 'fa-tools' },
   { id: 'packaging', name: 'Packaging', icon: 'fa-box-open' }
-];
-
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "A4 Sheets (500 sheets)",
-    price: "₹250",
-    numericPrice: 250,
-    category: "stationery",
-    seller: "Sunrise Stationers",
-    moq: "5 packs",
-    location: "Coimbatore",
-    area: "RS Puram",
-    rating: 4.5,
-    deliveryTime: "1-2 days",
-    image: "./src/assests/A4 sheets.jpeg",
-    inStock: true,
-    popularity: 95
-  },
-  {
-    id: 2,
-    name: "Cotton Fabric (per meter)",
-    price: "₹150",
-    numericPrice: 150,
-    category: "textiles",
-    seller: "Chennai Silks",
-    moq: "10 meters",
-    location: "Coimbatore",
-    area: "Town Hall",
-    rating: 4.2,
-    deliveryTime: "2-3 days",
-    image: "./src/assests/cotton.jpeg",
-    inStock: true,
-    popularity: 87
-  },
-  {
-    id: 3,
-    name: "Jumper Wires Set",
-    price: "₹199",
-    numericPrice: 199,
-    category: "electronics",
-    seller: "Sunrise Electronics",
-    moq: "20 sets",
-    location: "Coimbatore",
-    area: "Gandhipuram",
-    rating: 4.0,
-    deliveryTime: "1 day",
-    image: "./src/assests/jumper wires.jpeg",
-    inStock: true,
-    popularity: 76
-  },
-  {
-    id: 4,
-    name: "Honey (1kg)",
-    price: "₹450",
-    numericPrice: 450,
-    category: "food",
-    seller: "Lulu Market",
-    moq: "5 units",
-    location: "Coimbatore",
-    area: "Peelamedu",
-    rating: 4.7,
-    deliveryTime: "Same day",
-    image: "./src/assests/honey.jpeg",
-    inStock: true,
-    popularity: 92
-  },
-  {
-    id: 5,
-    name: "Premium Headphones (Bulk)",
-    price: "₹1200",
-    numericPrice: 1200,
-    category: "electronics",
-    seller: "Sunrise Electronics",
-    moq: "10 units",
-    location: "Coimbatore",
-    area: "Gandhipuram",
-    rating: 4.6,
-    deliveryTime: "2-3 days",
-    image: "./src/assests/headphones.jpeg",
-    inStock: true,
-    popularity: 84,
-  },
-  {
-    id: 6,
-    name: "Silk Thread Bundle",
-    price: "₹350",
-    numericPrice: 350,
-    category: "textiles",
-    seller: "Brookfields Textiles",
-    moq: "15 bundles",
-    location: "Coimbatore",
-    area: "Brookfields",
-    rating: 4.3,
-    deliveryTime: "1-2 days",
-    image: "./src/assests/silk thread.jpeg",
-    inStock: false,
-    popularity: 78,
-  }
 ];
 
 const useLocalStorage = (key, initialValue) => {
@@ -142,7 +45,6 @@ const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue];
 };
 
-
 const B_Homepage = () => {
   useEffect(() => {
     document.body.style.minHeight = '100vh';
@@ -154,16 +56,117 @@ const B_Homepage = () => {
     };
   }, []);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { currentUser, getProfileName } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCity, setSelectedCity] = useState('Coimbatore');
-  const { cartItems, addToCart } = useCart(); // Update to use cartItems and addToCart
+  const [selectedCity, setSelectedCity] = useState('coimbatore');
+  const { cartItems, addToCart } = useCart();
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [sortBy, setSortBy] = useState('popular');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
+  
+  const [products, setProducts] = useState([]);
+  const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  const getBusinessOwnerName = () => {
+    if (currentUser && currentUser.owner_name) {
+      return currentUser.owner_name;
+    }
+    return 'Business Owner';
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.products.getProducts({ city: currentUser?.city });
+        let productsData = response.data?.products || [];
+        
+        console.log('API Response:', response);
+        console.log('Raw products data:', productsData);
+        
+        const transformedProducts = productsData.map(product => ({
+          id: product.id,
+          name: product.name,
+          price: `₹${product.price}`,
+          numericPrice: product.price,
+          category: product.category || 'uncategorized',
+          seller: product.seller,
+          seller_id: product.seller_id,
+          business_id: product.business_id,
+          moq: product.moq ? `${product.moq} units` : '1 unit',
+          location: product.location || 'coimbatore',
+          area: product.area || 'Local Area',
+          rating: 4.5,
+          deliveryTime: "1-3 days",
+          image: product.image_url || null,
+          hasNoImage: !product.image_url,
+          inStock: product.quantity_available > 0,
+          popularity: Math.floor(Math.random() * (100 - 70) + 70),
+          description: product.description || 'No description available',
+          quantity_available: product.quantity_available
+        }));
+        
+        setProducts(transformedProducts);
+        console.log('Transformed products:', transformedProducts);
+        
+        try {
+          const dealsResponse = await api.deals.getActiveDeals({ 
+            city: currentUser?.city,
+            exclude_businessman_id: currentUser?.businessman_id || currentUser?.business_id
+          });
+          let dealsData = [];
+          
+          if (dealsResponse.data && dealsResponse.data.data) {
+            // Access the deals array from the nested data property
+            dealsData = dealsResponse.data.data;
+          }
+          
+          const transformedDeals = Array.isArray(dealsData) ? dealsData.map(deal => ({
+            id: deal.deal_id || deal.product_id,
+            product_id: deal.product_id, // Add this to make product lookup easier
+            name: deal.product_name,
+            price: `₹${deal.discounted_price || deal.price}`,
+            originalPrice: deal.original_price ? `₹${deal.original_price}` : undefined,
+            numericPrice: deal.discounted_price || deal.price,
+            discount: deal.discount_percentage || 0,
+            category: deal.category || 'uncategorized',
+            seller: deal.business_name,
+            moq: deal.moq ? `${deal.moq} units` : '1 unit',
+            location: deal.area || 'coimbatore',
+            area: deal.street || 'Local Area',
+            rating: 4.5,
+            deliveryTime: "1-3 days",
+            image: deal.image_url || null,
+            hasNoImage: !deal.image_url,
+            inStock: deal.quantity_available > 0,
+            popularity: Math.floor(Math.random() * (100 - 70) + 70),
+            description: deal.description || 'No description available',
+            quantity_available: deal.quantity_available,
+            isDeal: true,
+            deal_type: deal.deal_type || null
+          })) : [];
+          
+          setDeals(transformedDeals);
+        } catch (dealErr) {
+          console.error('Failed to fetch deals:', dealErr);
+          setDeals([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+        setError('Failed to load products. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [currentUser?.city, location.key]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 80);
@@ -171,16 +174,65 @@ const B_Homepage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    // Show BOGO specific notification for Buy One Get One deals
+    setShowCartNotification(true);
+    setTimeout(() => setShowCartNotification(false), 2000);
+  };
+
   const filteredProducts = useMemo(() => {
-    let filtered = PRODUCTS.filter((product) => {
-      return (
-        (selectedCategory === 'all' || product.category === selectedCategory) &&
-        product.location === selectedCity &&
-        (searchQuery === '' ||
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.seller.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+    if (!products.length) {
+      console.log('No products available before filtering');
+      return [];
+    }
+    
+    console.log('Products before filtering:', products);
+    console.log('Current user:', currentUser);
+    console.log('Selected category:', selectedCategory);
+    console.log('Search query:', searchQuery);
+    
+    // Get IDs of products that are already in deals to filter them out
+    const dealProductIds = deals.map(deal => deal.product_id);
+    console.log('Deal product IDs to exclude:', dealProductIds);
+    
+    // Filter products: exclude own products and products already in deals (unless they're the user's own deals)
+    let filtered = products.filter(product => {
+      // Skip products owned by the current user
+      if (currentUser && product.business_id && 
+          (currentUser.businessman_id === product.business_id || 
+           currentUser.business_id === product.business_id)) {
+        console.log(`Filtering out own product: ${product.name} (ID: ${product.id})`);
+        return false;
+      }
+      
+      // Check if this product has a deal by searching for the product ID in the deals array
+      const productHasDeal = deals.some(deal => deal.product_id === product.id);
+      
+      if (productHasDeal) {
+        // If the product has a deal, filter it out from regular products
+        console.log(`Filtering out product with deal: ${product.name} (ID: ${product.id})`);
+        return false;
+      }
+      
+      // If no deal found for this product, include it in regular products
+      return true;
     });
+    
+    // Apply category filter if selected
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    // Apply search filter if query exists
+    if (searchQuery !== '') {
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.seller.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    console.log('Filtered products count:', filtered.length);
 
     return filtered.sort((a, b) => {
       switch (sortBy) {
@@ -195,7 +247,38 @@ const B_Homepage = () => {
           return b.popularity - a.popularity;
       }
     });
-  }, [selectedCategory, selectedCity, searchQuery, sortBy]);
+  }, [products, deals, selectedCategory, searchQuery, sortBy, currentUser]);
+
+  const filteredDeals = useMemo(() => {
+    if (!deals.length) return [];
+    
+    let filtered = deals.filter((deal) => {
+      return (
+        (selectedCategory === 'all' || deal.category === selectedCategory) &&
+        (searchQuery === '' ||
+          deal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          deal.seller.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    });
+
+    console.log('Filtered deals:', filtered);
+
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'priceLow':
+          return a.numericPrice - b.numericPrice;
+        case 'priceHigh':
+          return b.numericPrice - a.numericPrice;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'discount':
+          return b.discount - a.discount;
+        case 'popular':
+        default:
+          return b.popularity - a.popularity;
+      }
+    });
+  }, [deals, selectedCategory, searchQuery, sortBy]);
 
   return (
     <div className="business-app">
@@ -204,7 +287,7 @@ const B_Homepage = () => {
         setSelectedCity={setSelectedCity} 
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
-        cart={cartItems}  // <-- Pass the context cartItems
+        cart={cartItems}
         setShowCart={setShowCart} 
         navigate={navigate} 
         showLocationDropdown={showLocationDropdown}
@@ -212,7 +295,13 @@ const B_Homepage = () => {
       />
 
       <main className="business-main">
-        {/* Hero Section */}
+        <div className="welcome-banner">
+          <div className="container">
+            <h2>Welcome, {getBusinessOwnerName()}! 👋</h2>
+            <p>Find everything you need for your business growth today.</p>
+          </div>
+        </div>
+
         <section className="hero-section">
           <div className="container">
             <div className="hero-content">
@@ -236,7 +325,100 @@ const B_Homepage = () => {
           </div>
         </section>
 
-        {/* Categories Section */}
+        <section className="featured-products-showcase">
+          <div className="container">
+            <div className="section-header">
+              <h2><i className="fas fa-tag"></i> Today's Best Deals</h2>
+              <p>Special offers from local suppliers</p>
+            </div>
+            
+            <div className="featured-products-grid">
+              {!loading && filteredDeals.slice(0, 2).map((deal) => (
+                <div key={deal.id} className="featured-product-card">
+                  <div className="featured-product-image">
+                    {deal.hasNoImage ? (
+                      <div className="no-image"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f5f5f5',
+                        color: '#aaa'
+                      }}
+                    >
+                      <i className="fas fa-image fa-3x"></i>
+                    </div>
+                    ) : (
+                      <img src={deal.image} alt={deal.name} />
+                    )}
+                    <div className="featured-badge">
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? (
+                        <span style={{ background: '#e67e22' }}>BUY 1 GET 1 FREE</span>
+                      ) : (
+                        <span>Save {deal.discount}%</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="featured-product-info">
+                    <h3>{deal.name}</h3>
+                    <div className="featured-product-price">
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <span className="current-price" style={{ color: '#e67e22', fontWeight: 'bold' }}>{deal.price}</span>
+                          <span style={{ 
+                            fontSize: '0.85rem', 
+                            backgroundColor: '#fff8e1', 
+                            color: '#e67e22', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            marginTop: '4px',
+                            border: '1px dashed #e67e22'
+                          }}>
+                            <i className="fas fa-gift" style={{ marginRight: '4px' }}></i>
+                            Get 2nd item FREE
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="current-price">{deal.discounted_price || deal.price}</span>
+                          {deal.discount_percentage > 0 && (
+                            <span className="original-price">{deal.originalPrice || deal.price}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="featured-product-seller">by {deal.seller}</div>
+                    <button 
+                      className="featured-add-to-cart"
+                      onClick={() => handleAddToCart(deal)}
+                      style={{
+                        background: deal.deal_type === 'BUY_ONE_GET_ONE' ? '#e67e22' : undefined
+                      }}
+                    >
+                      {deal.deal_type === 'BUY_ONE_GET_ONE' ? 'Add BOGO Deal to Cart' : 'Add to Cart'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {loading && (
+                <>
+                  <div className="featured-product-skeleton"></div>
+                  <div className="featured-product-skeleton"></div>
+                </>
+              )}
+
+              {!loading && filteredDeals.length === 0 && (
+                <div className="no-deals-message">
+                  <p>No deals available currently. Check back soon!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         <section className="categories-section">
           <div className="container">
             <div className="section-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -259,15 +441,77 @@ const B_Homepage = () => {
           </div>
         </section>
 
-        {/* Products Section */}
-        <ProductsSection
-          filteredProducts={filteredProducts}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          addToCart={addToCart}
-          setSelectedCategory={setSelectedCategory}
-          setSearchQuery={setSearchQuery}
-        />
+        <section className="products-section">
+          <div className="container">
+            <div className="section-header">
+              <h2>Regular Products</h2>
+              <div className="header-meta">
+                <p>Browse regular priced products from trusted sellers</p>
+                <div className="sort-options">
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="popular">Most Popular</option>
+                    <option value="priceLow">Price: Low to High</option>
+                    <option value="priceHigh">Price: High to Low</option>
+                    <option value="rating">Highest Rated</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="loading-container">
+                <i className="fas fa-spinner fa-spin"></i>
+                <p>Loading products...</p>
+              </div>
+            ) : error ? (
+              <div className="error-container">
+                <i className="fas fa-exclamation-circle"></i>
+                <p>{error}</p>
+                <button onClick={() => window.location.reload()}>Try Again</button>
+              </div>
+            ) : (
+              <>
+                <div className="products-count">
+                  <span>{filteredProducts.length} products found</span>
+                </div>
+                <div className="products-grid">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product) => (
+                      <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
+                        <ProductCard 
+                          product={{
+                            product_id: product.id,
+                            product_name: product.name,
+                            price: parseFloat(product.numericPrice),
+                            quantity_available: product.quantity_available,
+                            image_url: product.image,
+                            category: product.category,
+                            moq: parseInt(product.moq) || 1,
+                            business_name: product.seller,
+                            area: product.area,
+                            in_stock: product.inStock,
+                            description: product.description
+                          }} 
+                          onAddToCart={handleAddToCart} 
+                        />
+                      </Suspense>
+                    ))
+                  ) : (
+                    <div className="no-products">
+                      <i className="fas fa-box-open"></i>
+                      <h3>No regular products found</h3>
+                      <p>Check out our deals section for special offers!</p>
+                      <button onClick={() => {
+                        setSelectedCategory('all');
+                        setSearchQuery('');
+                      }}>Clear Filters</button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
 
         {showCartNotification && (
           <div className="cart-notification">
@@ -276,7 +520,6 @@ const B_Homepage = () => {
         )}
       </main>
 
-      {/* Cart Sidebar */}
       {showCart && (
         <Suspense fallback={<div>Loading cart...</div>}>
           <Cart items={cartItems} onClose={() => setShowCart(false)} />
@@ -313,50 +556,5 @@ const B_Homepage = () => {
     </div>
   );
 };
-
-const ProductsSection = ({ 
-  filteredProducts, 
-  sortBy, 
-  setSortBy, 
-  addToCart, 
-  setSelectedCategory, 
-  setSearchQuery 
-}) => (
-  <section className="products-section">
-    <div className="container">
-      <div className="products-header">
-        <h2>Featured Products</h2>
-        <div className="sort-options">
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="popular">Most Popular</option>
-            <option value="priceLow">Price: Low to High</option>
-            <option value="priceHigh">Price: High to Low</option>
-            <option value="rating">Highest Rated</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="products-grid">
-        {filteredProducts.map(product => (
-          <Suspense key={product.id} fallback={<div className="product-skeleton"></div>}>
-            <ProductCard product={product} onAddToCart={addToCart} />
-          </Suspense>
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="no-products">
-          <i className="fas fa-search"></i>
-          <h3>No products found</h3>
-          <p>Try adjusting your search criteria</p>
-          <button onClick={() => {
-            setSelectedCategory('all');
-            setSearchQuery('');
-          }}>Clear Filters</button>
-        </div>
-      )}
-    </div>
-  </section>
-);
 
 export default B_Homepage;
