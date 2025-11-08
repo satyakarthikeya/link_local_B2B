@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import D_Navbar from '../components/D_Navbar';
 import D_Footer from '../components/D_Footer';
 import api from '../utils/api';
-import "../styles/delivery_home.css";
-import "../styles/profile.css";
+import "../Styles/delivery_home.css";
+import "../Styles/profile.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_ProfilePage = () => {
@@ -167,7 +167,7 @@ const D_ProfilePage = () => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };

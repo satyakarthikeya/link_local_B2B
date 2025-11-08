@@ -1,8 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import B_Navbar from '../components/B_Navbar';
-import '../styles/business_home.css';
-import '../styles/Search.css';
+import '../Styles/business_home.css';
+import '../Styles/Search.css';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { productAPI } from '../utils/api';
@@ -11,11 +11,10 @@ const ProductCard = lazy(() => import('../components/ProductCard'));
 
 const SearchResults = () => {
   const { cartItems, addToCart } = useCart();
-  const { currentUser } = useAuth();
+  const { currentUser: _currentUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const filtersRef = useRef(null);
-  const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
   const [selectedCity, setSelectedCity] = useState('coimbatore');
@@ -266,7 +265,6 @@ const SearchResults = () => {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         cart={cartItems}
-        setShowCart={setShowCart}
         navigate={navigate}
       />
 
@@ -691,7 +689,7 @@ const SearchResults = () => {
 };
 
 // Helper function for pagination display
-function getPaginationRange() {
+function getPaginationRange(currentPage, totalPages) {
   const delta = 1; // Pages to show on either side of current page
   let range = [];
   

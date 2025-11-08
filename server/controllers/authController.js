@@ -192,7 +192,7 @@ const AuthController = {
         }
 
         // Include bankDetails in the response
-        const { password, bankDetails, ...businessData } = userData;
+        const { password: _password1, bankDetails, ...businessData } = userData;
         return res.json({ ...businessData, bankDetails });
       } else if (type === 'delivery') {
         userData = await DeliveryModel.findById(id);
@@ -201,7 +201,7 @@ const AuthController = {
         }
 
         // Remove password from response
-        const { password, ...agentData } = userData;
+        const { password: _password2, ...agentData } = userData;
         return res.json(agentData);
       } else {
         return res.status(400).json({ error: 'Invalid user type' });
@@ -228,7 +228,7 @@ const AuthController = {
           }
           
           // Remove password from response
-          const { password, ...businessData } = updatedUser;
+          const { password: _password3, ...businessData } = updatedUser;
           return res.json({
             message: 'Business profile updated successfully',
             user: businessData
@@ -248,7 +248,7 @@ const AuthController = {
         }
         
         // Remove password from response
-        const { password, ...agentData } = updatedUser;
+        const { password: _password4, ...agentData } = updatedUser;
         return res.json({
           message: 'Delivery profile updated successfully',
           user: agentData

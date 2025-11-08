@@ -1,5 +1,5 @@
 import React from "react";
-import "../styles/auth.css"; // Only import the auth styles
+import "../Styles/auth.css"; // Only import the auth styles
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 

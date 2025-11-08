@@ -11,7 +11,7 @@ import RegisterDelivery from "./pages/RegisterDelivery";
 import D_Homepage from "./pages/D_Homepage";
 import D_MapView from "./pages/D_MapView";
 import D_ProfilePage from "./pages/D_ProfilePage";
-import MyShop from "./pages/Myshop";
+import MyShop from "./pages/MyShop";
 import B_Homepage from "./pages/B_Homepage";
 import B_ProfilePage from "./pages/B_ProfilePage";
 import SearchResults from "./pages/SearchResults";

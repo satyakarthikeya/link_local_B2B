@@ -4,8 +4,7 @@ import OrderController from '../controllers/orderController.js';
 import { 
   authenticateToken,
   authorizeBusiness, 
-  authorizeDelivery,
-  authorizeBusinessOrDelivery
+  authorizeDelivery
 } from '../middleware/auth.js';
 import { validateRequest, schemas } from '../middleware/validateRequest.js';
 import { catchAsync } from '../utils/errorHandler.js';

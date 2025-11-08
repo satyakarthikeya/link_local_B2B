@@ -5,20 +5,20 @@ import MockAdapter from 'axios-mock-adapter';
 // Create a new instance of the mock adapter
 const mock = new MockAdapter(axios, { delayResponse: 800 });
 
-// Mock business profiles
-const businesses = [
-  { id: 1, name: "Sunrise Electronics", area: "Jayanagar", city: "Bangalore" },
-  { id: 2, name: "Kenny's Apparel", area: "Koramangala", city: "Bangalore" },
-  { id: 3, name: "SS Restaurant Supplies", area: "Indiranagar", city: "Bangalore" },
-  { id: 4, name: "Lulu Market", area: "Whitefield", city: "Bangalore" }
-];
+// Mock business profiles (reserved for future use)
+// const businesses = [
+//   { id: 1, name: "Sunrise Electronics", area: "Jayanagar", city: "Bangalore" },
+//   { id: 2, name: "Kenny's Apparel", area: "Koramangala", city: "Bangalore" },
+//   { id: 3, name: "SS Restaurant Supplies", area: "Indiranagar", city: "Bangalore" },
+//   { id: 4, name: "Lulu Market", area: "Whitefield", city: "Bangalore" }
+// ];
 
-// Mock delivery agents
-const deliveryAgents = [
-  { id: 101, name: "Rahul K", contact_number: "9876543210", vehicle_type: "Bike", availability_status: "Available" },
-  { id: 102, name: "Suresh M", contact_number: "9876543211", vehicle_type: "Van", availability_status: "Available" },
-  { id: 103, name: "Deepak R", contact_number: "9876543212", vehicle_type: "Bike", availability_status: "Unavailable" }
-];
+// Mock delivery agents (reserved for future use)
+// const deliveryAgents = [
+//   { id: 101, name: "Rahul K", contact_number: "9876543210", vehicle_type: "Bike", availability_status: "Available" },
+//   { id: 102, name: "Suresh M", contact_number: "9876543211", vehicle_type: "Van", availability_status: "Available" },
+//   { id: 103, name: "Deepak R", contact_number: "9876543212", vehicle_type: "Bike", availability_status: "Unavailable" }
+// ];
 
 // Generate current date and past dates
 const now = new Date();
@@ -27,15 +27,15 @@ const yesterday = new Date(now.setDate(now.getDate() - 1)).toISOString();
 const lastWeek = new Date(now.setDate(now.getDate() - 6)).toISOString();
 const twoWeeksAgo = new Date(now.setDate(now.getDate() - 7)).toISOString();
 
-// Mock products
-const mockProducts = [
-  { id: 1, name: 'JK Copier A4 Sheets', price: 299.99, image_url: '/src/assests/Jk copier.jpeg', category: 'Stationery' },
-  { id: 2, name: 'Premium Cotton T-shirt', price: 599.50, image_url: '/src/assests/cotton.jpeg', category: 'Apparel' },
-  { id: 3, name: 'Wireless Headphones', price: 1499.99, image_url: '/src/assests/headphones.jpeg', category: 'Electronics' },
-  { id: 4, name: 'Organic Honey 500g', price: 349.75, image_url: '/src/assests/honey.jpeg', category: 'Grocery' },
-  { id: 5, name: 'Rice 5kg Pack', price: 449.99, image_url: '/src/assests/rice bags.jpeg', category: 'Grocery' },
-  { id: 6, name: 'Silk Thread Set', price: 199.50, image_url: '/src/assests/silk thread.jpeg', category: 'Craft' }
-];
+// Mock products (reserved for future use)
+// const mockProducts = [
+//   { id: 1, name: 'JK Copier A4 Sheets', price: 299.99, image_url: '/src/assests/Jk copier.jpeg', category: 'Stationery' },
+//   { id: 2, name: 'Premium Cotton T-shirt', price: 599.50, image_url: '/src/assests/cotton.jpeg', category: 'Apparel' },
+//   { id: 3, name: 'Wireless Headphones', price: 1499.99, image_url: '/src/assests/headphones.jpeg', category: 'Electronics' },
+//   { id: 4, name: 'Organic Honey 500g', price: 349.75, image_url: '/src/assests/honey.jpeg', category: 'Grocery' },
+//   { id: 5, name: 'Rice 5kg Pack', price: 449.99, image_url: '/src/assests/rice bags.jpeg', category: 'Grocery' },
+//   { id: 6, name: 'Silk Thread Set', price: 199.50, image_url: '/src/assests/silk thread.jpeg', category: 'Craft' }
+// ];
 
 // Enhanced mock orders data for order history - primarily for the OrderHistory.jsx page
 export const mockOrderHistory = [

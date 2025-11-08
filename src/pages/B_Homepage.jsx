@@ -1,6 +1,6 @@
-import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import '../styles/business_home.css';
+import '../Styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,30 +21,6 @@ const CATEGORIES = [
   { id: 'packaging', name: 'Packaging', icon: 'fa-box-open' }
 ];
 
-const useLocalStorage = (key, initialValue) => {
-  const [storedValue, setStoredValue] = useState(() => {
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  });
-
-  const setValue = value => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      localStorage.setItem(key, JSON.stringify(valueToStore));
-    } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
-    }
-  };
-
-  return [storedValue, setValue];
-};
-
 const B_Homepage = () => {
   useEffect(() => {
     document.body.style.minHeight = '100vh';
@@ -57,13 +33,12 @@ const B_Homepage = () => {
   }, []);
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, getProfileName } = useAuth();
+  const { currentUser } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('coimbatore');
   const { cartItems, addToCart } = useCart();
   const [showCart, setShowCart] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isScrolled, setIsScrolled] = useState(false);
   const [sortBy, setSortBy] = useState('popular');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
@@ -169,7 +144,9 @@ const B_Homepage = () => {
   }, [currentUser?.city, location.key]);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 80);
+    const handleScroll = () => {
+      // Scroll handling can be added here if needed
+    };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);

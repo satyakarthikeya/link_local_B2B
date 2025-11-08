@@ -28,7 +28,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState(localStorage.getItem('userType') || null); // 'business' or 'delivery'
   const [token, setToken] = useState(localStorage.getItem('authToken') || null);
-  const [error, setError] = useState('');
 
   // Helper function to store user data in local storage
   const storeUserData = (userData, type, authToken) => {
@@ -75,7 +74,7 @@ export function AuthProvider({ children }) {
           // Try to parse as JSON if possible
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
-        } catch (e) {
+        } catch {
           // If not JSON, use text or status
           errorMessage = errorText || `Server error: ${response.status}`;
         }
@@ -128,7 +127,7 @@ export function AuthProvider({ children }) {
           // Try to parse as JSON if possible
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
-        } catch (e) {
+        } catch {
           // If not JSON, use text or status
           errorMessage = errorText || `Server error: ${response.status}`;
         }
@@ -382,8 +381,7 @@ export function AuthProvider({ children }) {
     getProfileName,
     isAuthenticated: !!token,
     isBusinessUser: userType === 'business',
-    isDeliveryUser: userType === 'delivery',
-    error
+    isDeliveryUser: userType === 'delivery'
   };
 
   return (

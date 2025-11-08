@@ -132,8 +132,8 @@ const DeliveryController = {
   // Update delivery agent location
   async updateLocation(req, res) {
     try {
-      const id = req.user.id;
-      const { latitude, longitude, address } = req.body;
+      const _id = req.user.id;
+      const { latitude: _latitude, longitude: _longitude, address: _address } = req.body;
       
       // This is a placeholder - you'd need to add location fields to the profile table
       // or create a separate locations table
@@ -319,7 +319,7 @@ const DeliveryController = {
   async getEarningsHistory(req, res) {
     try {
       const agent_id = req.user.id;
-      const { period = 'month', start_date, end_date } = req.query;
+      const { period: _period = 'month', start_date: _start_date, end_date: _end_date } = req.query;
       
       // Get completed orders with earnings calculation
       const stats = await OrderModel.getOrderStatistics(agent_id);
@@ -354,7 +354,7 @@ const DeliveryController = {
   // Get delivery agent documents
   async getDocuments(req, res) {
     try {
-      const agent_id = req.user.id;
+      const _agent_id = req.user.id;
       
       // In a real implementation, you would fetch documents from storage
       // Here we're returning mock data
@@ -478,7 +478,7 @@ const DeliveryController = {
   // Reject an order notification
   async rejectOrderNotification(req, res) {
     try {
-      const agent_id = req.user.id;
+      const _agent_id = req.user.id;
       const { notification_id } = req.params;
       
       if (!notification_id) {

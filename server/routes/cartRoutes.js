@@ -1,7 +1,7 @@
 import express from 'express';
 import CartController from '../controllers/cartController.js';
 import { catchAsync } from '../utils/errorHandler.js';
-import { authenticateToken, authorizeBusiness } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import Joi from 'joi';
 import { validateRequest } from '../middleware/validateRequest.js';
 

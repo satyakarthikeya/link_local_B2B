@@ -1,10 +1,10 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
 import api from '../utils/api'; // Import the API utility
-import "../styles/business_home.css";
-import "../styles/profile.css"; // We'll create this next
+import "../Styles/business_home.css";
+import "../Styles/profile.css"; // We'll create this next
 
 const B_ProfilePage = () => {
   const navigate = useNavigate();
@@ -61,14 +61,14 @@ const B_ProfilePage = () => {
     { id: 3, name: "Shop License", type: "license", status: "verified", uploadDate: "12/10/2023" }
   ]);
 
-  const [paymentHistory, setPaymentHistory] = useState([
+  const paymentHistory = [
     { id: "PMT001", date: "15/03/2025", amount: "₹5,200", status: "Completed", method: "Bank Transfer", orderId: "OD12345" },
     { id: "PMT002", date: "02/03/2025", amount: "₹3,750", status: "Completed", method: "UPI", orderId: "OD12332" },
     { id: "PMT003", date: "18/02/2025", amount: "₹8,900", status: "Completed", method: "Credit Card", orderId: "OD12318" },
     { id: "PMT004", date: "05/02/2025", amount: "₹2,100", status: "Completed", method: "Bank Transfer", orderId: "OD12296" }
-  ]);
+  ];
 
-  const [subscription, setSubscription] = useState({
+  const subscription = {
     plan: "Business Pro",
     status: "Active",
     nextBillingDate: "15/05/2025",
@@ -80,7 +80,7 @@ const B_ProfilePage = () => {
       "0% transaction fee",
       "Multiple currentUser accounts"
     ]
-  });
+  };
 
   useEffect(() => {
     if (currentUser) {

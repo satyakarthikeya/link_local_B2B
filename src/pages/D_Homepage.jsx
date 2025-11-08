@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/delivery_home.css";
+import "../Styles/delivery_home.css";
 import D_Navbar from "../components/D_Navbar";
 import D_Footer from "../components/D_Footer";
 import { useAuth } from "../context/AuthContext";
@@ -224,7 +224,7 @@ const D_Homepage = () => {
   const getUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {},
+        () => {},
         (error) => {
           console.error("Error getting location:", error);
         }
@@ -232,11 +232,11 @@ const D_Homepage = () => {
     }
   };
   
-  const showSuccessToast = (message) => {
+  const _showSuccessToast = (message) => {
     alert(message);
   };
   
-  const showErrorToast = (message) => {
+  const _showErrorToast = (message) => {
     alert(message);
   };
 
@@ -304,11 +304,11 @@ const D_Homepage = () => {
     }).format(amount || 0);
   };
   
-  const calculateDistance = (from, to) => {
+  const calculateDistance = () => {
     return `${Math.floor(Math.random() * 5) + 1} km`;
   };
   
-  const estimateDeliveryTime = (from, to) => {
+  const estimateDeliveryTime = () => {
     return `${Math.floor(Math.random() * 20) + 10} min`;
   };
 

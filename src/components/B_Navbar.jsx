@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { useAuth } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
 import ReviewForm from './ReviewForm';
-import "../styles/navbar.css";
+import "../Styles/navbar.css";
 import logo from "../assests/Logo.png";
 
 const NotificationItem = ({ notification, onRead }) => {
@@ -48,7 +48,7 @@ NotificationItem.propTypes = {
 
 const B_Navbar = () => {
   const navigate = useNavigate();
-  const { currentUser, getProfileName, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { cartCount, toggleCart } = React.useContext(CartContext);
   
   const [isScrolled, setIsScrolled] = useState(false);
@@ -144,7 +144,7 @@ const B_Navbar = () => {
     return notifications.filter(n => !n.read).length;
   };
 
-  const handleShowReview = (order) => {
+  const _handleShowReview = (order) => {
     setSelectedOrder(order);
     setShowReviewForm(true);
   };

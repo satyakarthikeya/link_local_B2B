@@ -4,13 +4,13 @@ import B_Navbar from '../components/B_Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../utils/api';
-import '../styles/Checkout.css';
+import '../Styles/Checkout.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { cartItems, clearCart } = useCart();
+  const { cartItems } = useCart();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);

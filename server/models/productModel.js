@@ -186,8 +186,8 @@ const ProductModel = {
       max_price,
       stock_status,
       search_query,
-      page = 1,
-      limit = 12,
+      page: _page = 1,
+      limit: _limit = 12,
       city, // ← filter by city
       exclude_businessman_id, // ← new filter to exclude current user's products
       exclude_deals = false   // ← new flag to exclude products that are part of deals

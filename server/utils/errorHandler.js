@@ -47,7 +47,7 @@ class ValidationError extends AppError {
 /**
  * Handle operational errors (expected errors)
  */
-const handleError = (err, req, res, next) => {
+const handleError = (err, req, res, _next) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       status: 'error',

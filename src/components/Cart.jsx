@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import "../styles/Cart.css";
+import "../Styles/Cart.css";
 import { useCart } from '../context/CartContext';
 
 const CartItem = ({ item, updateQuantity, removeFromCart }) => {
@@ -152,7 +152,7 @@ const EmptyCart = ({ onContinueShopping }) => (
   </div>
 );
 
-const Cart = ({ isOpen, onClose, items: propItems, updateQuantity: propUpdateQuantity, removeFromCart: propRemoveFromCart, asOverlay = false }) => {
+const Cart = ({ isOpen, onClose, items: propItems, updateQuantity: propUpdateQuantity, removeFromCart: propRemoveFromCart, _asOverlay = false }) => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart: contextRemoveFromCart, updateQuantity: contextUpdateQuantity } = useCart();
   const [items, setItems] = useState([]);
