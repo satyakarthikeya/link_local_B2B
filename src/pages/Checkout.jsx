@@ -10,7 +10,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 const Checkout = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { cartItems, clearCart } = useCart();
+  const { cartItems } = useCart();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);

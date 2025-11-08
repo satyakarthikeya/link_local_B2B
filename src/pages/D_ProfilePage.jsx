@@ -167,7 +167,7 @@ const D_ProfilePage = () => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };

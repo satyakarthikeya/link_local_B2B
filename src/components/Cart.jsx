@@ -152,7 +152,7 @@ const EmptyCart = ({ onContinueShopping }) => (
   </div>
 );
 
-const Cart = ({ isOpen, onClose, items: propItems, updateQuantity: propUpdateQuantity, removeFromCart: propRemoveFromCart, asOverlay = false }) => {
+const Cart = ({ isOpen, onClose, items: propItems, updateQuantity: propUpdateQuantity, removeFromCart: propRemoveFromCart, _asOverlay = false }) => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart: contextRemoveFromCart, updateQuantity: contextUpdateQuantity } = useCart();
   const [items, setItems] = useState([]);

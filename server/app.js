@@ -12,7 +12,6 @@ import dealRoutes from './routes/dealRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import { errorHandler } from './utils/errorHandler.js';
-import logger from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

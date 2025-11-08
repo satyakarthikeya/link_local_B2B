@@ -8,7 +8,7 @@ import axios from 'axios';
 
 const MyShop = () => {
   const navigate = useNavigate();
-  const { currentUser, token, logout, isBusinessUser } = useAuth();
+  const { currentUser, token, isBusinessUser } = useAuth();
   
   // Redirect if not logged in or not a business user
   useEffect(() => {
@@ -727,7 +727,7 @@ const MyShop = () => {
     }
 
     try {
-      const response = await api.deals.removeDeal(dealId);
+      await api.deals.removeDeal(dealId);
       showNotification('Deal deleted successfully!', 'success');
       await fetchDeals();
       // Trigger a manual refresh of products to ensure the previously deal-excluded 
@@ -758,7 +758,7 @@ const MyShop = () => {
     setDealFormErrors({});
   };
 
-  const handleRemoveDeal = async (productId) => {
+  const _handleRemoveDeal = async (productId) => {
     if (!window.confirm('Are you sure you want to remove this deal? This action cannot be undone.')) {
       return;
     }
@@ -813,7 +813,7 @@ const MyShop = () => {
     }, 300);
   };
 
-  const handleSwitchToProducts = (filter = 'all') => {
+  const _handleSwitchToProducts = (filter = 'all') => {
     setStockFilter(filter);
     setActiveTab('products');
   };

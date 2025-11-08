@@ -12,7 +12,7 @@ import { mockOrderHistory } from '../utils/ordersMockData';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const OrderHistory = () => {
-  const { user } = useAuth();
+  useAuth(); // Keep the hook call even if we don't use the values
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
