@@ -1,5 +1,5 @@
 import React from "react";
-import "../styles/main.css"; // Import styles
+import "../Styles/main.css"; // Import styles
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const Footer = () => {

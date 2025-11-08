@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import "../styles/main.css";
+import "../Styles/main.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const Logo = () => (

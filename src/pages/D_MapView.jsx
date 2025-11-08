@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import D_Navbar from "../components/D_Navbar";
 import D_Footer from "../components/D_Footer";
-import "../styles/delivery_home.css";
+import "../Styles/delivery_home.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const D_MapView = () => {

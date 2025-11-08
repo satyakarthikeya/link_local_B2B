@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import '../styles/Cart.css';
+import '../Styles/Cart.css';
 
 const ProductCard = ({ product, onAddToCart, isBusinessView = false, onUpdateStock, onEdit, onDelete, onCreateDeal }) => {
   const [isHovered, setIsHovered] = useState(false);

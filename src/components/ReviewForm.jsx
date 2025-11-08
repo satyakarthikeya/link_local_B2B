@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import '../styles/ReviewForm.css';
+import '../Styles/ReviewForm.css';
 
 const ReviewForm = ({ order, onClose, onSubmit }) => {
   const [rating, setRating] = useState(5);

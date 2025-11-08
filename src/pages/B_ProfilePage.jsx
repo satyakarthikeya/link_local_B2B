@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
 import api from '../utils/api'; // Import the API utility
-import "../styles/business_home.css";
-import "../styles/profile.css"; // We'll create this next
+import "../Styles/business_home.css";
+import "../Styles/profile.css"; // We'll create this next
 
 const B_ProfilePage = () => {
   const navigate = useNavigate();

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import B_Navbar from '../components/B_Navbar';
-import '../styles/MyShop.css';
+import '../Styles/MyShop.css';
 import api from '../utils/api';
 import axios from 'axios';
 

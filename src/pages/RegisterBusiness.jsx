@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import "../styles/auth.css";
+import "../Styles/auth.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const RegisterBusiness = () => {

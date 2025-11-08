@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import '../styles/business_home.css';
+import '../Styles/business_home.css';
 import B_Navbar from '../components/B_Navbar';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';

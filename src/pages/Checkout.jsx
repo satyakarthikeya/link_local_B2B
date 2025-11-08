@@ -4,7 +4,7 @@ import B_Navbar from '../components/B_Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../utils/api';
-import '../styles/Checkout.css';
+import '../Styles/Checkout.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const Checkout = () => {

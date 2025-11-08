@@ -4,7 +4,7 @@ import B_Navbar from '../components/B_Navbar';
 import ReviewForm from '../components/ReviewForm';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import '../styles/OrderHistory.css';
+import '../Styles/OrderHistory.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 // Import mock data for fallback
 import { mockOrderHistory } from '../utils/ordersMockData';

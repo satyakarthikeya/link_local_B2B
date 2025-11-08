@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/delivery_home.css";
+import "../Styles/delivery_home.css";
 import D_Navbar from "../components/D_Navbar";
 import D_Footer from "../components/D_Footer";
 import { useAuth } from "../context/AuthContext";

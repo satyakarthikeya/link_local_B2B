@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import '../styles/Cart.css';
+import '../Styles/Cart.css';
 
 const CartPanel = ({ isOpen, onClose }) => {
   const { 

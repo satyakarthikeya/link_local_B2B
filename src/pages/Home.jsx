@@ -1,5 +1,5 @@
 import React from "react";
-import "../styles/main.css"; // Fixed capitalization to match folder structure
+import "../Styles/main.css"; // Fixed capitalization to match folder structure
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useNavigate } from "react-router-dom";

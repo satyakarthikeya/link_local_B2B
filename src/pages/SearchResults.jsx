@@ -1,8 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import B_Navbar from '../components/B_Navbar';
-import '../styles/business_home.css';
-import '../styles/Search.css';
+import '../Styles/business_home.css';
+import '../Styles/Search.css';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { productAPI } from '../utils/api';

@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { useAuth } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
 import ReviewForm from './ReviewForm';
-import "../styles/navbar.css";
+import "../Styles/navbar.css";
 import logo from "../assests/Logo.png";
 
 const NotificationItem = ({ notification, onRead }) => {
